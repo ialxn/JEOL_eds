@@ -40,6 +40,10 @@ class JEOL_pts:
 
         In : plt.plot(dc.spectrum())
         Out: [<matplotlib.lines.Line2D at 0x7f7192feec10>]
+
+        In : plt.plot(dc.spectrum(ROI=(10,20,50,100)))
+        Out: [<matplotlib.lines.Line2D at 0x7f7192b58050>]
+
     """
 
     def __init__(self, fname, dtype='uint16'):
@@ -180,11 +184,19 @@ class JEOL_pts:
         """
         return self.dcube.sum(axis=2)
 
-    def spectrum(self):
-        """Returns spectrum integrated over whole image
+    def spectrum(self, ROI=None):
+        """Returns spectrum integrated over a ROI
 
+        Parameter
+                 ROI:   tuple (int, int, int, int) or None
+                        defines ROI for which spectrum is extracted. ROI is
+                        defined by its boundaries (left, right, top, bottom).
+                        None implied that the whole image is used.
         Returns
             spectrum:   ndarray
                         spectrum
         """
-        return self.dcube.sum(axis=0).sum(axis=0)
+        if not ROI:
+            ROI = (0, self.im_size, 0, self.im_size)
+
+        return self.dcube[ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=0).sum(axis=0)
