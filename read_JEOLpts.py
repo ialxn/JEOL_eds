@@ -38,6 +38,9 @@ class JEOL_pts:
         In : plt.imshow(dc.map())
         Out: <matplotlib.image.AxesImage at 0x7f7192ee6dd0>
 
+        In : plt.imshow(dc.map(interval=(115, 130)))
+        Out: <matplotlib.image.AxesImage at 0x7f7191eefd10>
+
         In : plt.plot(dc.spectrum())
         Out: [<matplotlib.lines.Line2D at 0x7f7192feec10>]
 
@@ -175,14 +178,23 @@ class JEOL_pts:
         print(N, N_err)
         return dcube
 
-    def map(self):
-        """Returns map integrated over whole spectrum
+    def map(self, interval=None):
+        """Returns map integrated over interval in spectrum
+
+        Parameter
+            interval:   tuple (int, int)
+                        defines interval (channels) to be used for map.
+                        None imples that all channels are integrated.
+
 
         Returns
             map:   ndarray
                    map
         """
-        return self.dcube.sum(axis=2)
+        if not interval:
+            interval = (0, self.N_ch)
+
+        return self.dcube[:, :, interval[0]:interval[1]].sum(axis=2)
 
     def spectrum(self, ROI=None):
         """Returns spectrum integrated over a ROI
