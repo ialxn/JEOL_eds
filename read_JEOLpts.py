@@ -35,8 +35,8 @@ class JEOL_pts:
         In : dc.dcube.shape
         Out: (128, 128, 4096)
 
-        In: plt.imshow(dc.dcube.sum(axis=2))
-        Out: <matplotlib.image.AxesImage at 0x7f719315b1d0>
+        In : plt.imshow(dc.map())
+        Out: <matplotlib.image.AxesImage at 0x7f7192ee6dd0>
 
         In : plt.plot(dc.spectrum())
         Out: [<matplotlib.lines.Line2D at 0x7f7192feec10>]
@@ -170,6 +170,15 @@ class JEOL_pts:
                 N_err += 1
         print(N, N_err)
         return dcube
+
+    def map(self):
+        """Returns map integrated over whole spectrum
+
+        Returns
+            map:   ndarray
+                   map
+        """
+        return self.dcube.sum(axis=2)
 
     def spectrum(self):
         """Returns spectrum integrated over whole image
