@@ -38,8 +38,8 @@ class JEOL_pts:
         In: plt.imshow(dc.dcube.sum(axis=2))
         Out: <matplotlib.image.AxesImage at 0x7f719315b1d0>
 
-        In : plt.plot(dc.dcube.sum(axis=0).sum(axis=0))
-        Out: [<matplotlib.lines.Line2D at 0x7f7193085dd0>]
+        In : plt.plot(dc.spectrum())
+        Out: [<matplotlib.lines.Line2D at 0x7f7192feec10>]
     """
 
     def __init__(self, fname, dtype='uint16'):
@@ -170,3 +170,12 @@ class JEOL_pts:
                 N_err += 1
         print(N, N_err)
         return dcube
+
+    def spectrum(self):
+        """Returns spectrum integrated over whole image
+
+        Returns
+            spectrum:   ndarray
+                        spectrum
+        """
+        return self.dcube.sum(axis=0).sum(axis=0)
