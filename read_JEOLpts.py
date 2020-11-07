@@ -14,6 +14,15 @@ class JEOL_pts:
         In : dc = JEOL_pts('128.pts')
         2081741 902010
 
+        In : dc.dcube.dtype
+        Out: dtype('uint16')
+
+        In : dc = JEOL_pts('128.pts', dtype='int')
+        2081741 902010
+
+        In : dc.dcube.dtype
+        Out: dtype('int64')
+
         In : dc.file_name
         Out: '128.pts'
 
@@ -33,19 +42,22 @@ class JEOL_pts:
         Out: [<matplotlib.lines.Line2D at 0x7f7193085dd0>]
     """
 
-    def __init__(self, fname):
+    def __init__(self, fname, dtype='uint16'):
         """Read datacube from JEOL '.pts' file
 
             Parameters
 
                  fname:     str
                             filename
+                 dtype:     str
+                            data type used to store (not read) datacube.
+                            can be any of the dtype supported by numpy.
         """
         self.file_name = fname
         headersize, datasize = self.__get_offset_and_size()
         self.im_size = self.__get_img_size(headersize)
         self.N_ch = self.__get_numCH(headersize)
-        self.dcube = self.__get_data_cube(headersize, datasize)
+        self.dcube = self.__get_data_cube(dtype, headersize, datasize)
 
     def __get_offset_and_size(self):
         """Returns length of header (bytes) and size of data (number of u2).
@@ -112,10 +124,12 @@ class JEOL_pts:
             return None
 
 
-    def __get_data_cube(self, hsize, Ndata):
+    def __get_data_cube(self, dtype, hsize, Ndata):
         """Returns data cube (X x Y x E)
 
             Parameters
+                dtype:      str
+                            data type used to store data cube
                 hsize:      int
                             number of header bytes
                 Ndata:      int
@@ -128,7 +142,7 @@ class JEOL_pts:
         with open(self.file_name, 'rb') as f:
             np.fromfile(f, dtype='u1', count=hsize)    # skip header
             data = np.fromfile(f, dtype='u2')
-        dcube = np.zeros([self.im_size, self.im_size, self.N_ch])
+        dcube = np.zeros([self.im_size, self.im_size, self.N_ch], dtype=dtype)
         N = 0
         N_err = 0
         A = 2**15
