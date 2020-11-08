@@ -5,6 +5,7 @@ Created on Sat Nov  7 13:30:08 2020
 
 @author: alxneit
 """
+import os
 import struct
 import numpy as np
 
@@ -59,10 +60,21 @@ class JEOL_pts:
         In : plt.plot(dc.spectrum(ROI=(10,20,50,100)))
         Out: [<matplotlib.lines.Line2D at 0x7f7192b58050>]
 
+        In : dc.save_dcube()
+
+        In  dc2 = JEOL_pts('128.npz')
+
+        In : dc2.file_name
+        Out: '128.npz'
+
+        In : npzfile = np.load('128.npz')
+
+        In : dcube = npzfile['arr_0']
+
     """
 
     def __init__(self, fname, dtype='uint16', debug=False):
-        """Read datacube from JEOL '.pts' file
+        """Read datacube from JEOL '.pts' file or from previously saved data cube
 
             Parameters
 
@@ -71,15 +83,21 @@ class JEOL_pts:
                  dtype:     str
                             data type used to store (not read) datacube.
                             can be any of the dtype supported by numpy.
+                            if a '.npz' file is loaded, this parameter is
+                            ignored and the dtype corresponds to the one
+                            of the loaded data cube.
                  debug:     bool
                             Turn on (various) debug output.
         """
-        self.file_name = fname
-        self.debug = debug
-        headersize, datasize = self.__get_offset_and_size()
-        self.im_size = self.__get_img_size(headersize)
-        self.N_ch = self.__get_numCH(headersize)
-        self.dcube = self.__get_data_cube(dtype, headersize, datasize)
+        if os.path.splitext(fname)[1] == '.npz':
+            self.__load_dcube(fname)
+        else:
+            self.file_name = fname
+            self.debug = debug
+            headersize, datasize = self.__get_offset_and_size()
+            self.im_size = self.__get_img_size(headersize)
+            self.N_ch = self.__get_numCH(headersize)
+            self.dcube = self.__get_data_cube(dtype, headersize, datasize)
 
     def __get_offset_and_size(self):
         """Returns length of header (bytes) and size of data (number of u2).
@@ -237,3 +255,22 @@ class JEOL_pts:
             ROI = (0, self.im_size, 0, self.im_size)
 
         return self.dcube[ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=0).sum(axis=0)
+
+    def save_dcube(self):
+        """Save (compressed) data cube as file_name.npz
+        """
+        fname = os.path.splitext(self.file_name)[0] + '.npz'
+        np.savez(fname, self.dcube)
+
+    def __load_dcube(self, fname):
+        """Initialize by loading from previously saved data cube
+
+        Parameter
+            fname:  str
+                    file name of '.npz' file (must end in '.npz')
+        """
+        self.file_name = fname
+        npzfile = np.load(fname)
+        self.dcube = npzfile['arr_0']
+        self.size = self.dcube.shape[0]
+        self.N_ch = self.dcube.shape[2]
