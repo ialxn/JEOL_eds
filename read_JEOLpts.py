@@ -216,8 +216,8 @@ class JEOL_pts:
                         unknown[str(d)] = 1
                     N_err += 1
         if self.debug:
-            print('Unidentified data items ({} out of {}, {}%) found:'.format(N, N_err, 100*N_err/N))
-            for key in unknown:
+            print('Unidentified data items ({} out of {}, {:.2f}%) found:'.format(N, N_err, 100*N_err/N))
+            for key in sorted(unknown):
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
 
