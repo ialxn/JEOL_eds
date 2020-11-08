@@ -20,6 +20,18 @@ class JEOL_pts:
         In : dc = JEOL_pts('128.pts', dtype='int')
         2081741 902010
 
+        In : dc = JEOL_pts('128.pts', dtype='uint16', debug=True)
+        Unidentified data items (2081741 out of 902010) found:
+	        24576: found 41858 times
+	        28672: found 40952 times
+	        40960: found 55190 times
+               .
+               .
+               .
+	        41056: found 1 times
+	        41057: found 1 times
+	        41058: found 1 times
+
         In : dc.dcube.dtype
         Out: dtype('int64')
 
@@ -49,7 +61,7 @@ class JEOL_pts:
 
     """
 
-    def __init__(self, fname, dtype='uint16'):
+    def __init__(self, fname, dtype='uint16', debug=False):
         """Read datacube from JEOL '.pts' file
 
             Parameters
@@ -59,8 +71,11 @@ class JEOL_pts:
                  dtype:     str
                             data type used to store (not read) datacube.
                             can be any of the dtype supported by numpy.
+                 debug:     bool
+                            Turn on (various) debug output.
         """
         self.file_name = fname
+        self.debug = debug
         headersize, datasize = self.__get_offset_and_size()
         self.im_size = self.__get_img_size(headersize)
         self.N_ch = self.__get_numCH(headersize)
@@ -152,6 +167,7 @@ class JEOL_pts:
         dcube = np.zeros([self.im_size, self.im_size, self.N_ch], dtype=dtype)
         N = 0
         N_err = 0
+        unknown = {}
         A = 2**15
         B = A + 4096
         C = B + 4096
@@ -173,9 +189,18 @@ class JEOL_pts:
                 z = int(d - D)
                 dcube[x, y, z] = dcube[x, y, z] + 1
             else:
-                # I have no idea what these data mean
-                N_err += 1
-        print(N, N_err)
+                if self.debug:
+                    # I have no idea what these data mean
+                    # collect statistics on these values for debug
+                    if str(d) in unknown:
+                        unknown[str(d)] += 1
+                    else:
+                        unknown[str(d)] = 1
+                    N_err += 1
+        if self.debug:
+            print('Unidentified data items ({} out of {}, {}%) found:'.format(N, N_err, 100*N_err/N))
+            for key in unknown:
+                print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
 
     def map(self, interval=None):
