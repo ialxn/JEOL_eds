@@ -12,17 +12,22 @@ import numpy as np
 class JEOL_pts:
     """Work with JEOL '.pts' files
 
-        In : dc = JEOL_pts('128.pts')
-        2081741 902010
+        Examples
 
-        In : dc.dcube.dtype
-        Out: dtype('uint16')
+        # Initialize JEOL_pts object (read data from '.pts' file).
+        # Data cube has dtype = 'uint16' (default).
+        >>>> dc = JEOL_pts('128.pts')
+        >>>> dc.dcube.dtype
+        dtype('uint16')
 
-        In : dc = JEOL_pts('128.pts', dtype='int')
-        2081741 902010
+        # Same, but specify dtype to be used for data cube.
+        >>>> dc = JEOL_pts('128.pts', dtype='int')
+        >>>> dc.dcube.dtype
+        dtype('int64')
 
-        In : dc = JEOL_pts('128.pts', dtype='uint16', debug=True)
-        Unidentified data items (2081741 out of 902010) found:
+        # Provide some debug output when loading.
+        >>>> dc = JEOL_pts('128.pts', dtype='uint16', debug=True)
+        Unidentified data items (2081741 out of 902010, 43.33%) found:
 	        24576: found 41858 times
 	        28672: found 40952 times
 	        40960: found 55190 times
@@ -33,44 +38,51 @@ class JEOL_pts:
 	        41057: found 1 times
 	        41058: found 1 times
 
-        In : dc.dcube.dtype
-        Out: dtype('int64')
+        # Useful attributes
+        >>>> dc.file_name
+        '128.pts'       # File name loaded from.
+        >>>> dc.N_ch    # Number of energy channels
+        4096
+        >>>> dc.im_size # Map dimension (size x size)
+        128
+        >>>> dc.dcube.shape
+        (128, 128, 4096)
 
-        In : dc.file_name
-        Out: '128.pts'
+        # Use helper functions map() and spectrum().
+        >>>> import matplotlib.pyplot as plt
 
-        In : dc.N_ch
-        Out: 4096
+        # Use all energy channels, i.e. plot map of total number of counts
+        >>>> plt.imshow(dc.map())
+        <matplotlib.image.AxesImage at 0x7f7192ee6dd0>
+        # Specify energy interval (channels containing a spectral line) to
+        # be used for map. Used to map specific elements.
+        >>>> plt.imshow(dc.map(interval=(115, 130)))
+        >>>> <matplotlib.image.AxesImage at 0x7f7191eefd10>
 
-        In : dc.im_size
-        Out: 128
+        # Plot spectrum integrated over full dimension.
+        >>>> plt.plot(dc.spectrum())
+        [<matplotlib.lines.Line2D at 0x7f7192feec10>]
+        # Plot spectrum corresponding to a (rectangular) ROI specified as
+        # tuple (left, right, top, bottom) of pixels.
+        >>>> plt.plot(dc.spectrum(ROI=(10,20,50,100)))
+        [<matplotlib.lines.Line2D at 0x7f7192b58050>]
 
-        In : dc.dcube.shape
-        Out: (128, 128, 4096)
+        # Save extracted data cube. File name is the same as the '.pts' file
+        # but extension is changed to 'npz'.
+        >>>> dc.save_dcube()
 
-        In : plt.imshow(dc.map())
-        Out: <matplotlib.image.AxesImage at 0x7f7192ee6dd0>
+        # JEOL_pts object can also be initialized from a saved data cube. In
+        # this case, dtype is the same as in the stored data cube and a
+        # possible 'dtype=' keyword is ignored.
+        >>>> dc2 = JEOL_pts('128.npz')
+        >>>> dc2.file_name
+        '128.npz'
 
-        In : plt.imshow(dc.map(interval=(115, 130)))
-        Out: <matplotlib.image.AxesImage at 0x7f7191eefd10>
-
-        In : plt.plot(dc.spectrum())
-        Out: [<matplotlib.lines.Line2D at 0x7f7192feec10>]
-
-        In : plt.plot(dc.spectrum(ROI=(10,20,50,100)))
-        Out: [<matplotlib.lines.Line2D at 0x7f7192b58050>]
-
-        In : dc.save_dcube()
-
-        In  dc2 = JEOL_pts('128.npz')
-
-        In : dc2.file_name
-        Out: '128.npz'
-
-        In : npzfile = np.load('128.npz')
-
-        In : dcube = npzfile['arr_0']
-
+        # If you want to read the data cube into your own program
+        >>>> npzfile = np.load('128.npz')
+        >>>> dcube = npzfile['arr_0']
+        >>>> dcube.shape
+        (128, 128, 4096)
     """
 
     def __init__(self, fname, dtype='uint16', debug=False):
