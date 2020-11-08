@@ -5,6 +5,7 @@ Created on Sat Nov  7 13:30:08 2020
 
 @author: alxneit
 """
+import os
 import struct
 import numpy as np
 
@@ -46,6 +47,12 @@ class JEOL_pts:
 
         In : plt.plot(dc.spectrum(ROI=(10,20,50,100)))
         Out: [<matplotlib.lines.Line2D at 0x7f7192b58050>]
+
+        In : dc.save_dcube()
+
+        In : npzfile = np.load('128.npz')
+
+        In : dcube = npzfile['arr_0']
 
     """
 
@@ -212,3 +219,9 @@ class JEOL_pts:
             ROI = (0, self.im_size, 0, self.im_size)
 
         return self.dcube[ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=0).sum(axis=0)
+
+    def save_dcube(self):
+        """Save (compressed) data cube as file_name.npz
+        """
+        fname = os.path.splitext(self.file_name)[0] + '.npz'
+        np.savez(fname, self.dcube)
