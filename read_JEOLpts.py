@@ -50,6 +50,11 @@ class JEOL_pts:
 
         In : dc.save_dcube()
 
+        In  dc2 = JEOL_pts('128.npz')
+
+        In : dc2.file_name
+        Out: '128.npz'
+
         In : npzfile = np.load('128.npz')
 
         In : dcube = npzfile['arr_0']
@@ -57,7 +62,7 @@ class JEOL_pts:
     """
 
     def __init__(self, fname, dtype='uint16'):
-        """Read datacube from JEOL '.pts' file
+        """Read datacube from JEOL '.pts' file or from previously saved data cube
 
             Parameters
 
@@ -66,12 +71,18 @@ class JEOL_pts:
                  dtype:     str
                             data type used to store (not read) datacube.
                             can be any of the dtype supported by numpy.
+                            if a '.npz' file is loaded, this parameter is
+                            ignored and the dtype corresponds to the one
+                            of the loaded data cube.
         """
-        self.file_name = fname
-        headersize, datasize = self.__get_offset_and_size()
-        self.im_size = self.__get_img_size(headersize)
-        self.N_ch = self.__get_numCH(headersize)
-        self.dcube = self.__get_data_cube(dtype, headersize, datasize)
+        if os.path.splitext(fname)[1] == '.npz':
+            self.__load_dcube(fname)
+        else:
+            self.file_name = fname
+            headersize, datasize = self.__get_offset_and_size()
+            self.im_size = self.__get_img_size(headersize)
+            self.N_ch = self.__get_numCH(headersize)
+            self.dcube = self.__get_data_cube(dtype, headersize, datasize)
 
     def __get_offset_and_size(self):
         """Returns length of header (bytes) and size of data (number of u2).
@@ -225,3 +236,16 @@ class JEOL_pts:
         """
         fname = os.path.splitext(self.file_name)[0] + '.npz'
         np.savez(fname, self.dcube)
+
+    def __load_dcube(self, fname):
+        """Initialize by loading from previously saved data cube
+
+        Parameter
+            fname:  str
+                    file name of '.npz' file (must end in '.npz')
+        """
+        self.file_name = fname
+        npzfile = np.load(fname)
+        self.dcube = npzfile['arr_0']
+        self.size = self.dcube.shape[0]
+        self.N_ch = self.dcube.shape[2]
