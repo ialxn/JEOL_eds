@@ -103,12 +103,14 @@ class JEOL_pts:
         """
         if os.path.splitext(fname)[1] == '.npz':
             self.__load_dcube(fname)
+            self.CH_Res = None
         else:
             self.file_name = fname
             self.debug = debug
             headersize, datasize = self.__get_offset_and_size()
             self.im_size = self.__get_img_size(headersize)
             self.N_ch = self.__get_numCH(headersize)
+            self.CH_Res = self.__get_CHRes(headersize)
             self.dcube = self.__get_data_cube(dtype, headersize, datasize)
 
     def __get_offset_and_size(self):
@@ -175,6 +177,25 @@ class JEOL_pts:
                     return numCH
             return None
 
+    def __get_CHRes(self, hsize):
+        """Returns energy resolution (keV per channel)
+
+            Parameters
+                hsize:      int
+                            number of header bytes
+
+            Returns
+                CHRes:      float
+                            energy resolution (kvV per channel) or None (Error)
+        """
+        with open(self.file_name, 'rb') as f:
+            data = np.fromfile(f, dtype='u1', count=hsize)
+            for offset in range(hsize - 6):
+                string = b''.join(list(struct.unpack('ssssss', data[offset:offset+6])))
+                if string == b'CH Res':
+                    numCH = np.frombuffer(data[offset+15: offset+15+8], dtype='<f8', count=1)[0]
+                    return numCH
+            return None
 
     def __get_data_cube(self, dtype, hsize, Ndata):
         """Returns data cube (X x Y x E)
