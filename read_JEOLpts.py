@@ -193,7 +193,7 @@ class JEOL_pts:
         """
         with open(self.file_name, 'rb') as f:
             np.fromfile(f, dtype='u1', count=hsize)    # skip header
-            data = np.fromfile(f, dtype='u2')
+            data = np.fromfile(f, dtype='u2', count=Ndata)
         dcube = np.zeros([self.im_size, self.im_size, self.N_ch], dtype=dtype)
         N = 0
         N_err = 0
