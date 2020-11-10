@@ -305,5 +305,5 @@ class JEOL_pts:
         self.file_name = fname
         npzfile = np.load(fname)
         self.dcube = npzfile['arr_0']
-        self.size = self.dcube.shape[0]
+        self.im_size = self.dcube.shape[0]
         self.N_ch = self.dcube.shape[2]
