@@ -324,7 +324,7 @@ class JEOL_pts:
         """Save (compressed) data cube as file_name.npz
         """
         fname = os.path.splitext(self.file_name)[0] + '.npz'
-        np.savez(fname, self.dcube)
+        np.savez_compressed(fname, self.dcube)
 
     def __load_dcube(self, fname):
         """Initialize by loading from previously saved data cube
