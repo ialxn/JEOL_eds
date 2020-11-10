@@ -149,7 +149,7 @@ class JEOL_pts:
 
             Returns
                 value:      Any type (depends on parameter extracted)
-                            Value of parameter
+                            Value of parameter. Single number or array.
 
             Notes
                 According to jeol_metadata.ods. Right after the parameter name
@@ -162,7 +162,9 @@ class JEOL_pts:
         items = {2 : ('<u2', 2),
                  3 : ('<u4', 4),
                  4 : ('<f4', 4),
-                 5 : ('<f8', 8)}
+                 5 : ('<f8', 8),
+                 8 : ('<f4', 4)     # list of float32 values
+                 }
         ParLen = len(ParName)
         FormStr = b's' * ParLen
         for offset in range(header.size - ParLen):
@@ -176,10 +178,12 @@ class JEOL_pts:
                 NBytes = np.frombuffer(header[offset: offset+4], dtype='<i4', count=1)[0]
                 NItems = int(NBytes / items[ItemCode][1])   # How many items to be read
                 offset += 4
-                values = np.frombuffer(header[offset: offset+NBytes],
-                                       dtype=items[ItemCode][0],
-                                       count=NItems)
-                return values[0]
+                val = np.frombuffer(header[offset: offset+NBytes],
+                                    dtype=items[ItemCode][0],
+                                    count=NItems)
+                if val.size == 1:   # return single number
+                    return val[0]
+                return val          # return array
         return None
 
     def __get_img_size(self, hsize):
