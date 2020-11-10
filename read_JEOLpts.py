@@ -112,7 +112,7 @@ class JEOL_pts:
                 header = np.fromfile(f, dtype='u1', count=headersize)
                 self.N_ch = self.__get_parameter('NumCH', header)
                 self.CH_Res = self.__get_parameter('CH Res', header)
-            self.im_size = self.__get_img_size(headersize)  # separate pattern
+                self.im_size = self.__get_parameter('ScanLine', header)
             self.dcube = self.__get_data_cube(dtype, headersize, datasize)
 
 
@@ -185,29 +185,6 @@ class JEOL_pts:
                     return val[0]
                 return val          # return array
         return None
-
-    def __get_img_size(self, hsize):
-        """Returns size of image.
-
-            Parameters
-                hsize:      int
-                            number of header bytes
-
-            Returns
-                 size:      int
-                            size of image (size x size) or None (Error)
-        """
-        sizes = [64, 128, 256, 512, 1024, 2048, 4092]   # possible image sizes
-        with open(self.file_name, 'rb') as f:
-            header = np.fromfile(f, dtype='u1', count=hsize)     # read header
-            # search for string 'Pixels'
-            for offset in range(hsize - 6):
-                string = b''.join(list(struct.unpack('ssssss', header[offset:offset+6])))
-                if string == b'Pixels':
-                    # index to list is '<i2' 9 bytes after string (of length 6)
-                    idx = np.frombuffer(header[offset+6+9: offset+6+11], dtype='<i2', count=1)[0]
-                    return sizes[idx]
-            return None
 
     def __get_data_cube(self, dtype, hsize, Ndata):
         """Returns data cube (X x Y x E)
