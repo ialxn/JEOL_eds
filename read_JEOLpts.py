@@ -108,10 +108,13 @@ class JEOL_pts:
             self.file_name = fname
             self.debug = debug
             headersize, datasize = self.__get_offset_and_size()
-            self.im_size = self.__get_img_size(headersize)
-            self.N_ch = self.__get_numCH(headersize)
-            self.CH_Res = self.__get_CHRes(headersize)
+            with open(fname, 'rb') as f:
+                header = np.fromfile(f, dtype='u1', count=headersize)
+                self.N_ch = self.__get_parameter('NumCH', header)
+                self.CH_Res = self.__get_parameter('CH Res', header)
+                self.im_size = self.__get_parameter('ScanLine', header)
             self.dcube = self.__get_data_cube(dtype, headersize, datasize)
+
 
     def __get_offset_and_size(self):
         """Returns length of header (bytes) and size of data (number of u2).
@@ -134,68 +137,54 @@ class JEOL_pts:
             size = (size - offset) / 2  # convert to number of u2 in data segment
             return offset, int(size)
 
-    def __get_img_size(self, hsize):
-        """Returns size of image.
+    @staticmethod
+    def __get_parameter(ParName, header):
+        """Returns parameter value extracted from header (or None).
 
             Parameters
-                hsize:      int
-                            number of header bytes
+                ParName:    str
+                            Name of parameter to be extracted
+                header:     byte array
+                            Binary header
 
             Returns
-                 size:      int
-                            size of image (size x size) or None (Error)
+                value:      Any type (depends on parameter extracted)
+                            Value of parameter. Single number or array.
+
+            Notes
+                According to jeol_metadata.ods. Right after the parameter name
+                the numerical type of the parameter is encoded as '<u4' followed
+                by how many bytes are used to store it (parameter might contain
+                multiple items). This table is (partially) stored in a dict.
+
+                    3: ('<u4', 4)       code 3 -> 'uint32' is 4 bytes long
         """
-        sizes = [64, 128, 256, 512, 1024, 2048, 4092]   # possible image sizes
-        with open(self.file_name, 'rb') as f:
-            header = np.fromfile(f, dtype='u1', count=hsize)     # read header
-            # search for string 'Pixels'
-            for offset in range(hsize - 6):
-                string = b''.join(list(struct.unpack('ssssss', header[offset:offset+6])))
-                if string == b'Pixels':
-                    # index to list is '<i2' 9 bytes after string (of length 6)
-                    idx = np.frombuffer(header[offset+6+9: offset+6+11], dtype='<i2', count=1)[0]
-                    return sizes[idx]
-            return None
-
-    def __get_numCH(self, hsize):
-        """Returns number of channels (length of spectrum)
-
-            Parameters
-                hsize:      int
-                            number of header bytes
-
-            Returns
-                numCH:      int
-                            size of image (size x size) or None (Error)
-        """
-        with open(self.file_name, 'rb') as f:
-            data = np.fromfile(f, dtype='u1', count=hsize)
-            for offset in range(hsize - 5):
-                string = b''.join(list(struct.unpack('sssss', data[offset:offset+5])))
-                if string == b'NumCH':
-                    numCH = np.frombuffer(data[offset+14: offset+14+4], dtype='<i4', count=1)[0]
-                    return numCH
-            return None
-
-    def __get_CHRes(self, hsize):
-        """Returns energy resolution (keV per channel)
-
-            Parameters
-                hsize:      int
-                            number of header bytes
-
-            Returns
-                CHRes:      float
-                            energy resolution (kvV per channel) or None (Error)
-        """
-        with open(self.file_name, 'rb') as f:
-            data = np.fromfile(f, dtype='u1', count=hsize)
-            for offset in range(hsize - 6):
-                string = b''.join(list(struct.unpack('ssssss', data[offset:offset+6])))
-                if string == b'CH Res':
-                    numCH = np.frombuffer(data[offset+15: offset+15+8], dtype='<f8', count=1)[0]
-                    return numCH
-            return None
+        items = {2 : ('<u2', 2),
+                 3 : ('<u4', 4),
+                 4 : ('<f4', 4),
+                 5 : ('<f8', 8),
+                 8 : ('<f4', 4)     # list of float32 values
+                 }
+        ParLen = len(ParName)
+        FormStr = b's' * ParLen
+        for offset in range(header.size - ParLen):
+            string = b''.join(list(struct.unpack(FormStr, header[offset:offset+ParLen])))
+            if string == ParName.encode():
+                offset += ParLen + 1
+                # After parameter name, first read code
+                ItemCode = np.frombuffer(header[offset: offset+4], dtype='<i4', count=1)[0]
+                offset += 4
+                # Read number of bytes needed to store parameter
+                NBytes = np.frombuffer(header[offset: offset+4], dtype='<i4', count=1)[0]
+                NItems = int(NBytes / items[ItemCode][1])   # How many items to be read
+                offset += 4
+                val = np.frombuffer(header[offset: offset+NBytes],
+                                    dtype=items[ItemCode][0],
+                                    count=NItems)
+                if val.size == 1:   # return single number
+                    return val[0]
+                return val          # return array
+        return None
 
     def __get_data_cube(self, dtype, hsize, Ndata):
         """Returns data cube (X x Y x E)
