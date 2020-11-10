@@ -25,10 +25,21 @@ class EDS_metadata:
             self.N_ch = self.__get_parameter('NumCH', header)
             self.CH_Res = self.__get_parameter('CH Res', header)
             self.im_size = self.__get_parameter('ScanLine', header)
+            self.E_calib = (self.__get_parameter('CoefA', header),
+                            self.__get_parameter('CoefB', header))
+            self.LiveTime = self.__get_parameter('LiveTime', header)
+            self.RealTime = self.__get_parameter('RealTime', header)
+            self.DwellTime = self.__get_parameter('DwellTime(msec)', header)
+            self.DeadTime = 'T' + str(self.__get_parameter('DeadTime', header))
         else:                   # 'npz' file loaded
             self.N_ch = None
             self.CH_Res = None
             self.im_size = None
+            self.E_calib = (None, None)
+            self.LiveTime = None
+            self.RealTime = None
+            self.DwellTime = None
+            self.DeadTime = None
 
     @staticmethod
     def __get_parameter(ParName, header):
