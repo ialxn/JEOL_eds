@@ -121,13 +121,25 @@ class JEOL_pts:
 
         # Useful attributes
         >>>> dc.file_name
-        '128.pts'       # File name loaded from.
-        >>>> dc.N_ch    # Number of energy channels
-        4096
-        >>>> dc.im_size # Map dimension (size x size)
-        128
-        >>>> dc.dcube.shape
+        '128.pts'               # File name loaded from.
+        >>>> dc.dcube.shape     # Shape of data cube
         (128, 128, 4096)
+
+        # More info is stored in metadata
+        >>>> dc.meta.N_ch    # Number of energy channels
+        4096
+        >>>> dc.meta.im_size # Map dimension (size x size)
+        128
+        # Print all metadata as dict
+        >>>>: vars(dc.meta)
+        {'N_ch': 4096,
+         'CH_Res': 0.01,
+         'im_size': 256,
+         'E_calib': (0.0100006, -0.00122558),
+         'LiveTime': 1638.1000000000001,
+         'RealTime': 1692.6200000000001,
+         'DwellTime': 0.5,
+         'DeadTime': 'T3'}
 
         # Use helper functions map() and spectrum().
         >>>> import matplotlib.pyplot as plt
