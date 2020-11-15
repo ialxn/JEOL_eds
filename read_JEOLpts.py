@@ -9,6 +9,83 @@ import os
 import struct
 import numpy as np
 
+class EDS_metadata:
+    """Class to contain metadata
+    """
+    def __init__(self, header):
+        """Populates meta data from parameters stored in header
+
+            Parameter
+                header:     byte array (or None)
+                            Binary header or None if we were loading
+                            a '.npz' file that does not contain metadata.
+        """
+        self.N_ch = self.__get_parameter('NumCH', header)
+        self.CH_Res = self.__get_parameter('CH Res', header)
+        self.im_size = self.__get_parameter('ScanLine', header)
+        self.E_calib = (self.__get_parameter('CoefA', header),
+                        self.__get_parameter('CoefB', header))
+        self.LiveTime = self.__get_parameter('LiveTime', header)
+        self.RealTime = self.__get_parameter('RealTime', header)
+        self.DwellTime = self.__get_parameter('DwellTime(msec)', header)
+        try:
+            self.DeadTime = 'T' + str(self.__get_parameter('DeadTime', header) + 1)
+        except TypeError:
+            self.DeadTime = None
+
+    @staticmethod
+    def __get_parameter(ParName, header):
+        """Returns parameter value extracted from header (or None).
+
+            Parameters
+                ParName:    str
+                            Name of parameter to be extracted
+                header:     byte array
+                            Binary header
+
+            Returns
+                value:      Any type (depends on parameter extracted)
+                            Value of parameter. Single number or array
+                            (or None, if reading from '.npz' file, i.e.
+                             when header is None)
+
+            Notes
+                According to jeol_metadata.ods. Right after the parameter name
+                the numerical type of the parameter is encoded as '<u4' followed
+                by how many bytes are used to store it (parameter might contain
+                multiple items). This table is (partially) stored in a dict.
+
+                    3: ('<u4', 4)       code 3 -> 'uint32' is 4 bytes long
+        """
+        if header is None:
+            return None
+        items = {2 : ('<u2', 2),
+                 3 : ('<u4', 4),
+                 4 : ('<f4', 4),
+                 5 : ('<f8', 8),
+                 8 : ('<f4', 4)     # list of float32 values
+                 }
+        ParLen = len(ParName)
+        FormStr = b's' * ParLen
+        for offset in range(header.size - ParLen):
+            string = b''.join(list(struct.unpack(FormStr, header[offset:offset+ParLen])))
+            if string == ParName.encode():
+                offset += ParLen + 1
+                # After parameter name, first read code
+                ItemCode = np.frombuffer(header[offset: offset+4], dtype='<i4', count=1)[0]
+                offset += 4
+                # Read number of bytes needed to store parameter
+                NBytes = np.frombuffer(header[offset: offset+4], dtype='<i4', count=1)[0]
+                NItems = int(NBytes / items[ItemCode][1])   # How many items to be read
+                offset += 4
+                val = np.frombuffer(header[offset: offset+NBytes],
+                                    dtype=items[ItemCode][0],
+                                    count=NItems)
+                if val.size == 1:   # return single number
+                    return val[0]
+                return val          # return array
+        return None
+
 class JEOL_pts:
     """Work with JEOL '.pts' files
 
@@ -40,13 +117,25 @@ class JEOL_pts:
 
         # Useful attributes
         >>>> dc.file_name
-        '128.pts'       # File name loaded from.
-        >>>> dc.N_ch    # Number of energy channels
-        4096
-        >>>> dc.im_size # Map dimension (size x size)
-        128
-        >>>> dc.dcube.shape
+        '128.pts'               # File name loaded from.
+        >>>> dc.dcube.shape     # Shape of data cube
         (128, 128, 4096)
+
+        # More info is stored in metadata
+        >>>> dc.meta.N_ch    # Number of energy channels
+        4096
+        >>>> dc.meta.im_size # Map dimension (size x size)
+        128
+        # Print all metadata as dict
+        >>>>: vars(dc.meta)
+        {'N_ch': 4096,
+         'CH_Res': 0.01,
+         'im_size': 256,
+         'E_calib': (0.0100006, -0.00122558),
+         'LiveTime': 1638.1000000000001,
+         'RealTime': 1692.6200000000001,
+         'DwellTime': 0.5,
+         'DeadTime': 'T4'}
 
         # Use helper functions map() and spectrum().
         >>>> import matplotlib.pyplot as plt
@@ -102,17 +191,15 @@ class JEOL_pts:
                             Turn on (various) debug output.
         """
         if os.path.splitext(fname)[1] == '.npz':
+            self.meta = EDS_metadata(None)
             self.__load_dcube(fname)
-            self.CH_Res = None
         else:
             self.file_name = fname
             self.debug = debug
             headersize, datasize = self.__get_offset_and_size()
             with open(fname, 'rb') as f:
                 header = np.fromfile(f, dtype='u1', count=headersize)
-                self.N_ch = self.__get_parameter('NumCH', header)
-                self.CH_Res = self.__get_parameter('CH Res', header)
-                self.im_size = self.__get_parameter('ScanLine', header)
+                self.meta = EDS_metadata(header)
             self.dcube = self.__get_data_cube(dtype, headersize, datasize)
 
 
@@ -137,55 +224,6 @@ class JEOL_pts:
             size = (size - offset) / 2  # convert to number of u2 in data segment
             return offset, int(size)
 
-    @staticmethod
-    def __get_parameter(ParName, header):
-        """Returns parameter value extracted from header (or None).
-
-            Parameters
-                ParName:    str
-                            Name of parameter to be extracted
-                header:     byte array
-                            Binary header
-
-            Returns
-                value:      Any type (depends on parameter extracted)
-                            Value of parameter. Single number or array.
-
-            Notes
-                According to jeol_metadata.ods. Right after the parameter name
-                the numerical type of the parameter is encoded as '<u4' followed
-                by how many bytes are used to store it (parameter might contain
-                multiple items). This table is (partially) stored in a dict.
-
-                    3: ('<u4', 4)       code 3 -> 'uint32' is 4 bytes long
-        """
-        items = {2 : ('<u2', 2),
-                 3 : ('<u4', 4),
-                 4 : ('<f4', 4),
-                 5 : ('<f8', 8),
-                 8 : ('<f4', 4)     # list of float32 values
-                 }
-        ParLen = len(ParName)
-        FormStr = b's' * ParLen
-        for offset in range(header.size - ParLen):
-            string = b''.join(list(struct.unpack(FormStr, header[offset:offset+ParLen])))
-            if string == ParName.encode():
-                offset += ParLen + 1
-                # After parameter name, first read code
-                ItemCode = np.frombuffer(header[offset: offset+4], dtype='<i4', count=1)[0]
-                offset += 4
-                # Read number of bytes needed to store parameter
-                NBytes = np.frombuffer(header[offset: offset+4], dtype='<i4', count=1)[0]
-                NItems = int(NBytes / items[ItemCode][1])   # How many items to be read
-                offset += 4
-                val = np.frombuffer(header[offset: offset+NBytes],
-                                    dtype=items[ItemCode][0],
-                                    count=NItems)
-                if val.size == 1:   # return single number
-                    return val[0]
-                return val          # return array
-        return None
-
     def __get_data_cube(self, dtype, hsize, Ndata):
         """Returns data cube (X x Y x E)
 
@@ -204,7 +242,7 @@ class JEOL_pts:
         with open(self.file_name, 'rb') as f:
             np.fromfile(f, dtype='u1', count=hsize)    # skip header
             data = np.fromfile(f, dtype='u2', count=Ndata)
-        dcube = np.zeros([self.im_size, self.im_size, self.N_ch], dtype=dtype)
+        dcube = np.zeros([self.meta.im_size, self.meta.im_size, self.meta.N_ch], dtype=dtype)
         N = 0
         N_err = 0
         unknown = {}
@@ -212,12 +250,12 @@ class JEOL_pts:
         B = A + 4096
         C = B + 4096
         D = C + 4096
-        E = D + self.N_ch
+        E = D + self.meta.N_ch
         # Data is mapped as follows:
         #   A <= datum < B   -> y-coordinate
         #   B <= datum < C   -> x-coordinate
         #   C + 4096 <= datum < C + 4096 + numCH    -> count registered
-        scale = 4096 / self.im_size
+        scale = 4096 / self.meta.im_size
         # map the size x size image into 4096x4096
         for d in data:
             N += 1
@@ -257,7 +295,7 @@ class JEOL_pts:
                    map
         """
         if not interval:
-            interval = (0, self.N_ch)
+            interval = (0, self.meta.N_ch)
 
         return self.dcube[:, :, interval[0]:interval[1]].sum(axis=2)
 
@@ -274,7 +312,7 @@ class JEOL_pts:
                         spectrum
         """
         if not ROI:
-            ROI = (0, self.im_size, 0, self.im_size)
+            ROI = (0, self.meta.im_size, 0, self.meta.im_size)
 
         return self.dcube[ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=0).sum(axis=0)
 
@@ -282,7 +320,7 @@ class JEOL_pts:
         """Save (compressed) data cube as file_name.npz
         """
         fname = os.path.splitext(self.file_name)[0] + '.npz'
-        np.savez(fname, self.dcube)
+        np.savez_compressed(fname, self.dcube)
 
     def __load_dcube(self, fname):
         """Initialize by loading from previously saved data cube
@@ -294,5 +332,5 @@ class JEOL_pts:
         self.file_name = fname
         npzfile = np.load(fname)
         self.dcube = npzfile['arr_0']
-        self.im_size = self.dcube.shape[0]
-        self.N_ch = self.dcube.shape[2]
+        self.meta.im_size = self.dcube.shape[0]
+        self.meta.N_ch = self.dcube.shape[2]
