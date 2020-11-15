@@ -30,7 +30,7 @@ class EDS_metadata:
             self.LiveTime = self.__get_parameter('LiveTime', header)
             self.RealTime = self.__get_parameter('RealTime', header)
             self.DwellTime = self.__get_parameter('DwellTime(msec)', header)
-            self.DeadTime = 'T' + str(self.__get_parameter('DeadTime', header))
+            self.DeadTime = 'T' + str(self.__get_parameter('DeadTime', header) + 1)
         else:                   # 'npz' file loaded
             self.N_ch = None
             self.CH_Res = None
@@ -139,7 +139,7 @@ class JEOL_pts:
          'LiveTime': 1638.1000000000001,
          'RealTime': 1692.6200000000001,
          'DwellTime': 0.5,
-         'DeadTime': 'T3'}
+         'DeadTime': 'T4'}
 
         # Use helper functions map() and spectrum().
         >>>> import matplotlib.pyplot as plt
