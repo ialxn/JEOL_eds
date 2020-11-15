@@ -17,28 +17,20 @@ class EDS_metadata:
 
             Parameter
                 header:     byte array (or None)
-                            Binary header. If None is supplied we were loading
-                            a '.npz' file that does not contain metadata and we
-                            initialize with None.
+                            Binary header or None if we were loading
+                            a '.npz' file that does not contain metadata.
         """
-        if header is not None:  # 'pts' file loaded
-            self.N_ch = self.__get_parameter('NumCH', header)
-            self.CH_Res = self.__get_parameter('CH Res', header)
-            self.im_size = self.__get_parameter('ScanLine', header)
-            self.E_calib = (self.__get_parameter('CoefA', header),
-                            self.__get_parameter('CoefB', header))
-            self.LiveTime = self.__get_parameter('LiveTime', header)
-            self.RealTime = self.__get_parameter('RealTime', header)
-            self.DwellTime = self.__get_parameter('DwellTime(msec)', header)
+        self.N_ch = self.__get_parameter('NumCH', header)
+        self.CH_Res = self.__get_parameter('CH Res', header)
+        self.im_size = self.__get_parameter('ScanLine', header)
+        self.E_calib = (self.__get_parameter('CoefA', header),
+                        self.__get_parameter('CoefB', header))
+        self.LiveTime = self.__get_parameter('LiveTime', header)
+        self.RealTime = self.__get_parameter('RealTime', header)
+        self.DwellTime = self.__get_parameter('DwellTime(msec)', header)
+        try:
             self.DeadTime = 'T' + str(self.__get_parameter('DeadTime', header) + 1)
-        else:                   # 'npz' file loaded
-            self.N_ch = None
-            self.CH_Res = None
-            self.im_size = None
-            self.E_calib = (None, None)
-            self.LiveTime = None
-            self.RealTime = None
-            self.DwellTime = None
+        except TypeError:
             self.DeadTime = None
 
     @staticmethod
@@ -53,7 +45,9 @@ class EDS_metadata:
 
             Returns
                 value:      Any type (depends on parameter extracted)
-                            Value of parameter. Single number or array.
+                            Value of parameter. Single number or array
+                            (or None, if reading from '.npz' file, i.e.
+                             when header is None)
 
             Notes
                 According to jeol_metadata.ods. Right after the parameter name
@@ -63,6 +57,8 @@ class EDS_metadata:
 
                     3: ('<u4', 4)       code 3 -> 'uint32' is 4 bytes long
         """
+        if header is None:
+            return None
         items = {2 : ('<u2', 2),
                  3 : ('<u4', 4),
                  4 : ('<f4', 4),
