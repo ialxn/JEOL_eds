@@ -146,7 +146,7 @@ class JEOL_pts:
         # Specify energy interval (channels containing a spectral line) to
         # be used for map. Used to map specific elements.
         >>>> plt.imshow(dc.map(interval=(115, 130)))
-        >>>> <matplotlib.image.AxesImage at 0x7f7191eefd10>
+        <matplotlib.image.AxesImage at 0x7f7191eefd10>
 
         # Plot spectrum integrated over full dimension.
         >>>> plt.plot(dc.spectrum())
