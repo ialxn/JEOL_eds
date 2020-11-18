@@ -146,7 +146,10 @@ class JEOL_pts:
         # Specify energy interval (channels containing a spectral line) to
         # be used for map. Used to map specific elements.
         >>>> plt.imshow(dc.map(interval=(115, 130)))
-        >>>> <matplotlib.image.AxesImage at 0x7f7191eefd10>
+        <matplotlib.image.AxesImage at 0x7f7191eefd10>
+        # specify interval by energy (keV) instead of channel numbers.
+        >>>>plt.imshow(p_off.map(interval=(8,10), unit='keV'))
+        <matplotlib.image.AxesImage at 0x7f4fd0616950>
 
         # Plot spectrum integrated over full dimension.
         >>>> plt.plot(dc.spectrum())
@@ -281,13 +284,16 @@ class JEOL_pts:
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
 
-    def map(self, interval=None):
+    def map(self, interval=None, unit=None):
         """Returns map integrated over interval in spectrum
 
         Parameter
-            interval:   tuple (int, int)
-                        defines interval (channels) to be used for map.
+            interval:   tuple (number, number)
+                        defines interval (channels, or energy [keV]) to be used
+                        for map.
                         None imples that all channels are integrated.
+                unit:   None (interval is channel numbers) or 'keV' (data is
+                        in keV and will be converted to channel numbers).
 
 
         Returns
@@ -296,7 +302,11 @@ class JEOL_pts:
         """
         if not interval:
             interval = (0, self.meta.N_ch)
-
+        elif unit == 'keV':
+            interval = (int(round((interval[0] - self.meta.E_calib[1]) / self.meta.E_calib[0])),
+                        int(round((interval[1] - self.meta.E_calib[1]) / self.meta.E_calib[0])))
+        if self.debug:
+            print('Using channels {} - {}'.format(interval[0], interval[1]))
         return self.dcube[:, :, interval[0]:interval[1]].sum(axis=2)
 
     def spectrum(self, ROI=None):
