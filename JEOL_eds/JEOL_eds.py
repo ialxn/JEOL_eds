@@ -162,6 +162,8 @@ class JEOL_pts:
         # Save extracted data cube. File name is the same as the '.pts' file
         # but extension is changed to 'npz'.
         >>>> dc.save_dcube()
+        # You can also supply your own filename, but use '.npz' as extension.
+        >>>> dc.save_dcube(fname='my_new_filename.npz')
 
         # JEOL_pts object can also be initialized from a saved data cube. In
         # this case, dtype is the same as in the stored data cube and a
@@ -326,10 +328,16 @@ class JEOL_pts:
 
         return self.dcube[ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=0).sum(axis=0)
 
-    def save_dcube(self):
-        """Save (compressed) data cube as file_name.npz
+    def save_dcube(self, fname=None):
+        """Save (compressed) data cube
+
+            Parameter
+                fname:  str (or None)
+                        filename. If none is supplied the basename
+                        of the '.pts' file is used.
         """
-        fname = os.path.splitext(self.file_name)[0] + '.npz'
+        if fname is None:
+            fname = os.path.splitext(self.file_name)[0] + '.npz'
         np.savez_compressed(fname, self.dcube)
 
     def __load_dcube(self, fname):
