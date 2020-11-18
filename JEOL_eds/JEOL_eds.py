@@ -194,6 +194,7 @@ class JEOL_pts:
                             Turn on (various) debug output.
         """
         if os.path.splitext(fname)[1] == '.npz':
+            self.debug = None
             self.meta = EDS_metadata(None)
             self.__load_dcube(fname)
         else:
