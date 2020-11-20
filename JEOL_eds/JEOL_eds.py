@@ -146,7 +146,10 @@ class JEOL_pts:
         # Specify energy interval (channels containing a spectral line) to
         # be used for map. Used to map specific elements.
         >>>> plt.imshow(dc.map(interval=(115, 130)))
-        >>>> <matplotlib.image.AxesImage at 0x7f7191eefd10>
+        <matplotlib.image.AxesImage at 0x7f7191eefd10>
+        # specify interval by energy (keV) instead of channel numbers.
+        >>>>plt.imshow(p_off.map(interval=(8,10), unit='keV'))
+        <matplotlib.image.AxesImage at 0x7f4fd0616950>
 
         # Plot spectrum integrated over full dimension.
         >>>> plt.plot(dc.spectrum())
@@ -159,6 +162,8 @@ class JEOL_pts:
         # Save extracted data cube. File name is the same as the '.pts' file
         # but extension is changed to 'npz'.
         >>>> dc.save_dcube()
+        # You can also supply your own filename, but use '.npz' as extension.
+        >>>> dc.save_dcube(fname='my_new_filename.npz')
 
         # JEOL_pts object can also be initialized from a saved data cube. In
         # this case, dtype is the same as in the stored data cube and a
@@ -191,6 +196,7 @@ class JEOL_pts:
                             Turn on (various) debug output.
         """
         if os.path.splitext(fname)[1] == '.npz':
+            self.debug = None
             self.meta = EDS_metadata(None)
             self.__load_dcube(fname)
         else:
@@ -281,13 +287,16 @@ class JEOL_pts:
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
 
-    def map(self, interval=None):
+    def map(self, interval=None, unit=None):
         """Returns map integrated over interval in spectrum
 
         Parameter
-            interval:   tuple (int, int)
-                        defines interval (channels) to be used for map.
+            interval:   tuple (number, number)
+                        defines interval (channels, or energy [keV]) to be used
+                        for map.
                         None imples that all channels are integrated.
+                unit:   None (interval is channel numbers) or 'keV' (data is
+                        in keV and will be converted to channel numbers).
 
 
         Returns
@@ -296,7 +305,11 @@ class JEOL_pts:
         """
         if not interval:
             interval = (0, self.meta.N_ch)
-
+        elif unit == 'keV':
+            interval = (int(round((interval[0] - self.meta.E_calib[1]) / self.meta.E_calib[0])),
+                        int(round((interval[1] - self.meta.E_calib[1]) / self.meta.E_calib[0])))
+        if self.debug:
+            print('Using channels {} - {}'.format(interval[0], interval[1]))
         return self.dcube[:, :, interval[0]:interval[1]].sum(axis=2)
 
     def spectrum(self, ROI=None):
@@ -316,10 +329,16 @@ class JEOL_pts:
 
         return self.dcube[ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=0).sum(axis=0)
 
-    def save_dcube(self):
-        """Save (compressed) data cube as file_name.npz
+    def save_dcube(self, fname=None):
+        """Save (compressed) data cube
+
+            Parameter
+                fname:  str (or None)
+                        filename. If none is supplied the basename
+                        of the '.pts' file is used.
         """
-        fname = os.path.splitext(self.file_name)[0] + '.npz'
+        if fname is None:
+            fname = os.path.splitext(self.file_name)[0] + '.npz'
         np.savez_compressed(fname, self.dcube)
 
     def __load_dcube(self, fname):
