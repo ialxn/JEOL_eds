@@ -176,9 +176,12 @@ class JEOL_pts:
         >>>> plt.plot(dc.spectrum(ROI=(10,20,50,100)))
         [<matplotlib.lines.Line2D at 0x7f7192b58050>]
         # Plot spectrum for a single frame (if split_frames is active).
-        >>>> plt.plot(dc.spectrum(frame=23))
+        >>>> plt.plot(dc.spectrum(frames=(23)))
         [<matplotlib.lines.Line2D at 0x7f06b3db32d0>]
-
+        # Extract spectrum corresponding to a few frames added
+        >>>> spec = dc.spectrum(frames=(0,2,5,6))
+        # Spectrum of all odd frames
+        >>>> spec = dc.spectrum(frames=range(1, dc.meta.sweep, 2))
 
         # Save extracted data cube. File name is the same as the '.pts' file
         # but extension is changed to 'npz'.
@@ -360,7 +363,7 @@ class JEOL_pts:
             return self.dcube[:, :, :, interval[0]:interval[1]].sum(axis=(0, 3))
         return self.dcube[frame, :, :, interval[0]:interval[1]].sum(axis=3)
 
-    def spectrum(self, ROI=None, frame=None):
+    def spectrum(self, ROI=None, frames=None):
         """Returns spectrum integrated over a ROI
 
         Parameter
@@ -368,21 +371,28 @@ class JEOL_pts:
                         defines ROI for which spectrum is extracted. ROI is
                         defined by its boundaries (left, right, top, bottom).
                         None implied that the whole image is used.
-               frame:   int
-                        Frame number used for spectrum. If split_frames is
-                        active and no frame number is given sum all frames.
+              frames:   iterable (tuple, list, array, range object)
+                        Frame numbers included in spectrum. If split_frames is
+                        active and frames is not specified all frames are included.
 
         Returns
             spectrum:   ndarray
                         spectrum
         """
-        if not self.split_frames:
-            frame = 0   # Only a single frame present unless split_frames active
         if not ROI:
             ROI = (0, self.meta.im_size, 0, self.meta.im_size)
-        if self.split_frames and frame is None:
-            return self.dcube[frame, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1, 2))
-        return self.dcube[frame, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
+        if not self.split_frames:   # only a single frame (0) present
+            return self.dcube[0, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
+
+        # split_frames is active
+        if frames is None:  # no frames specified, sum all frames (axis 0)
+            return self.dcube[:, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1, 2))
+
+        # only sum specified frames
+        spec = np.zeros(self.dcube.shape[-1])
+        for frame in frames:
+            spec += self.dcube[frame, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
+        return spec
 
     def save_dcube(self, fname=None):
         """Save (compressed) data cube
