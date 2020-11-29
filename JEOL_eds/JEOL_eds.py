@@ -287,17 +287,18 @@ class JEOL_pts:
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
 
-    def map(self, interval=None, unit=None):
+    def map(self, interval=None, energy=False):
         """Returns map integrated over interval in spectrum
 
         Parameter
             interval:   tuple (number, number)
                         defines interval (channels, or energy [keV]) to be used
                         for map.
-                        None imples that all channels are integrated.
-                unit:   None (interval is channel numbers) or 'keV' (data is
-                        in keV and will be converted to channel numbers).
 
+                        None implies that all channels are integrated.
+              energy:   bool
+                        If False (default) interval is specified as channel
+                        numbers otherwise (True) interval is specified as 'keV'.
 
         Returns
             map:   ndarray
@@ -305,7 +306,7 @@ class JEOL_pts:
         """
         if not interval:
             interval = (0, self.meta.N_ch)
-        if unit == 'keV':
+        if energy:
             interval = (int(round((interval[0] - self.meta.E_calib[1]) / self.meta.E_calib[0])),
                         int(round((interval[1] - self.meta.E_calib[1]) / self.meta.E_calib[0])))
         if self.debug:
