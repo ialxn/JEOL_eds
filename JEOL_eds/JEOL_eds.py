@@ -160,12 +160,18 @@ class JEOL_pts:
         >>>> plt.imshow(dc.map(interval=(115, 130)))
         <matplotlib.image.AxesImage at 0x7f7191eefd10>
         # specify interval by energy (keV) instead of channel numbers.
-        >>>>plt.imshow(p_off.map(interval=(8,10), unit='keV'))
+        >>>>plt.imshow(p_off.map(interval=(8,10), units=True))
         <matplotlib.image.AxesImage at 0x7f4fd0616950>
         # If split_frames is active you can specify to plot the map
         # of a single frame
-        >>>> plt.imshow(dc.map(frame=3))
+        >>>> plt.imshow(dc.map(frames=(3)))
         <matplotlib.image.AxesImage at 0x7f06c05ef750>
+        # Map correponding to a few frames
+        >>>> m = dc.map(frames=(3,5,11,12,13))
+        # Cu Kalpha map of all even frames
+        >>>> m = dc.map(interval=(7.9, 8.1),
+                        energy=True,
+                        frames=range(0, dc.meta.Sweep, 2))
 
         # Plot spectrum integrated over full dimension. If split_frames is
         # active the following plots spectra for all frames added together.
@@ -332,26 +338,26 @@ class JEOL_pts:
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
 
-    def map(self, interval=None, unit=None, frame=None):
+    def map(self, interval=None, unit=None, frames=None):
         """Returns map integrated over interval in spectrum
 
         Parameter
             interval:   tuple (number, number)
                         defines interval (channels, or energy [keV]) to be used
                         for map.
-                        None imples that all channels are integrated.
-                unit:   None (interval is channel numbers) or 'keV' (data is
-                        in keV and will be converted to channel numbers).
-               frame:   int
-                        Frame number used for map. If split_frames is active
-                        and no frame number is given sum all frames.
+                        None implies that all channels are integrated.
+              energy:   bool
+                        If false (default) interval is specified as channel
+                        numbers otherwise (True) interval is specified as 'keV'.
+              frames:   iterable (tuple, list, array, range object)
+                        Frame numbers included in map. If split_frames is
+                        active and frames is not specified all frames are
+                        included.
 
         Returns
             map:   ndarray
                    map
         """
-        if not self.split_frames:
-            frame = 0   # Only a single frame present unless split_frames active
         if not interval:
             interval = (0, self.meta.N_ch)
         elif unit == 'keV':
@@ -359,9 +365,19 @@ class JEOL_pts:
                         int(round((interval[1] - self.meta.E_calib[1]) / self.meta.E_calib[0])))
         if self.debug:
             print('Using channels {} - {}'.format(interval[0], interval[1]))
-        if self.split_frames and frame is None:
-            return self.dcube[:, :, :, interval[0]:interval[1]].sum(axis=(0, 3))
-        return self.dcube[frame, :, :, interval[0]:interval[1]].sum(axis=3)
+
+        if not self.split_frames:   # only a single frame (0) present
+            return self.dcube[0, :, :, interval[0]:interval[1]].sum(axis=-1)
+
+        # split_frame is active
+        if frames is None:  # no frames specified, sum all frames
+            return self.dcube[:, :, :, interval[0]:interval[1]].sum(axis=(0, -1))
+
+        # only sum specified frames
+        m = np.zeros((self.dcube.shape[1:3]))
+        for frame in frames:
+            m += self.dcube[frame, :, :, interval[0]:interval[1]].sum(axis=-1)
+        return m
 
     def spectrum(self, ROI=None, frames=None):
         """Returns spectrum integrated over a ROI
@@ -385,7 +401,7 @@ class JEOL_pts:
             return self.dcube[0, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
 
         # split_frames is active
-        if frames is None:  # no frames specified, sum all frames (axis 0)
+        if frames is None:  # no frames specified, sum all frames
             return self.dcube[:, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1, 2))
 
         # only sum specified frames
