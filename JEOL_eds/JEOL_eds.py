@@ -305,7 +305,7 @@ class JEOL_pts:
         """
         if not interval:
             interval = (0, self.meta.N_ch)
-        elif unit == 'keV':
+        if unit == 'keV':
             interval = (int(round((interval[0] - self.meta.E_calib[1]) / self.meta.E_calib[0])),
                         int(round((interval[1] - self.meta.E_calib[1]) / self.meta.E_calib[0])))
         if self.debug:
