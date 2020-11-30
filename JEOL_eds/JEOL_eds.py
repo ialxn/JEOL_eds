@@ -297,31 +297,27 @@ class JEOL_pts:
         unknown = {}
         frame = 0
         x = -1
-        A = 2**15
-        B = A + 4096
-        C = B + 4096
-        D = C + 4096
-        E = D + self.meta.N_ch
         # Data is mapped as follows:
-        #   A <= datum < B   -> y-coordinate
-        #   B <= datum < C   -> x-coordinate
-        #   C + 4096 <= datum < C + 4096 + numCH    -> count registered
+        #   32768 <= datum < 36864                  -> y-coordinate
+        #   36864 <= datum < 40960                  -> x-coordinate
+        #   45056 <= datum < END (=45056 + N_ch)    -> count registered
+        END = 45056 + self.meta.N_ch
         scale = 4096 / self.meta.im_size
         # map the size x size image into 4096x4096
         for d in data:
             N += 1
-            if A <= d < B:
-                y = int((d - A) / scale)
-            elif B <= d < C:
-                d = int((d - B) / scale)
+            if 32768 <= d < 36864:
+                y = int((d - 32768) / scale)
+            elif 36864 <= d < 40960:
+                d = int((d - 36864) / scale)
                 if self.split_frames and d < x:
                     # A new frame starts once the slow axis (x) restarts which
                     # is not necessary at zero, if we have very few counts and
                     # nothing registers on scan line x=0.
                     frame += 1
                 x = d
-            elif D <= d < E:
-                z = int(d - D)
+            elif 45056 <= d < END:
+                z = int(d - 45056)
                 dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
             else:
                 if self.debug:
