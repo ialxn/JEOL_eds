@@ -10,15 +10,16 @@ import struct
 import numpy as np
 
 class EDS_metadata:
-    """Class to contain metadata
+    """Class to store metadata.
     """
     def __init__(self, header):
         """Populates meta data from parameters stored in header
 
-            Parameter
-                header:     byte array (or None)
-                            Binary header or None if we were loading
-                            a '.npz' file that does not contain metadata.
+            Parameters
+            ----------
+                header:     Byte array (or None)
+                            Binary header or None if loading a '.npz'
+                            file that does not contain metadata.
         """
         self.N_ch = self.__get_parameter('NumCH', header)
         self.CH_Res = self.__get_parameter('CH Res', header)
@@ -42,18 +43,21 @@ class EDS_metadata:
         """Returns parameter value extracted from header (or None).
 
             Parameters
-                ParName:    str
-                            Name of parameter to be extracted
-                header:     byte array
-                            Binary header
+            ----------
+                ParName:    Str
+                            Name of parameter to be extracted.
+                 header:    Byte array
+                            Binary header.
 
             Returns
+            -------
                 value:      Any type (depends on parameter extracted)
                             Value of parameter. Single number or array
                             (or None, if reading from '.npz' file, i.e.
-                             when header is None)
+                            when header is None).
 
             Notes
+            -----
                 According to jeol_metadata.ods. Right after the parameter name
                 the numerical type of the parameter is encoded as '<u4' followed
                 by how many bytes are used to store it (parameter might contain
@@ -94,6 +98,7 @@ class JEOL_pts:
     """Work with JEOL '.pts' files
 
         Examples
+        --------
 
         # Initialize JEOL_pts object (read data from '.pts' file).
         # Data cube has dtype = 'uint16' (default).
@@ -125,18 +130,18 @@ class JEOL_pts:
         >>>> dc.dcube.shape     # Shape of data cube
         (1, 128, 128, 4096)
 
-        # Store individual frames
+        # Store individual frames.
         >>>> dc=JEOL_pts('test/128.pts', split_frames=True)
         >>>> dc.dcube.shape
         (50, 128, 128, 4096)
 
-        # More info is stored in metadata
+        # More info is stored in metadata.
         >>>> dc.meta.N_ch    # Number of energy channels
         4096
         >>>> dc.meta.im_size # Map dimension (size x size)
         128
-        # Print all metadata as dict
-        >>>>: vars(dc.meta)
+        # Print all metadata as dict.
+        >>>> vars(dc.meta)
         {'N_ch': 4096,
          'CH_Res': 0.01,
          'Sweep': 50,
@@ -151,7 +156,7 @@ class JEOL_pts:
         >>>> import matplotlib.pyplot as plt
 
         # Use all energy channels, i.e. plot map of total number of counts.
-        # If split_frames is active the following plots maps for all frames
+        # If split_frames is active, the following draws maps for all frames
         # added together.
         >>>> plt.imshow(dc.map())
         <matplotlib.image.AxesImage at 0x7f7192ee6dd0>
@@ -159,32 +164,32 @@ class JEOL_pts:
         # be used for map. Used to map specific elements.
         >>>> plt.imshow(dc.map(interval=(115, 130)))
         <matplotlib.image.AxesImage at 0x7f7191eefd10>
-        # specify interval by energy (keV) instead of channel numbers.
+        # Specify interval by energy (keV) instead of channel numbers.
         >>>>plt.imshow(p_off.map(interval=(8,10), units=True))
         <matplotlib.image.AxesImage at 0x7f4fd0616950>
         # If split_frames is active you can specify to plot the map
         # of a single frame
         >>>> plt.imshow(dc.map(frames=(3)))
         <matplotlib.image.AxesImage at 0x7f06c05ef750>
-        # Map correponding to a few frames
+        # Map correponding to a few frames.
         >>>> m = dc.map(frames=(3,5,11,12,13))
         # Cu Kalpha map of all even frames
         >>>> m = dc.map(interval=(7.9, 8.1),
                         energy=True,
                         frames=range(0, dc.meta.Sweep, 2))
 
-        # Plot spectrum integrated over full dimension. If split_frames is
+        # Plot spectrum integrated over full image. If split_frames is
         # active the following plots spectra for all frames added together.
         >>>> plt.plot(dc.spectrum())
         [<matplotlib.lines.Line2D at 0x7f7192feec10>]
         # Plot spectrum corresponding to a (rectangular) ROI specified as
         # tuple (left, right, top, bottom) of pixels.
         >>>> plt.plot(dc.spectrum(ROI=(10,20,50,100)))
-        [<matplotlib.lines.Line2D at 0x7f7192b58050>]
+        <matplotlib.lines.Line2D at 0x7f7192b58050>
         # Plot spectrum for a single frame (if split_frames is active).
         >>>> plt.plot(dc.spectrum(frames=(23)))
-        [<matplotlib.lines.Line2D at 0x7f06b3db32d0>]
-        # Extract spectrum corresponding to a few frames added
+        <matplotlib.lines.Line2D at 0x7f06b3db32d0>
+        # Extract spectrum corresponding to a few frames added.
         >>>> spec = dc.spectrum(frames=(0,2,5,6))
         # Spectrum of all odd frames
         >>>> spec = dc.spectrum(frames=range(1, dc.meta.sweep, 2))
@@ -202,34 +207,34 @@ class JEOL_pts:
         >>>> dc2.file_name
         '128.npz'
 
-        # If you want to read the data cube into your own program
+        # If you want to read the data cube into your own program.
         >>>> npzfile = np.load('128.npz')
         >>>> dcube = npzfile['arr_0']
-        # Single frame or split_frames was not active when data was saved
+        # split_frames was not active when data was saved.
         >>>> dcube.shape
         (1, 128, 128, 4096)
-        # Split_frames was active when data was saved
+        # Split_frames was active when data was saved.
         >>>> dcube.shape
         (50, 128, 128, 4096)
     """
 
     def __init__(self, fname, dtype='uint16', debug=False, split_frames=False):
-        """Read datacube from JEOL '.pts' file or from previously saved data cube
+        """Reads datacube from JEOL '.pts' file or from previously saved data cube.
 
             Parameters
-
-                 fname:     str
-                            filename
-                 dtype:     str
-                            data type used to store (not read) datacube.
-                            can be any of the dtype supported by numpy.
-                            if a '.npz' file is loaded, this parameter is
+            ----------
+                 fname:     Str
+                            Filename.
+                 dtype:     Str
+                            Data type used to store (not read) datacube.
+                            Can be any of the dtype supported by numpy.
+                            If a '.npz' file is loaded, this parameter is
                             ignored and the dtype corresponds to the one
-                            of the loaded data cube.
-                 debug:     bool
+                            of the data cube when it was stored.
+                 debug:     Bool
                             Turn on (various) debug output.
-          split_frames:     bool
-                            store individual frames in the data cube (if
+          split_frames:     Bool
+                            Store individual frames in the data cube (if
                             True), otherwise add all frames and store in
                             a single frame (default).
         """
@@ -252,10 +257,11 @@ class JEOL_pts:
         """Returns length of header (bytes) and size of data (number of u2).
 
             Returns
-                offset:     int
-                            size of header (bytes) before data starts
-                  size:     int
-                            number of data (u2) items
+            -------
+                offset:     Int
+                            Size of header (bytes) before data starts.
+                  size:     Int
+                            Number of data (u2) items.
         """
         with open(self.file_name, 'rb') as f:
             np.fromfile(f, dtype='u1', count=4)     # skip
@@ -270,20 +276,23 @@ class JEOL_pts:
             return offset, int(size)
 
     def __get_data_cube(self, dtype, hsize, Ndata):
-        """Returns data cube (F x X x Y x E)
+        """Returns data cube (F x X x Y x E).
 
             Parameters
-                dtype:      str
-                            data type used to store data cube
-                hsize:      int
-                            number of header bytes
-                Ndata:      int
-                            number of data items ('u2') to be read
+            ----------
+                dtype:      Str
+                            Data type used to store data cube in memory.
+                hsize:      Int
+                            Number of header bytes.
+                Ndata:      Int
+                            Number of data items ('u2') to be read.
 
             Returns
-                dcube:      numpy array (N x size x size x numCH)
-                            data cube. N is the number of frames (if
-                            split_frames was selected) otherwise N=1.
+            -------
+                dcube:      Ndarray (N x size x size x numCH)
+                            Data cube. N is the number of frames (if split_frames
+                            was selected) otherwise N=1, image is size x size pixels,
+                            spectra contain numCH channels.
         """
         with open(self.file_name, 'rb') as f:
             np.fromfile(f, dtype='u1', count=hsize)    # skip header
@@ -315,9 +324,9 @@ class JEOL_pts:
             elif B <= d < C:
                 d = int((d - B) / scale)
                 if self.split_frames and d < x:
-                    # A new frame starts once the slow axis (x) restarts which
-                    # is not necessary at zero, if we have very few counts and
-                    # nothing registers on scan line x=0.
+                    # A new frame starts once the slow axis (x) restarts. This
+                    # does not necessary happen at x=zero, if we have very few
+                    # counts and nothing registers on first scan line.
                     frame += 1
                 x = d
             elif D <= d < E:
@@ -346,24 +355,27 @@ class JEOL_pts:
         return dcube
 
     def map(self, interval=None, energy=False, frames=None):
-        """Returns map integrated over interval in spectrum
+        """Returns map corresponding to an interval in spectrum.
 
-        Parameter
-            interval:   tuple (number, number)
-                        defines interval (channels, or energy [keV]) to be used
-                        for map.
-                        None implies that all channels are integrated.
-              energy:   bool
-                        If false (default) interval is specified as channel
-                        numbers otherwise (True) interval is specified as 'keV'.
-              frames:   iterable (tuple, list, array, range object)
-                        Frame numbers included in map. If split_frames is
-                        active and frames is not specified all frames are
-                        included.
+            Parameters
+            ----------
+                interval:   Tuple (number, number)
+                            Defines interval (channels, or energy [keV]) to be
+                            used for map. None implies that all channels are
+                            integrated.
+                  energy:   Bool
+                            If false (default) interval is specified as channel
+                            numbers otherwise (True) interval is specified as
+                            'keV'.
+                  frames:   Iterable (tuple, list, array, range object)
+                            Frame numbers included in map. If split_frames is
+                            active and frames is not specified all frames are
+                            included.
 
-        Returns
-            map:   ndarray
-                   map
+            Returns
+            -------
+                map:   Ndarray
+                       Spectral Map.
         """
         if not interval:
             interval = (0, self.meta.N_ch)
@@ -387,20 +399,23 @@ class JEOL_pts:
         return m
 
     def spectrum(self, ROI=None, frames=None):
-        """Returns spectrum integrated over a ROI
+        """Returns spectrum integrated over a ROI.
 
-        Parameter
-                 ROI:   tuple (int, int, int, int) or None
-                        defines ROI for which spectrum is extracted. ROI is
-                        defined by its boundaries (left, right, top, bottom).
-                        None implied that the whole image is used.
-              frames:   iterable (tuple, list, array, range object)
-                        Frame numbers included in spectrum. If split_frames is
-                        active and frames is not specified all frames are included.
+            Parameters
+            ----------
+                     ROI:   Tuple (int, int, int, int) or None
+                            Defines ROI for which spectrum is extracted. ROI is
+                            defined by its boundaries (left, right, top, bottom).
+                            None implies that the whole image is used.
+                  frames:   Iterable (tuple, list, array, range object)
+                            Frame numbers included in spectrum. If split_frames
+                            is active and frames is not specified all frames
+                            are included.
 
-        Returns
-            spectrum:   ndarray
-                        spectrum
+            Returns
+            -------
+                spectrum:   Ndarray
+                            EDX spectrum
         """
         if not ROI:
             ROI = (0, self.meta.im_size, 0, self.meta.im_size)
@@ -418,23 +433,25 @@ class JEOL_pts:
         return spec
 
     def save_dcube(self, fname=None):
-        """Save (compressed) data cube
+        """Saves (compressed) data cube.
 
-            Parameter
-                fname:  str (or None)
-                        filename. If none is supplied the basename
-                        of the '.pts' file is used.
+            Parameters
+            ----------
+                fname:  Str (or None)
+                        Filename. If none is supplied the base name of the
+                        '.pts' file is used.
         """
         if fname is None:
             fname = os.path.splitext(self.file_name)[0] + '.npz'
         np.savez_compressed(fname, self.dcube)
 
     def __load_dcube(self, fname):
-        """Initialize by loading from previously saved data cube
+        """Loads a previously saved data cube.
 
-        Parameter
-            fname:  str
-                    file name of '.npz' file (must end in '.npz')
+            Parameters
+            ----------
+                fname:  Str
+                        File name of '.npz' file (must end in '.npz').
         """
         self.file_name = fname
         npzfile = np.load(fname)
