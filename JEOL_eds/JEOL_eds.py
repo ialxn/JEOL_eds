@@ -322,7 +322,14 @@ class JEOL_pts:
                 x = d
             elif D <= d < E:
                 z = int(d - D)
-                dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
+                ##################################################
+                #                                                #
+                #  tentative OFFSET by 96 channels (see #59_60)  #
+                #                                                #
+                ##################################################
+                z -= 96
+                if z >= 0:
+                    dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
             else:
                 if self.debug:
                     # I have no idea what these data mean
