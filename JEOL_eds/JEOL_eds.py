@@ -8,6 +8,7 @@ Created on Sat Nov  7 13:30:08 2020
 import os
 import struct
 import numpy as np
+from scipy.signal import wiener, correlate
 
 class EDS_metadata:
     """Class to store metadata.
@@ -207,6 +208,32 @@ class JEOL_pts:
         >>>> dc2.file_name
         '128.npz'
 
+        # Get list of (possible) shifts [(dx0, dy0), (dx1, dx2), ...] in pixels
+        # of individual frames using frame 0 as reference. The shifts are
+        # calculated from the cross correlation of images of total intensity of
+        # each individual frame.
+        # Set "filtered=True" to calculate shifts from Wiener filtered images.
+        >>>> dc.shifts()
+        [(0, 0),
+         (array([1]), array([1])),
+         (array([0]), array([0])),
+         .
+         .
+         .
+         (array([1]), array([2]))]
+        >>>> dc.shifts(filtered=True)
+        /.../miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: divide by zero encountered in true_divide
+         res *= (1 - noise / lVar)
+        /.../miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
+         res *= (1 - noise / lVar)
+        [(0, 0),
+         (array([1]), array([1])),
+         (array([0]), array([1])),
+         .
+         .
+         .
+         (array([1]), array([2]))]
+
         # If you want to read the data cube into your own program.
         >>>> npzfile = np.load('128.npz')
         >>>> dcube = npzfile['arr_0']
@@ -350,6 +377,39 @@ class JEOL_pts:
             for key in sorted(unknown):
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
+
+    def shifts(self, filtered=False):
+        """Calcultes frame shift by cross correlation of images (total intensity).
+
+            Parameters
+            ----------
+             filtered:     Bool
+                           If True, use Wiener filtered data.
+
+            Returns
+            -------
+                            List of tuples (dx, dy) containing the shift for
+                            all frames or empty list if only a single frame
+                            is present.
+        """
+        if self.meta.Sweep == 1:
+            # only a single frame present
+            return []
+        # Use first frame as reference
+        if filtered:
+            ref = wiener(self.map(frames=[0]))
+        else:
+            ref = self.map(frames=[0])
+        shifts = [(0, 0)]
+        for f in range(1, self.meta.Sweep):
+            if filtered:
+                c = correlate(ref, wiener(self.map(frames=[f])))
+            else:
+                c = correlate(ref, self.map(frames=[f]))
+            dx, dy = np.where(c==np.amax(c))
+            # FIX: More than one maximum is possible
+            shifts.append((self.meta.im_size - dx, self.meta.im_size - dy))
+        return shifts
 
     def map(self, interval=None, energy=False, frames=None, verbose=False):
         """Returns map corresponding to an interval in spectrum.
