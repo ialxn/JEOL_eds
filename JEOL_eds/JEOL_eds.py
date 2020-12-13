@@ -213,26 +213,28 @@ class JEOL_pts:
         # calculated from the cross correlation of images of total intensity of
         # each individual frame.
         # Set "filtered=True" to calculate shifts from Wiener filtered images.
-        >>>> dc.shifts()
+        >>>> dc.shifts(verbose=True)
+        Average of (3, 2) (1, 1) set to (2, 2) in frame 24
         [(0, 0),
-         (array([1]), array([1])),
-         (array([0]), array([0])),
-         .
-         .
-         .
-         (array([1]), array([2]))]
+         (1, 1),
+         (0, 0),
+             .
+             .
+             .
+         (1, 2)]
+
         >>>> dc.shifts(filtered=True)
         /.../miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: divide by zero encountered in true_divide
          res *= (1 - noise / lVar)
         /.../miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
          res *= (1 - noise / lVar)
         [(0, 0),
-         (array([1]), array([1])),
-         (array([0]), array([1])),
-         .
-         .
-         .
-         (array([1]), array([2]))]
+         (1, 1),
+         (0, 1),
+             .
+             .
+             .
+         (1, 2)]
 
         # If you want to read the data cube into your own program.
         >>>> npzfile = np.load('128.npz')
@@ -378,13 +380,15 @@ class JEOL_pts:
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
 
-    def shifts(self, filtered=False):
+    def shifts(self, filtered=False, verbose=False):
         """Calcultes frame shift by cross correlation of images (total intensity).
 
             Parameters
             ----------
              filtered:     Bool
                            If True, use Wiener filtered data.
+              verbose:     Bool
+                           Provide additional info if set to True.
 
             Returns
             -------
@@ -407,7 +411,19 @@ class JEOL_pts:
             else:
                 c = correlate(ref, self.map(frames=[f]))
             dx, dy = np.where(c==np.amax(c))
-            # FIX: More than one maximum is possible
+            if dx.shape[0] > 1 and verbose:
+                # Report cases where averging was applied
+                print('Average of', end=' ')
+                for x, y in zip(dx, dy):
+                    print('({}, {})'.format(self.meta.im_size - x,
+                                            self.meta.im_size - y),
+                          end=' ')
+                print('set to ({}, {}) in frame {}'.format(self.meta.im_size - round(dx.mean()),
+                                                            self.meta.im_size - round(dy.mean()),
+                                                            f))
+            # More than one maximum is possible, use average
+            dx = round(dx.mean())
+            dy = round(dy.mean())
             shifts.append((self.meta.im_size - dx, self.meta.im_size - dy))
         return shifts
 
