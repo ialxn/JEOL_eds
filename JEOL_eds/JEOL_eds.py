@@ -111,8 +111,8 @@ class JEOL_pts:
         >>>> dc.dcube.dtype
         dtype('int64')
 
-        # Provide some debug output when loading.
-        >>>> dc = JEOL_pts('128.pts', dtype='uint16', debug=True)
+        # Provide additional (debug) output when loading.
+        >>>> dc = JEOL_pts('128.pts', dtype='uint16', verbose=True)
         Unidentified data items (2081741 out of 902010, 43.33%) found:
 	        24576: found 41858 times
 	        28672: found 40952 times
@@ -218,7 +218,7 @@ class JEOL_pts:
         (50, 128, 128, 4096)
     """
 
-    def __init__(self, fname, dtype='uint16', debug=False, split_frames=False):
+    def __init__(self, fname, dtype='uint16', verbose=False, split_frames=False):
         """Reads datacube from JEOL '.pts' file or from previously saved data cube.
 
             Parameters
@@ -231,8 +231,8 @@ class JEOL_pts:
                             If a '.npz' file is loaded, this parameter is
                             ignored and the dtype corresponds to the one
                             of the data cube when it was stored.
-                 debug:     Bool
-                            Turn on (various) debug output.
+               verbose:     Bool
+                            Turn on (various) output.
           split_frames:     Bool
                             Store individual frames in the data cube (if
                             True), otherwise add all frames and store in
@@ -240,17 +240,16 @@ class JEOL_pts:
         """
         self.split_frames = split_frames
         if os.path.splitext(fname)[1] == '.npz':
-            self.debug = None
             self.meta = EDS_metadata(None)
             self.__load_dcube(fname)
         else:
             self.file_name = fname
-            self.debug = debug
             headersize, datasize = self.__get_offset_and_size()
             with open(fname, 'rb') as f:
                 header = np.fromfile(f, dtype='u1', count=headersize)
                 self.meta = EDS_metadata(header)
-            self.dcube = self.__get_data_cube(dtype, headersize, datasize)
+            self.dcube = self.__get_data_cube(dtype, headersize, datasize,
+                                              verbose=verbose)
 
 
     def __get_offset_and_size(self):
@@ -275,7 +274,7 @@ class JEOL_pts:
             size = (size - offset) / 2  # convert to number of u2 in data segment
             return offset, int(size)
 
-    def __get_data_cube(self, dtype, hsize, Ndata):
+    def __get_data_cube(self, dtype, hsize, Ndata, verbose=False):
         """Returns data cube (F x X x Y x E).
 
             Parameters
@@ -286,6 +285,8 @@ class JEOL_pts:
                             Number of header bytes.
                 Ndata:      Int
                             Number of data items ('u2') to be read.
+              verbose:      Bool
+                            Print additional output
 
             Returns
             -------
@@ -336,7 +337,7 @@ class JEOL_pts:
                 if z >= 0:
                     dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
             else:
-                if self.debug:
+                if verbose:
                     # I have no idea what these data mean
                     # collect statistics on these values for debug
                     if str(d) in unknown:
@@ -344,13 +345,13 @@ class JEOL_pts:
                     else:
                         unknown[str(d)] = 1
                     N_err += 1
-        if self.debug:
+        if verbose:
             print('Unidentified data items ({} out of {}, {:.2f}%) found:'.format(N, N_err, 100*N_err/N))
             for key in sorted(unknown):
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
 
-    def map(self, interval=None, energy=False, frames=None):
+    def map(self, interval=None, energy=False, frames=None, verbose=False):
         """Returns map corresponding to an interval in spectrum.
 
             Parameters
@@ -367,6 +368,8 @@ class JEOL_pts:
                             Frame numbers included in map. If split_frames is
                             active and frames is not specified all frames are
                             included.
+                 verbose:   Bool
+                            If True, output some additional info.
 
             Returns
             -------
@@ -378,7 +381,7 @@ class JEOL_pts:
         if energy:
             interval = (int(round((interval[0] - self.meta.E_calib[1]) / self.meta.E_calib[0])),
                         int(round((interval[1] - self.meta.E_calib[1]) / self.meta.E_calib[0])))
-        if self.debug:
+        if verbose:
             print('Using channels {} - {}'.format(interval[0], interval[1]))
 
         if not self.split_frames:   # only a single frame (0) present
