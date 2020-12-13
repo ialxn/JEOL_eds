@@ -236,6 +236,19 @@ class JEOL_pts:
              .
          (1, 2)]
 
+        # Calulate shifts for odd frames only
+        >>>> dc.shifts(frames=range(1, 50, 2)
+        [(0, 0),
+         (1, 1),
+         (0, 0),
+         (2, 1),
+         (0, 0),
+             .
+             .
+             .
+         (0, 0),
+         (1, 2)]
+
         # If you want to read the data cube into your own program.
         >>>> npzfile = np.load('128.npz')
         >>>> dcube = npzfile['arr_0']
@@ -380,11 +393,13 @@ class JEOL_pts:
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
 
-    def shifts(self, filtered=False, verbose=False):
+    def shifts(self, frames=None, filtered=False, verbose=False):
         """Calcultes frame shift by cross correlation of images (total intensity).
 
             Parameters
             ----------
+               frames:     Iterable
+                           Frame numbers for which shifts are calculated.
              filtered:     Bool
                            If True, use Wiener filtered data.
               verbose:     Bool
@@ -395,17 +410,26 @@ class JEOL_pts:
                             List of tuples (dx, dy) containing the shift for
                             all frames or empty list if only a single frame
                             is present.
+                            CAREFUL! Non-empty list ALWAYS contains 'meta.Sweeps'
+                            elements and contains (0, 0) for frames that were
+                            not in the list provided by keyword 'frames='.
         """
         if self.meta.Sweep == 1:
             # only a single frame present
             return []
-        # Use first frame as reference
+        if frames is None:
+            frames = range(1, self.meta.Sweep) # Skip reference frame
+        # Use first frame as reference even if it is not included in list
+        # provided by keyword 'frames='
         if filtered:
             ref = wiener(self.map(frames=[0]))
         else:
             ref = self.map(frames=[0])
-        shifts = [(0, 0)]
-        for f in range(1, self.meta.Sweep):
+        shifts = [(0, 0)] * self.meta.Sweep
+        for f in frames:
+            if f == 0:
+                # Skip the reference frame
+                continue
             if filtered:
                 c = correlate(ref, wiener(self.map(frames=[f])))
             else:
@@ -424,7 +448,7 @@ class JEOL_pts:
             # More than one maximum is possible, use average
             dx = round(dx.mean())
             dy = round(dy.mean())
-            shifts.append((self.meta.im_size - dx, self.meta.im_size - dy))
+            shifts[f] = (self.meta.im_size - dx, self.meta.im_size - dy)
         return shifts
 
     def map(self, interval=None, energy=False, frames=None, verbose=False):
