@@ -7,5 +7,6 @@ setup(name='JEOL_eds',
       author='Ivo Alxneit',
       author_email='ivo.alxneit@psi.ch',
       packages=['JEOL_eds'],
-      install_requires=['numpy'],
+      install_requires=['numpy',
+                        'scipy'],
       zip_safe=False)

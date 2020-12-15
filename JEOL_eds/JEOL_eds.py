@@ -8,6 +8,7 @@ Created on Sat Nov  7 13:30:08 2020
 import os
 import struct
 import numpy as np
+from scipy.signal import wiener, correlate
 
 class EDS_metadata:
     """Class to store metadata.
@@ -111,8 +112,8 @@ class JEOL_pts:
         >>>> dc.dcube.dtype
         dtype('int64')
 
-        # Provide some debug output when loading.
-        >>>> dc = JEOL_pts('128.pts', dtype='uint16', debug=True)
+        # Provide additional (debug) output when loading.
+        >>>> dc = JEOL_pts('128.pts', dtype='uint16', verbose=True)
         Unidentified data items (2081741 out of 902010, 43.33%) found:
 	        24576: found 41858 times
 	        28672: found 40952 times
@@ -177,6 +178,10 @@ class JEOL_pts:
         >>>> m = dc.map(interval=(7.9, 8.1),
                         energy=True,
                         frames=range(0, dc.meta.Sweep, 2))
+        # Correct for frame shifts with additional output
+        >>>> dc.map(align='yes', verbose=True)
+        Using channels 0 - 4096
+        Average of (3, 2) (1, 1) set to (2, 2) in frame 24
 
         # Plot spectrum integrated over full image. If split_frames is
         # active the following plots spectra for all frames added together.
@@ -207,6 +212,47 @@ class JEOL_pts:
         >>>> dc2.file_name
         '128.npz'
 
+        # Get list of (possible) shifts [(dx0, dy0), (dx1, dx2), ...] in pixels
+        # of individual frames using frame 0 as reference. The shifts are
+        # calculated from the cross correlation of images of total intensity of
+        # each individual frame.
+        # Set "filtered=True" to calculate shifts from Wiener filtered images.
+        >>>> dc.shifts(verbose=True)
+        Average of (3, 2) (1, 1) set to (2, 2) in frame 24
+        [(0, 0),
+         (1, 1),
+         (0, 0),
+             .
+             .
+             .
+         (1, 2)]
+
+        >>>> dc.shifts(filtered=True)
+        /.../miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: divide by zero encountered in true_divide
+         res *= (1 - noise / lVar)
+        /.../miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
+         res *= (1 - noise / lVar)
+        [(0, 0),
+         (1, 1),
+         (0, 1),
+             .
+             .
+             .
+         (1, 2)]
+
+        # Calulate shifts for odd frames only
+        >>>> dc.shifts(frames=range(1, 50, 2)
+        [(0, 0),
+         (1, 1),
+         (0, 0),
+         (2, 1),
+         (0, 0),
+             .
+             .
+             .
+         (0, 0),
+         (1, 2)]
+
         # If you want to read the data cube into your own program.
         >>>> npzfile = np.load('128.npz')
         >>>> dcube = npzfile['arr_0']
@@ -218,7 +264,7 @@ class JEOL_pts:
         (50, 128, 128, 4096)
     """
 
-    def __init__(self, fname, dtype='uint16', debug=False, split_frames=False):
+    def __init__(self, fname, dtype='uint16', verbose=False, split_frames=False):
         """Reads datacube from JEOL '.pts' file or from previously saved data cube.
 
             Parameters
@@ -231,8 +277,8 @@ class JEOL_pts:
                             If a '.npz' file is loaded, this parameter is
                             ignored and the dtype corresponds to the one
                             of the data cube when it was stored.
-                 debug:     Bool
-                            Turn on (various) debug output.
+               verbose:     Bool
+                            Turn on (various) output.
           split_frames:     Bool
                             Store individual frames in the data cube (if
                             True), otherwise add all frames and store in
@@ -240,17 +286,16 @@ class JEOL_pts:
         """
         self.split_frames = split_frames
         if os.path.splitext(fname)[1] == '.npz':
-            self.debug = None
             self.meta = EDS_metadata(None)
             self.__load_dcube(fname)
         else:
             self.file_name = fname
-            self.debug = debug
             headersize, datasize = self.__get_offset_and_size()
             with open(fname, 'rb') as f:
                 header = np.fromfile(f, dtype='u1', count=headersize)
                 self.meta = EDS_metadata(header)
-            self.dcube = self.__get_data_cube(dtype, headersize, datasize)
+            self.dcube = self.__get_data_cube(dtype, headersize, datasize,
+                                              verbose=verbose)
 
 
     def __get_offset_and_size(self):
@@ -275,7 +320,7 @@ class JEOL_pts:
             size = (size - offset) / 2  # convert to number of u2 in data segment
             return offset, int(size)
 
-    def __get_data_cube(self, dtype, hsize, Ndata):
+    def __get_data_cube(self, dtype, hsize, Ndata, verbose=False):
         """Returns data cube (F x X x Y x E).
 
             Parameters
@@ -286,6 +331,8 @@ class JEOL_pts:
                             Number of header bytes.
                 Ndata:      Int
                             Number of data items ('u2') to be read.
+              verbose:      Bool
+                            Print additional output
 
             Returns
             -------
@@ -336,7 +383,7 @@ class JEOL_pts:
                 if z >= 0:
                     dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
             else:
-                if self.debug:
+                if verbose:
                     # I have no idea what these data mean
                     # collect statistics on these values for debug
                     if str(d) in unknown:
@@ -344,13 +391,72 @@ class JEOL_pts:
                     else:
                         unknown[str(d)] = 1
                     N_err += 1
-        if self.debug:
+        if verbose:
             print('Unidentified data items ({} out of {}, {:.2f}%) found:'.format(N, N_err, 100*N_err/N))
             for key in sorted(unknown):
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
 
-    def map(self, interval=None, energy=False, frames=None):
+    def shifts(self, frames=None, filtered=False, verbose=False):
+        """Calcultes frame shift by cross correlation of images (total intensity).
+
+            Parameters
+            ----------
+               frames:     Iterable
+                           Frame numbers for which shifts are calculated.
+             filtered:     Bool
+                           If True, use Wiener filtered data.
+              verbose:     Bool
+                           Provide additional info if set to True.
+
+            Returns
+            -------
+                            List of tuples (dx, dy) containing the shift for
+                            all frames or empty list if only a single frame
+                            is present.
+                            CAREFUL! Non-empty list ALWAYS contains 'meta.Sweeps'
+                            elements and contains (0, 0) for frames that were
+                            not in the list provided by keyword 'frames='.
+        """
+        if self.meta.Sweep == 1:
+            # only a single frame present
+            return []
+        if frames is None:
+            frames = range(1, self.meta.Sweep) # Skip reference frame
+        # Use first frame as reference even if it is not included in list
+        # provided by keyword 'frames='
+        if filtered:
+            ref = wiener(self.map(frames=[0]))
+        else:
+            ref = self.map(frames=[0])
+        shifts = [(0, 0)] * self.meta.Sweep
+        for f in frames:
+            if f == 0:
+                # Skip the reference frame
+                continue
+            if filtered:
+                c = correlate(ref, wiener(self.map(frames=[f])))
+            else:
+                c = correlate(ref, self.map(frames=[f]))
+            dx, dy = np.where(c==np.amax(c))
+            if dx.shape[0] > 1 and verbose:
+                # Report cases where averging was applied
+                print('Average of', end=' ')
+                for x, y in zip(dx, dy):
+                    print('({}, {})'.format(self.meta.im_size - x,
+                                            self.meta.im_size - y),
+                          end=' ')
+                print('set to ({}, {}) in frame {}'.format(self.meta.im_size - round(dx.mean()),
+                                                            self.meta.im_size - round(dy.mean()),
+                                                            f))
+            # More than one maximum is possible, use average
+            dx = round(dx.mean())
+            dy = round(dy.mean())
+            shifts[f] = (self.meta.im_size - dx, self.meta.im_size - dy)
+        return shifts
+
+    def map(self, interval=None, energy=False, frames=None, align='no',
+            verbose=False):
         """Returns map corresponding to an interval in spectrum.
 
             Parameters
@@ -367,32 +473,66 @@ class JEOL_pts:
                             Frame numbers included in map. If split_frames is
                             active and frames is not specified all frames are
                             included.
+                   align:   Str
+                            'no': Do not aligne individual frames.
+                            'yes': Align frames (use unfiltered frames in
+                                   cross correlation).
+                            'filter': Align frames (use  Wiener filtered
+                                      frames in cross correlation).
+                 verbose:   Bool
+                            If True, output some additional info.
 
             Returns
             -------
                 map:   Ndarray
                        Spectral Map.
         """
+        try: # Check for valid keyword arguments
+            ['yes', 'no', 'filter'].index(align)
+        except ValueError:
+            raise
+
         if not interval:
             interval = (0, self.meta.N_ch)
         if energy:
             interval = (int(round((interval[0] - self.meta.E_calib[1]) / self.meta.E_calib[0])),
                         int(round((interval[1] - self.meta.E_calib[1]) / self.meta.E_calib[0])))
-        if self.debug:
+        if verbose:
             print('Using channels {} - {}'.format(interval[0], interval[1]))
 
         if not self.split_frames:   # only a single frame (0) present
             return self.dcube[0, :, :, interval[0]:interval[1]].sum(axis=-1)
 
-        # split_frame is active
-        if frames is None:  # no frames specified, sum all frames
-            return self.dcube[:, :, :, interval[0]:interval[1]].sum(axis=(0, -1))
+        # split_frame is active but no alignment required
+        if align == 'no':
+            if frames is None:
+                return self.dcube[:, :, :, interval[0]:interval[1]].sum(axis=(0, -1))
+            # Only sum frames specified
+            m = np.zeros((self.meta.im_size, self.meta.im_size))
+            for frame in frames:
+                m += self.dcube[frame, :, :, interval[0]:interval[1]].sum(axis=-1)
+            return m
 
-        # only sum specified frames
-        m = np.zeros((self.dcube.shape[1:3]))
-        for frame in frames:
-            m += self.dcube[frame, :, :, interval[0]:interval[1]].sum(axis=-1)
-        return m
+        # Alignment is required
+        if frames is None:
+            # Sum all frames
+            frames = np.arange(self.meta.Sweep)
+        # Calculate frame shifts
+        if align == 'filter':
+            shifts = self.shifts(frames=frames, filtered=True, verbose=verbose)
+        if align == 'yes':
+            shifts = self.shifts(frames=frames, verbose=verbose)
+        # Allocate array for result
+        res = np.zeros((2*self.meta.im_size, 2*self.meta.im_size))
+        x0 = self.meta.im_size // 2
+        y0 = self.meta.im_size // 2
+        N = self.meta.im_size
+        for f in frames:
+            # map of this frame summed over all energy intervals
+            dx, dy = shifts[f]
+            res[x0-dx:x0-dx+N, y0-dy:y0-dy+N] += self.dcube[f, :, :,
+                                                            interval[0]:interval[1]].sum(axis=-1)
+        return res[x0:x0+N, y0:y0+N]
 
     def spectrum(self, ROI=None, frames=None):
         """Returns spectrum integrated over a ROI.
