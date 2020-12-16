@@ -240,6 +240,24 @@ class JEOL_pts:
              .
          (0, -1)]
 
+        # Get the 2D frequency distribution of the frames shifts using (or not)
+        # Wiener filtered frames.
+        >>>> dc.drift_statistics(verbose=True)
+        Average of (3, 2) (1, 1) set to (2, 2) in frame 24
+        Shifts (unfiltered):
+            Range: 0 - 3
+            Maximum 12 at (2, 1)
+        array([[ 2.,  4.,  0.],
+               [ 1., 11., 11.],
+               [ 0., 12.,  9.]])
+
+        >>>> m = dc.drift_statistics(filtered=True)
+        /.../scipy/signal/signaltools.py:1475: RuntimeWarning: divide by zero encountered in true_divide
+        res *= (1 - noise / lVar)
+        /.../scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
+        res *= (1 - noise / lVar)
+        plt.imshow(m)
+
         # Calulate shifts for odd frames only
         >>>> dc.shifts(frames=range(1, 50, 2))
         [(0, 0),
@@ -396,6 +414,44 @@ class JEOL_pts:
             for key in sorted(unknown):
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
+
+    def drift_statistics(self, filtered=False, verbose=False):
+        """Returns 2D frequency distribution of frame shifts (x, y).
+
+            Parameters
+            ----------
+             filtered:     Bool
+                           If True, use Wiener filtered data.
+              verbose:     Bool
+                           Provide additional info if set to True.
+
+           Returns
+           -------
+                           Ndarray or None if data cube contains a single
+                           frame only.
+        """
+        if self.dcube.shape[0] == 1:
+            return None
+        sh = self.shifts(filtered=filtered, verbose=verbose)
+        amin = np.min(sh)  # absolute min
+        amax = np.max(sh)  # absolute max
+        bins = np.arange(amin, amax + 1)  # bin edges for square histogram
+        h, _, _ = np.histogram2d(np.asarray(sh)[:, 0],
+                                 np.asarray(sh)[:, 1],
+                                 bins=bins)
+        if verbose:
+            peak_val = int(h.max())
+            mx, my = np.where(h==np.amax(h))
+            mx = int(mx + amin)
+            my = int(my + amin)
+            if filtered:
+                print('Shifts (filtered):')
+            else:
+                print('Shifts (unfiltered):')
+            print('   Range: {} - {}'.format(int(np.asarray(sh).min()),
+                                             int(np.asarray(sh).max())))
+            print('   Maximum {} at ({}, {})'.format(peak_val, mx, my))
+        return h
 
     def shifts(self, frames=None, filtered=False, verbose=False):
         """Calcultes frame shift by cross correlation of images (total intensity).
