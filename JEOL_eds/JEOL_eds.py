@@ -438,21 +438,24 @@ class JEOL_pts:
                 c = correlate(ref, wiener(self.map(frames=[f])))
             else:
                 c = correlate(ref, self.map(frames=[f]))
+            # c has shape (2 * self.meta.im_size - 1, 2 * self.meta.im_size - 1)
+            # Autocorrelation peaks at [self.meta.im_size - 1, self.meta.im_size - 1]
+            # i.e. offset is at dy (dy) index_of_maximum - self.meta.im_size + 1.
             dx, dy = np.where(c==np.amax(c))
             if dx.shape[0] > 1 and verbose:
                 # Report cases where averging was applied
                 print('Average of', end=' ')
                 for x, y in zip(dx, dy):
-                    print('({}, {})'.format(self.meta.im_size - x,
-                                            self.meta.im_size - y),
+                    print('({}, {})'.format(x - self.meta.im_size + 1,
+                                            y - self.meta.im_size + 1),
                           end=' ')
-                print('set to ({}, {}) in frame {}'.format(self.meta.im_size - round(dx.mean()),
-                                                            self.meta.im_size - round(dy.mean()),
+                print('set to ({}, {}) in frame {}'.format(round(dx.mean() - self.meta.im_size + 1),
+                                                           round(dy.mean() - self.meta.im_size + 1),
                                                             f))
             # More than one maximum is possible, use average
             dx = round(dx.mean())
             dy = round(dy.mean())
-            shifts[f] = (self.meta.im_size - dx, self.meta.im_size - dy)
+            shifts[f] = (dx - self.meta.im_size + 1, dy - self.meta.im_size + 1)
         return shifts
 
     def map(self, interval=None, energy=False, frames=None, align='no',
