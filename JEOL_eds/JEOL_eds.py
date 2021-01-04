@@ -181,7 +181,7 @@ class JEOL_pts:
         # Correct for frame shifts with additional output
         >>>> dc.map(align='yes', verbose=True)
         Using channels 0 - 4096
-        Average of (3, 2) (1, 1) set to (2, 2) in frame 24
+        Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
 
         # Plot spectrum integrated over full image. If split_frames is
         # active the following plots spectra for all frames added together.
@@ -218,14 +218,14 @@ class JEOL_pts:
         # each individual frame.
         # Set "filtered=True" to calculate shifts from Wiener filtered images.
         >>>> dc.shifts(verbose=True)
-        Average of (3, 2) (1, 1) set to (2, 2) in frame 24
+        Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
         [(0, 0),
-         (1, 1),
          (0, 0),
+         (1, 1),
              .
              .
              .
-         (1, 2)]
+         (0, -1)]
 
         >>>> dc.shifts(filtered=True)
         /.../miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: divide by zero encountered in true_divide
@@ -233,25 +233,25 @@ class JEOL_pts:
         /.../miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
          res *= (1 - noise / lVar)
         [(0, 0),
-         (1, 1),
-         (0, 1),
+         (0, 0),
+         (1, 0),
              .
              .
              .
-         (1, 2)]
+         (0, -1)]
 
         # Calulate shifts for odd frames only
-        >>>> dc.shifts(frames=range(1, 50, 2)
+        >>>> dc.shifts(frames=range(1, 50, 2))
         [(0, 0),
-         (1, 1),
          (0, 0),
-         (2, 1),
+         (0, 0),
+         (-1, 0),
          (0, 0),
              .
              .
              .
          (0, 0),
-         (1, 2)]
+         (0, -1)]
 
         # If you want to read the data cube into your own program.
         >>>> npzfile = np.load('128.npz')
