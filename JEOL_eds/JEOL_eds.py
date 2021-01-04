@@ -243,20 +243,23 @@ class JEOL_pts:
         # Get the 2D frequency distribution of the frames shifts using (or not)
         # Wiener filtered frames.
         >>>> dc.drift_statistics(verbose=True)
-        Average of (3, 2) (1, 1) set to (2, 2) in frame 24
+        Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
         Shifts (unfiltered):
-            Range: 0 - 3
-            Maximum 12 at (2, 1)
-        array([[ 2.,  4.,  0.],
-               [ 1., 11., 11.],
-               [ 0., 12.,  9.]])
+            Range: -2 - 1
+            Maximum 12 at (0, 0)
+        (array([[ 0.,  0.,  5.,  0.,  0.],
+                [ 0.,  9.,  7.,  0.,  0.],
+                [ 1., 10., 12.,  1.,  0.],
+                [ 0.,  0.,  4.,  1.,  0.],
+                [ 0.,  0.,  0.,  0.,  0.]]),
+         [-2, 2, -2, 2])
 
-        >>>> m = dc.drift_statistics(filtered=True)
+        >>>> m, e = dc.drift_statistics(filtered=True)
         /.../scipy/signal/signaltools.py:1475: RuntimeWarning: divide by zero encountered in true_divide
         res *= (1 - noise / lVar)
         /.../scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
         res *= (1 - noise / lVar)
-        plt.imshow(m)
+        plt.imshow(m, extent=e)
 
         # Calulate shifts for odd frames only
         >>>> dc.shifts(frames=range(1, 50, 2))
@@ -427,23 +430,26 @@ class JEOL_pts:
 
            Returns
            -------
-                           Ndarray or None if data cube contains a single
+                    h:     Ndarray or None if data cube contains a single
                            frame only.
+               extent:     List
+                           Used to plot histogram as plt.imshow(h, extent=extent)
         """
         if self.dcube.shape[0] == 1:
-            return None
+            return None, None
         sh = self.shifts(filtered=filtered, verbose=verbose)
-        amin = np.min(sh)  # absolute min
-        amax = np.max(sh)  # absolute max
-        bins = np.arange(amin, amax + 1)  # bin edges for square histogram
+        amax = np.abs(np.asarray(sh)).max()
+        # bin edges for square histogram centered at 0,0
+        bins = np.arange(-amax - 0.5, amax + 1.5)
+        extent = [-amax, amax, -amax, amax]
         h, _, _ = np.histogram2d(np.asarray(sh)[:, 0],
                                  np.asarray(sh)[:, 1],
                                  bins=bins)
         if verbose:
             peak_val = int(h.max())
             mx, my = np.where(h==np.amax(h))
-            mx = int(mx + amin)
-            my = int(my + amin)
+            mx = int(bins[int(mx)] + 0.5)
+            my = int(bins[int(my)] + 0.5)
             if filtered:
                 print('Shifts (filtered):')
             else:
@@ -451,7 +457,7 @@ class JEOL_pts:
             print('   Range: {} - {}'.format(int(np.asarray(sh).min()),
                                              int(np.asarray(sh).max())))
             print('   Maximum {} at ({}, {})'.format(peak_val, mx, my))
-        return h
+        return h, extent
 
     def shifts(self, frames=None, filtered=False, verbose=False):
         """Calcultes frame shift by cross correlation of images (total intensity).
