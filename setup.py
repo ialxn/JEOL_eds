@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(name='JEOL_eds',
       description='Read binary ".pts" files',
-      version='0.5',
+      version='0.6',
       author='Ivo Alxneit',
       author_email='ivo.alxneit@psi.ch',
       packages=['JEOL_eds'],
