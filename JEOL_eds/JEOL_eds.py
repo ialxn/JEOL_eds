@@ -101,6 +101,8 @@ class JEOL_pts:
         Examples
         --------
 
+        >>>> from JEOL_eds import JEOL_pts
+
         # Initialize JEOL_pts object (read data from '.pts' file).
         # Data cube has dtype = 'uint16' (default).
         >>>> dc = JEOL_pts('128.pts')
@@ -181,7 +183,7 @@ class JEOL_pts:
         # Correct for frame shifts with additional output
         >>>> dc.map(align='yes', verbose=True)
         Using channels 0 - 4096
-        Average of (3, 2) (1, 1) set to (2, 2) in frame 24
+        Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
 
         # Plot spectrum integrated over full image. If split_frames is
         # active the following plots spectra for all frames added together.
@@ -218,14 +220,14 @@ class JEOL_pts:
         # each individual frame.
         # Set "filtered=True" to calculate shifts from Wiener filtered images.
         >>>> dc.shifts(verbose=True)
-        Average of (3, 2) (1, 1) set to (2, 2) in frame 24
+        Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
         [(0, 0),
-         (1, 1),
          (0, 0),
+         (1, 1),
              .
              .
              .
-         (1, 2)]
+         (0, -1)]
 
         >>>> dc.shifts(filtered=True)
         /.../miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: divide by zero encountered in true_divide
@@ -233,25 +235,46 @@ class JEOL_pts:
         /.../miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
          res *= (1 - noise / lVar)
         [(0, 0),
-         (1, 1),
-         (0, 1),
+         (0, 0),
+         (1, 0),
              .
              .
              .
-         (1, 2)]
+         (0, -1)]
+
+        # Get the 2D frequency distribution of the frames shifts using (or not)
+        # Wiener filtered frames.
+        >>>> dc.drift_statistics(verbose=True)
+        Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
+        Shifts (unfiltered):
+            Range: -2 - 1
+            Maximum 12 at (0, 0)
+        (array([[ 0.,  0.,  5.,  0.,  0.],
+                [ 0.,  9.,  7.,  0.,  0.],
+                [ 1., 10., 12.,  1.,  0.],
+                [ 0.,  0.,  4.,  1.,  0.],
+                [ 0.,  0.,  0.,  0.,  0.]]),
+         [-2, 2, -2, 2])
+
+        >>>> m, e = dc.drift_statistics(filtered=True)
+        /.../scipy/signal/signaltools.py:1475: RuntimeWarning: divide by zero encountered in true_divide
+        res *= (1 - noise / lVar)
+        /.../scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
+        res *= (1 - noise / lVar)
+        plt.imshow(m, extent=e)
 
         # Calulate shifts for odd frames only
-        >>>> dc.shifts(frames=range(1, 50, 2)
+        >>>> dc.shifts(frames=range(1, 50, 2))
         [(0, 0),
-         (1, 1),
          (0, 0),
-         (2, 1),
+         (0, 0),
+         (-1, 0),
          (0, 0),
              .
              .
              .
          (0, 0),
-         (1, 2)]
+         (0, -1)]
 
         # If you want to read the data cube into your own program.
         >>>> npzfile = np.load('128.npz')
@@ -397,6 +420,47 @@ class JEOL_pts:
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
 
+    def drift_statistics(self, filtered=False, verbose=False):
+        """Returns 2D frequency distribution of frame shifts (x, y).
+
+            Parameters
+            ----------
+             filtered:     Bool
+                           If True, use Wiener filtered data.
+              verbose:     Bool
+                           Provide additional info if set to True.
+
+           Returns
+           -------
+                    h:     Ndarray or None if data cube contains a single
+                           frame only.
+               extent:     List
+                           Used to plot histogram as plt.imshow(h, extent=extent)
+        """
+        if self.dcube.shape[0] == 1:
+            return None, None
+        sh = self.shifts(filtered=filtered, verbose=verbose)
+        amax = np.abs(np.asarray(sh)).max()
+        # bin edges for square histogram centered at 0,0
+        bins = np.arange(-amax - 0.5, amax + 1.5)
+        extent = [-amax, amax, -amax, amax]
+        h, _, _ = np.histogram2d(np.asarray(sh)[:, 0],
+                                 np.asarray(sh)[:, 1],
+                                 bins=bins)
+        if verbose:
+            peak_val = int(h.max())
+            mx, my = np.where(h==np.amax(h))
+            mx = int(bins[int(mx)] + 0.5)
+            my = int(bins[int(my)] + 0.5)
+            if filtered:
+                print('Shifts (filtered):')
+            else:
+                print('Shifts (unfiltered):')
+            print('   Range: {} - {}'.format(int(np.asarray(sh).min()),
+                                             int(np.asarray(sh).max())))
+            print('   Maximum {} at ({}, {})'.format(peak_val, mx, my))
+        return h, extent
+
     def shifts(self, frames=None, filtered=False, verbose=False):
         """Calcultes frame shift by cross correlation of images (total intensity).
 
@@ -438,21 +502,24 @@ class JEOL_pts:
                 c = correlate(ref, wiener(self.map(frames=[f])))
             else:
                 c = correlate(ref, self.map(frames=[f]))
+            # c has shape (2 * self.meta.im_size - 1, 2 * self.meta.im_size - 1)
+            # Autocorrelation peaks at [self.meta.im_size - 1, self.meta.im_size - 1]
+            # i.e. offset is at dy (dy) index_of_maximum - self.meta.im_size + 1.
             dx, dy = np.where(c==np.amax(c))
             if dx.shape[0] > 1 and verbose:
                 # Report cases where averging was applied
                 print('Average of', end=' ')
                 for x, y in zip(dx, dy):
-                    print('({}, {})'.format(self.meta.im_size - x,
-                                            self.meta.im_size - y),
+                    print('({}, {})'.format(x - self.meta.im_size + 1,
+                                            y - self.meta.im_size + 1),
                           end=' ')
-                print('set to ({}, {}) in frame {}'.format(self.meta.im_size - round(dx.mean()),
-                                                            self.meta.im_size - round(dy.mean()),
+                print('set to ({}, {}) in frame {}'.format(round(dx.mean() - self.meta.im_size + 1),
+                                                           round(dy.mean() - self.meta.im_size + 1),
                                                             f))
             # More than one maximum is possible, use average
             dx = round(dx.mean())
             dy = round(dy.mean())
-            shifts[f] = (self.meta.im_size - dx, self.meta.im_size - dy)
+            shifts[f] = (dx - self.meta.im_size + 1, dy - self.meta.im_size + 1)
         return shifts
 
     def map(self, interval=None, energy=False, frames=None, align='no',
