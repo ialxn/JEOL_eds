@@ -101,6 +101,8 @@ class JEOL_pts:
         Examples
         --------
 
+        >>>> from JEOL_eds import JEOL_pts
+
         # Initialize JEOL_pts object (read data from '.pts' file).
         # Data cube has dtype = 'uint16' (default).
         >>>> dc = JEOL_pts('128.pts')
