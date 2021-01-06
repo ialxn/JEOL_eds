@@ -136,10 +136,10 @@ class JEOL_pts:
         # Store individual frames.
         >>>> dc=JEOL_pts('test/128.pts', split_frames=True)
         >>>> dc.dcube.shape
-        (50, 128, 128, 4096)
+        (50, 128, 128, 4000)
 
         # More info is stored in metadata.
-        >>>> dc.meta.N_ch    # Number of energy channels
+        >>>> dc.meta.N_ch    # Number of energy channels measured
         4096
         >>>> dc.meta.im_size # Map dimension (size x size)
         128
@@ -281,13 +281,14 @@ class JEOL_pts:
         >>>> dcube = npzfile['arr_0']
         # split_frames was not active when data was saved.
         >>>> dcube.shape
-        (1, 128, 128, 4096)
+        (1, 128, 128, 4000)
         # Split_frames was active when data was saved.
         >>>> dcube.shape
-        (50, 128, 128, 4096)
+        (50, 128, 128, 4000)
     """
 
-    def __init__(self, fname, dtype='uint16', verbose=False, split_frames=False):
+    def __init__(self, fname, dtype='uint16',
+                 split_frames=False, E_cutoff=False, verbose=False):
         """Reads datacube from JEOL '.pts' file or from previously saved data cube.
 
             Parameters
@@ -300,12 +301,15 @@ class JEOL_pts:
                             If a '.npz' file is loaded, this parameter is
                             ignored and the dtype corresponds to the one
                             of the data cube when it was stored.
-               verbose:     Bool
-                            Turn on (various) output.
           split_frames:     Bool
                             Store individual frames in the data cube (if
                             True), otherwise add all frames and store in
                             a single frame (default).
+              E_cutoff:     Float
+                            Energy cutoff in spectra. Only data below E_cutoff
+                            are read.
+               verbose:     Bool
+                            Turn on (various) output.
         """
         self.split_frames = split_frames
         if os.path.splitext(fname)[1] == '.npz':
@@ -318,7 +322,7 @@ class JEOL_pts:
                 header = np.fromfile(f, dtype='u1', count=headersize)
                 self.meta = EDS_metadata(header)
             self.dcube = self.__get_data_cube(dtype, headersize, datasize,
-                                              verbose=verbose)
+                                              E_cutoff=E_cutoff, verbose=verbose)
 
 
     def __get_offset_and_size(self):
@@ -343,7 +347,8 @@ class JEOL_pts:
             size = (size - offset) / 2  # convert to number of u2 in data segment
             return offset, int(size)
 
-    def __get_data_cube(self, dtype, hsize, Ndata, verbose=False):
+    def __get_data_cube(self, dtype, hsize, Ndata,
+                        E_cutoff=None, verbose=False):
         """Returns data cube (F x X x Y x E).
 
             Parameters
@@ -354,6 +359,9 @@ class JEOL_pts:
                             Number of header bytes.
                 Ndata:      Int
                             Number of data items ('u2') to be read.
+             E_cutoff:      Float
+                            Cutoff energy for spectra. Only store data below
+                            this energy.
               verbose:      Bool
                             Print additional output
 
@@ -364,13 +372,23 @@ class JEOL_pts:
                             was selected) otherwise N=1, image is size x size pixels,
                             spectra contain numCH channels.
         """
+        # set number of energy channels to be used in spectrum / data cube
+        ##################################################
+        #                                                #
+        #  tentative OFFSET by 96 channels (see #59_60)  #
+        #                                                #
+        ##################################################
+        if E_cutoff:
+            N_spec = round((E_cutoff - self.meta.E_calib[1]) / self.meta.E_calib[0])
+        else:
+            N_spec = self.meta.N_ch - 96
         with open(self.file_name, 'rb') as f:
             np.fromfile(f, dtype='u1', count=hsize)    # skip header
             data = np.fromfile(f, dtype='u2', count=Ndata)
         if self.split_frames:
-            dcube = np.zeros([self.meta.Sweep, self.meta.im_size, self.meta.im_size, self.meta.N_ch], dtype=dtype)
+            dcube = np.zeros([self.meta.Sweep, self.meta.im_size, self.meta.im_size, N_spec], dtype=dtype)
         else:
-            dcube = np.zeros([1, self.meta.im_size, self.meta.im_size, self.meta.N_ch], dtype=dtype)
+            dcube = np.zeros([1, self.meta.im_size, self.meta.im_size, N_spec], dtype=dtype)
         N = 0
         N_err = 0
         unknown = {}
@@ -379,7 +397,7 @@ class JEOL_pts:
         # Data is mapped as follows:
         #   32768 <= datum < 36864                  -> y-coordinate
         #   36864 <= datum < 40960                  -> x-coordinate
-        #   45056 <= datum < END (=45056 + N_ch)    -> count registered
+        #   45056 <= datum < END (=45056 + N_ch)    -> count registered at energy
         END = 45056 + self.meta.N_ch
         scale = 4096 / self.meta.im_size
         # map the size x size image into 4096x4096
@@ -403,7 +421,7 @@ class JEOL_pts:
                 #                                                #
                 ##################################################
                 z -= 96
-                if z >= 0:
+                if N_spec > z >= 0:
                     dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
             else:
                 if verbose:
