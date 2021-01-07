@@ -220,6 +220,7 @@ class JEOL_pts:
         # each individual frame.
         # Set "filtered=True" to calculate shifts from Wiener filtered images.
         >>>> dc.shifts(verbose=True)
+        Frame 0 used a reference
         Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
         [(0, 0),
          (0, 0),
@@ -245,6 +246,7 @@ class JEOL_pts:
         # Get the 2D frequency distribution of the frames shifts using (or not)
         # Wiener filtered frames.
         >>>> dc.drift_statistics(verbose=True)
+        Frame 0 used a reference
         Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
         Shifts (unfiltered):
             Range: -2 - 1
@@ -264,17 +266,18 @@ class JEOL_pts:
         plt.imshow(m, extent=e)
 
         # Calulate shifts for odd frames only
-        >>>> dc.shifts(frames=range(1, 50, 2))
+        >>>> dc.shifts(frames=range(1, 50, 2), verbose=True)
+        Frame 1 used a reference
         [(0, 0),
          (0, 0),
          (0, 0),
-         (-1, 0),
+         (0, 1),
          (0, 0),
              .
              .
              .
          (0, 0),
-         (0, -1)]
+         (-1, -1)]
 
         # If you want to read the data cube into your own program.
         >>>> npzfile = np.load('128.npz')
@@ -467,7 +470,8 @@ class JEOL_pts:
             Parameters
             ----------
                frames:     Iterable
-                           Frame numbers for which shifts are calculated.
+                           Frame numbers for which shifts are calculated. First
+                           frame given is used a reference.
              filtered:     Bool
                            If True, use Wiener filtered data.
               verbose:     Bool
@@ -486,18 +490,16 @@ class JEOL_pts:
             # only a single frame present
             return []
         if frames is None:
-            frames = range(1, self.meta.Sweep) # Skip reference frame
-        # Use first frame as reference even if it is not included in list
-        # provided by keyword 'frames='
+            frames = range(self.meta.Sweep)
+        # Always use first frame given as reference
         if filtered:
-            ref = wiener(self.map(frames=[0]))
+            ref = wiener(self.map(frames=[frames[0]]))
         else:
-            ref = self.map(frames=[0])
+            ref = self.map(frames=[frames[0]])
         shifts = [(0, 0)] * self.meta.Sweep
-        for f in frames:
-            if f == 0:
-                # Skip the reference frame
-                continue
+        if verbose:
+            print('Frame {} used a reference'.format(frames[0]))
+        for f in frames[1:]:    # skip reference frame
             if filtered:
                 c = correlate(ref, wiener(self.map(frames=[f])))
             else:
