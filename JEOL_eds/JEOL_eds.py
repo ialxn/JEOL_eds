@@ -168,14 +168,14 @@ class JEOL_pts:
         >>>> plt.imshow(dc.map(interval=(115, 130)))
         <matplotlib.image.AxesImage at 0x7f7191eefd10>
         # Specify interval by energy (keV) instead of channel numbers.
-        >>>>plt.imshow(p_off.map(interval=(8,10), units=True))
+        >>>>plt.imshow(dc.map(interval=(8,10), energy=True))
         <matplotlib.image.AxesImage at 0x7f4fd0616950>
         # If split_frames is active you can specify to plot the map
         # of a single frame
-        >>>> plt.imshow(dc.map(frames=(3)))
+        >>>> plt.imshow(dc.map(frames=[3]))
         <matplotlib.image.AxesImage at 0x7f06c05ef750>
         # Map correponding to a few frames.
-        >>>> m = dc.map(frames=(3,5,11,12,13))
+        >>>> m = dc.map(frames=[3,5,11,12,13])
         # Cu Kalpha map of all even frames
         >>>> m = dc.map(interval=(7.9, 8.1),
                         energy=True,
@@ -194,12 +194,12 @@ class JEOL_pts:
         >>>> plt.plot(dc.spectrum(ROI=(10,20,50,100)))
         <matplotlib.lines.Line2D at 0x7f7192b58050>
         # Plot spectrum for a single frame (if split_frames is active).
-        >>>> plt.plot(dc.spectrum(frames=(23)))
+        >>>> plt.plot(dc.spectrum(frames=[23]))
         <matplotlib.lines.Line2D at 0x7f06b3db32d0>
         # Extract spectrum corresponding to a few frames added.
-        >>>> spec = dc.spectrum(frames=(0,2,5,6))
+        >>>> spec = dc.spectrum(frames=[0,2,5,6])
         # Spectrum of all odd frames
-        >>>> spec = dc.spectrum(frames=range(1, dc.meta.sweep, 2))
+        >>>> spec = dc.spectrum(frames=range(1, dc.meta.Sweep, 2))
 
         # Save extracted data cube. File name is the same as the '.pts' file
         # but extension is changed to 'npz'.
