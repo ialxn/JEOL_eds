@@ -119,13 +119,6 @@ class JEOL_pts:
         Unidentified data items (2081741 out of 902010, 43.33%) found:
 	        24576: found 41858 times
 	        28672: found 40952 times
-	        40960: found 55190 times
-               .
-               .
-               .
-	        41056: found 1 times
-	        41057: found 1 times
-	        41058: found 1 times
 
         # Useful attributes
         >>>> dc.file_name
@@ -428,8 +421,11 @@ class JEOL_pts:
                     dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
             else:
                 if verbose:
-                    # I have no idea what these data mean
-                    # collect statistics on these values for debug
+                    if 40960 <= d < 45056:
+                        # Image (one per sweep) stored if option
+                        # "correct for sample movement" was active
+                        # during data collection.
+                        continue
                     if str(d) in unknown:
                         unknown[str(d)] += 1
                     else:
