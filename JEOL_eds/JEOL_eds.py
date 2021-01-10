@@ -131,6 +131,20 @@ class JEOL_pts:
         >>>> dc.dcube.shape
         (50, 128, 128, 4000)
 
+        # Also read and store BF images (one per frame) present if
+        # option "correct for sample movement" was active during
+        # data collection.
+        # Attribute will be set to None if no data was found!
+        >>> dc = JEOL_pts('128.pts', read_drift=True)
+        dc.drift_images is None
+        False
+        >>> dc.drift_images.shape
+        (50, 128, 128)
+
+        >>>> import matplotlib.pyplot as plt
+        plt.imshow(dc.drift_images[0])
+        <matplotlib.image.AxesImage at 0x7ff3e9976550>
+
         # More info is stored in metadata.
         >>>> dc.meta.N_ch    # Number of energy channels measured
         4096
@@ -147,9 +161,6 @@ class JEOL_pts:
          'RealTime': 1692.6200000000001,
          'DwellTime': 0.5,
          'DeadTime': 'T4'}
-
-        # Use helper functions map() and spectrum().
-        >>>> import matplotlib.pyplot as plt
 
         # Use all energy channels, i.e. plot map of total number of counts.
         # If split_frames is active, the following draws maps for all frames
@@ -284,7 +295,8 @@ class JEOL_pts:
     """
 
     def __init__(self, fname, dtype='uint16',
-                 split_frames=False, E_cutoff=False, verbose=False):
+                 split_frames=False, E_cutoff=False, read_drift=False,
+                 verbose=False):
         """Reads datacube from JEOL '.pts' file or from previously saved data cube.
 
             Parameters
@@ -304,6 +316,10 @@ class JEOL_pts:
               E_cutoff:     Float
                             Energy cutoff in spectra. Only data below E_cutoff
                             are read.
+            read_drift:     Bool
+                            Read BF images (one BF image per frame stored in
+                            the raw data, if the option "correct for sample
+                            movement" was active while the data was collected).
                verbose:     Bool
                             Turn on (various) output.
         """
@@ -319,7 +335,10 @@ class JEOL_pts:
                 self.meta = EDS_metadata(header)
             self.dcube = self.__get_data_cube(dtype, headersize, datasize,
                                               E_cutoff=E_cutoff, verbose=verbose)
-
+        if read_drift and os.path.splitext(fname)[1] == '.pts':
+            self.drift_images = self.__read_drift_images(fname)
+        else:
+            self.drift_images = None
 
     def __get_offset_and_size(self):
         """Returns length of header (bytes) and size of data (number of u2).
@@ -436,6 +455,34 @@ class JEOL_pts:
             for key in sorted(unknown):
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
+
+    def __read_drift_images(self, fname):
+        """Read BF images stored (option "correct for sample movement" was active)
+
+            Parameters
+            ----------
+                fname:      Str
+                            Filename.
+
+            Returns
+            -------
+                ndarray or None if data is not available
+                Stack of images with shape (N_images, im_size, im_size)
+
+        Notes
+        -----
+            Based on a code fragment by @sempicor at
+            https://github.com/hyperspy/hyperspy/pull/2488
+        """
+        with open(fname) as f:
+            f.seek(8*16**3)     # data seems to be at fixed offset
+            rawdata = np.fromfile(f, dtype='u2')
+            ipos = np.where(np.logical_and(rawdata >= 40960, rawdata < 45056))[0]
+            if len(ipos) == 0:  # No data available
+                return None
+            I = np.array(rawdata[ipos]-40960, dtype='uint16')
+            N_images = int(np.ceil(ipos.shape[0] / self.meta.im_size**2))
+            return I.reshape((N_images, self.meta.im_size, self.meta.im_size))
 
     def drift_statistics(self, filtered=False, verbose=False):
         """Returns 2D frequency distribution of frame shifts (x, y).
