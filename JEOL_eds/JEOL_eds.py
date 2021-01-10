@@ -119,13 +119,6 @@ class JEOL_pts:
         Unidentified data items (2081741 out of 902010, 43.33%) found:
 	        24576: found 41858 times
 	        28672: found 40952 times
-	        40960: found 55190 times
-               .
-               .
-               .
-	        41056: found 1 times
-	        41057: found 1 times
-	        41058: found 1 times
 
         # Useful attributes
         >>>> dc.file_name
@@ -136,10 +129,24 @@ class JEOL_pts:
         # Store individual frames.
         >>>> dc=JEOL_pts('test/128.pts', split_frames=True)
         >>>> dc.dcube.shape
-        (50, 128, 128, 4096)
+        (50, 128, 128, 4000)
+
+        # Also read and store BF images (one per frame) present if
+        # option "correct for sample movement" was active during
+        # data collection.
+        # Attribute will be set to None if no data was found!
+        >>> dc = JEOL_pts('128.pts', read_drift=True)
+        dc.drift_images is None
+        False
+        >>> dc.drift_images.shape
+        (50, 128, 128)
+
+        >>>> import matplotlib.pyplot as plt
+        plt.imshow(dc.drift_images[0])
+        <matplotlib.image.AxesImage at 0x7ff3e9976550>
 
         # More info is stored in metadata.
-        >>>> dc.meta.N_ch    # Number of energy channels
+        >>>> dc.meta.N_ch    # Number of energy channels measured
         4096
         >>>> dc.meta.im_size # Map dimension (size x size)
         128
@@ -155,9 +162,6 @@ class JEOL_pts:
          'DwellTime': 0.5,
          'DeadTime': 'T4'}
 
-        # Use helper functions map() and spectrum().
-        >>>> import matplotlib.pyplot as plt
-
         # Use all energy channels, i.e. plot map of total number of counts.
         # If split_frames is active, the following draws maps for all frames
         # added together.
@@ -168,14 +172,14 @@ class JEOL_pts:
         >>>> plt.imshow(dc.map(interval=(115, 130)))
         <matplotlib.image.AxesImage at 0x7f7191eefd10>
         # Specify interval by energy (keV) instead of channel numbers.
-        >>>>plt.imshow(p_off.map(interval=(8,10), units=True))
+        >>>>plt.imshow(dc.map(interval=(8,10), energy=True))
         <matplotlib.image.AxesImage at 0x7f4fd0616950>
         # If split_frames is active you can specify to plot the map
         # of a single frame
-        >>>> plt.imshow(dc.map(frames=(3)))
+        >>>> plt.imshow(dc.map(frames=[3]))
         <matplotlib.image.AxesImage at 0x7f06c05ef750>
         # Map correponding to a few frames.
-        >>>> m = dc.map(frames=(3,5,11,12,13))
+        >>>> m = dc.map(frames=[3,5,11,12,13])
         # Cu Kalpha map of all even frames
         >>>> m = dc.map(interval=(7.9, 8.1),
                         energy=True,
@@ -194,12 +198,12 @@ class JEOL_pts:
         >>>> plt.plot(dc.spectrum(ROI=(10,20,50,100)))
         <matplotlib.lines.Line2D at 0x7f7192b58050>
         # Plot spectrum for a single frame (if split_frames is active).
-        >>>> plt.plot(dc.spectrum(frames=(23)))
+        >>>> plt.plot(dc.spectrum(frames=[23]))
         <matplotlib.lines.Line2D at 0x7f06b3db32d0>
         # Extract spectrum corresponding to a few frames added.
-        >>>> spec = dc.spectrum(frames=(0,2,5,6))
+        >>>> spec = dc.spectrum(frames=[0,2,5,6])
         # Spectrum of all odd frames
-        >>>> spec = dc.spectrum(frames=range(1, dc.meta.sweep, 2))
+        >>>> spec = dc.spectrum(frames=range(1, dc.meta.Sweep, 2))
 
         # Save extracted data cube. File name is the same as the '.pts' file
         # but extension is changed to 'npz'.
@@ -220,6 +224,7 @@ class JEOL_pts:
         # each individual frame.
         # Set "filtered=True" to calculate shifts from Wiener filtered images.
         >>>> dc.shifts(verbose=True)
+        Frame 0 used a reference
         Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
         [(0, 0),
          (0, 0),
@@ -245,6 +250,7 @@ class JEOL_pts:
         # Get the 2D frequency distribution of the frames shifts using (or not)
         # Wiener filtered frames.
         >>>> dc.drift_statistics(verbose=True)
+        Frame 0 used a reference
         Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
         Shifts (unfiltered):
             Range: -2 - 1
@@ -264,30 +270,33 @@ class JEOL_pts:
         plt.imshow(m, extent=e)
 
         # Calulate shifts for odd frames only
-        >>>> dc.shifts(frames=range(1, 50, 2))
+        >>>> dc.shifts(frames=range(1, 50, 2), verbose=True)
+        Frame 1 used a reference
         [(0, 0),
          (0, 0),
          (0, 0),
-         (-1, 0),
+         (0, 1),
          (0, 0),
              .
              .
              .
          (0, 0),
-         (0, -1)]
+         (-1, -1)]
 
         # If you want to read the data cube into your own program.
         >>>> npzfile = np.load('128.npz')
         >>>> dcube = npzfile['arr_0']
         # split_frames was not active when data was saved.
         >>>> dcube.shape
-        (1, 128, 128, 4096)
+        (1, 128, 128, 4000)
         # Split_frames was active when data was saved.
         >>>> dcube.shape
-        (50, 128, 128, 4096)
+        (50, 128, 128, 4000)
     """
 
-    def __init__(self, fname, dtype='uint16', verbose=False, split_frames=False):
+    def __init__(self, fname, dtype='uint16',
+                 split_frames=False, E_cutoff=False, read_drift=False,
+                 verbose=False):
         """Reads datacube from JEOL '.pts' file or from previously saved data cube.
 
             Parameters
@@ -300,12 +309,19 @@ class JEOL_pts:
                             If a '.npz' file is loaded, this parameter is
                             ignored and the dtype corresponds to the one
                             of the data cube when it was stored.
-               verbose:     Bool
-                            Turn on (various) output.
           split_frames:     Bool
                             Store individual frames in the data cube (if
                             True), otherwise add all frames and store in
                             a single frame (default).
+              E_cutoff:     Float
+                            Energy cutoff in spectra. Only data below E_cutoff
+                            are read.
+            read_drift:     Bool
+                            Read BF images (one BF image per frame stored in
+                            the raw data, if the option "correct for sample
+                            movement" was active while the data was collected).
+               verbose:     Bool
+                            Turn on (various) output.
         """
         self.split_frames = split_frames
         if os.path.splitext(fname)[1] == '.npz':
@@ -318,8 +334,11 @@ class JEOL_pts:
                 header = np.fromfile(f, dtype='u1', count=headersize)
                 self.meta = EDS_metadata(header)
             self.dcube = self.__get_data_cube(dtype, headersize, datasize,
-                                              verbose=verbose)
-
+                                              E_cutoff=E_cutoff, verbose=verbose)
+        if read_drift and os.path.splitext(fname)[1] == '.pts':
+            self.drift_images = self.__read_drift_images(fname)
+        else:
+            self.drift_images = None
 
     def __get_offset_and_size(self):
         """Returns length of header (bytes) and size of data (number of u2).
@@ -343,7 +362,8 @@ class JEOL_pts:
             size = (size - offset) / 2  # convert to number of u2 in data segment
             return offset, int(size)
 
-    def __get_data_cube(self, dtype, hsize, Ndata, verbose=False):
+    def __get_data_cube(self, dtype, hsize, Ndata,
+                        E_cutoff=None, verbose=False):
         """Returns data cube (F x X x Y x E).
 
             Parameters
@@ -354,6 +374,9 @@ class JEOL_pts:
                             Number of header bytes.
                 Ndata:      Int
                             Number of data items ('u2') to be read.
+             E_cutoff:      Float
+                            Cutoff energy for spectra. Only store data below
+                            this energy.
               verbose:      Bool
                             Print additional output
 
@@ -364,13 +387,23 @@ class JEOL_pts:
                             was selected) otherwise N=1, image is size x size pixels,
                             spectra contain numCH channels.
         """
+        # set number of energy channels to be used in spectrum / data cube
+        ##################################################
+        #                                                #
+        #  tentative OFFSET by 96 channels (see #59_60)  #
+        #                                                #
+        ##################################################
+        if E_cutoff:
+            N_spec = round((E_cutoff - self.meta.E_calib[1]) / self.meta.E_calib[0])
+        else:
+            N_spec = self.meta.N_ch - 96
         with open(self.file_name, 'rb') as f:
             np.fromfile(f, dtype='u1', count=hsize)    # skip header
             data = np.fromfile(f, dtype='u2', count=Ndata)
         if self.split_frames:
-            dcube = np.zeros([self.meta.Sweep, self.meta.im_size, self.meta.im_size, self.meta.N_ch], dtype=dtype)
+            dcube = np.zeros([self.meta.Sweep, self.meta.im_size, self.meta.im_size, N_spec], dtype=dtype)
         else:
-            dcube = np.zeros([1, self.meta.im_size, self.meta.im_size, self.meta.N_ch], dtype=dtype)
+            dcube = np.zeros([1, self.meta.im_size, self.meta.im_size, N_spec], dtype=dtype)
         N = 0
         N_err = 0
         unknown = {}
@@ -379,7 +412,7 @@ class JEOL_pts:
         # Data is mapped as follows:
         #   32768 <= datum < 36864                  -> y-coordinate
         #   36864 <= datum < 40960                  -> x-coordinate
-        #   45056 <= datum < END (=45056 + N_ch)    -> count registered
+        #   45056 <= datum < END (=45056 + N_ch)    -> count registered at energy
         END = 45056 + self.meta.N_ch
         scale = 4096 / self.meta.im_size
         # map the size x size image into 4096x4096
@@ -403,12 +436,15 @@ class JEOL_pts:
                 #                                                #
                 ##################################################
                 z -= 96
-                if z >= 0:
+                if N_spec > z >= 0:
                     dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
             else:
                 if verbose:
-                    # I have no idea what these data mean
-                    # collect statistics on these values for debug
+                    if 40960 <= d < 45056:
+                        # Image (one per sweep) stored if option
+                        # "correct for sample movement" was active
+                        # during data collection.
+                        continue
                     if str(d) in unknown:
                         unknown[str(d)] += 1
                     else:
@@ -419,6 +455,34 @@ class JEOL_pts:
             for key in sorted(unknown):
                 print('\t{}: found {} times'.format(key, unknown[key]))
         return dcube
+
+    def __read_drift_images(self, fname):
+        """Read BF images stored (option "correct for sample movement" was active)
+
+            Parameters
+            ----------
+                fname:      Str
+                            Filename.
+
+            Returns
+            -------
+                ndarray or None if data is not available
+                Stack of images with shape (N_images, im_size, im_size)
+
+        Notes
+        -----
+            Based on a code fragment by @sempicor at
+            https://github.com/hyperspy/hyperspy/pull/2488
+        """
+        with open(fname) as f:
+            f.seek(8*16**3)     # data seems to be at fixed offset
+            rawdata = np.fromfile(f, dtype='u2')
+            ipos = np.where(np.logical_and(rawdata >= 40960, rawdata < 45056))[0]
+            if len(ipos) == 0:  # No data available
+                return None
+            I = np.array(rawdata[ipos]-40960, dtype='uint16')
+            N_images = int(np.ceil(ipos.shape[0] / self.meta.im_size**2))
+            return I.reshape((N_images, self.meta.im_size, self.meta.im_size))
 
     def drift_statistics(self, filtered=False, verbose=False):
         """Returns 2D frequency distribution of frame shifts (x, y).
@@ -467,7 +531,8 @@ class JEOL_pts:
             Parameters
             ----------
                frames:     Iterable
-                           Frame numbers for which shifts are calculated.
+                           Frame numbers for which shifts are calculated. First
+                           frame given is used a reference.
              filtered:     Bool
                            If True, use Wiener filtered data.
               verbose:     Bool
@@ -486,18 +551,16 @@ class JEOL_pts:
             # only a single frame present
             return []
         if frames is None:
-            frames = range(1, self.meta.Sweep) # Skip reference frame
-        # Use first frame as reference even if it is not included in list
-        # provided by keyword 'frames='
+            frames = range(self.meta.Sweep)
+        # Always use first frame given as reference
         if filtered:
-            ref = wiener(self.map(frames=[0]))
+            ref = wiener(self.map(frames=[frames[0]]))
         else:
-            ref = self.map(frames=[0])
+            ref = self.map(frames=[frames[0]])
         shifts = [(0, 0)] * self.meta.Sweep
-        for f in frames:
-            if f == 0:
-                # Skip the reference frame
-                continue
+        if verbose:
+            print('Frame {} used a reference'.format(frames[0]))
+        for f in frames[1:]:    # skip reference frame
             if filtered:
                 c = correlate(ref, wiener(self.map(frames=[f])))
             else:
