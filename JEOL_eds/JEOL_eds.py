@@ -384,7 +384,7 @@ class JEOL_pts:
             _, _, head_pos, head_len, data_pos, data_len = np.fromfile(fd, "<I", 6)
             fd.read(128).rstrip(b"\x00").decode("utf-8")
             _ = fd.read(132).rstrip(b"\x00").decode("utf-8")
-            self.file_date = datetime(1899, 12, 30) + timedelta(days=np.fromfile(fd, "d", 1)[0])
+            self.file_date = str(datetime(1899, 12, 30) + timedelta(days=np.fromfile(fd, "d", 1)[0]))
             fd.seek(head_pos + 12)
             return self.__parsejeol(fd)
 
