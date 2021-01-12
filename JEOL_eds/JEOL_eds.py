@@ -32,25 +32,27 @@ class JEOL_pts:
 
         # Provide additional (debug) output when loading.
         >>>> dc = JEOL_pts('128.pts', dtype='uint16', verbose=True)
-        Unidentified data items (2081741 out of 902010, 43.33%) found:
+        Unidentified data items (2081741 out of 82810, 3.98%) found:
 	        24576: found 41858 times
 	        28672: found 40952 times
 
-        # Useful attributes
+        # Useful attributes.
         >>>> dc.file_name
         '128.pts'               # File name loaded from.
+        >>>> dc.file_date
+        '2020-10-23 11:18:40'   # File creation date
         >>>> dc.dcube.shape     # Shape of data cube
-        (1, 128, 128, 4096)
+        (1, 128, 128, 4000)
 
         # Store individual frames.
-        >>>> dc=JEOL_pts('test/128.pts', split_frames=True)
+        >>>> dc=JEOL_pts('128.pts', split_frames=True)
         >>>> dc.dcube.shape
         (50, 128, 128, 4000)
 
         # Also read and store BF images (one per frame) present if
         # option "correct for sample movement" was active during
         # data collection.
-        # Attribute will be set to None if no data was found!
+        # Attribute will be set to 'None' if no data was found!
         >>> dc = JEOL_pts('128.pts', read_drift=True)
         dc.drift_images is None
         False
@@ -61,26 +63,33 @@ class JEOL_pts:
         plt.imshow(dc.drift_images[0])
         <matplotlib.image.AxesImage at 0x7ff3e9976550>
 
-        # More info is stored in metadata.
-        >>>> dc.meta.N_ch    # Number of energy channels measured
-        4096
-        >>>> dc.meta.im_size # Map dimension (size x size)
-        128
-        # Print all metadata as dict.
-        >>>> vars(dc.meta)
-        {'N_ch': 4096,
-         'CH_Res': 0.01,
+        # More info is stored in attribute `JEOL_pts.parameters`.
+        >>>> dc.parameters      # Full dict
+        {'PTTD Cond': {'Meas Cond': {'CONDPAGE0_C.R': {'Tpl': {'index': 3,
+             'List': ['T1', 'T2', 'T3', 'T4']},
+        .
+        .
+        .
+            'FocusMP': 16043213}}}}
+
+        # Measurement parameters active when map was acquired.
+        >>>> dc.parameters['EDS Data']['AnalyzableMap MeasData']['Doc']
+        {'LiveTime': 409.5,
+         'RealTime': 418.56,
+         'CountRate': {'value': 538,
+          'n': 1085,
+          'sum': array([7.84546000e+05, 6.31998988e+08])},
+         'DeadTime': {'value': 1, 'n': 1085, 'sum': array([2025., 4409.])},
+         'DwellTime(msec)': 0.5,
          'Sweep': 50,
-         'im_size': 256,
-         'E_calib': (0.0100006, -0.00122558),
-         'LiveTime': 1638.1000000000001,
-         'RealTime': 1692.6200000000001,
-         'DwellTime': 0.5,
-         'DeadTime': 'T4'}
+         'ScanLine': 128,
+         'CoefA': 0.0100006,
+         'CoefB': -0.00122558,
+         'Esc': 1.75}
 
         # Use all energy channels, i.e. plot map of total number of counts.
-        # If split_frames is active, the following draws maps for all frames
-        # added together.
+        # If option 'split_frames' was used to read the data, the following
+        # draws maps for all frames added together.
         >>>> plt.imshow(dc.map())
         <matplotlib.image.AxesImage at 0x7f7192ee6dd0>
         # Specify energy interval (channels containing a spectral line) to
@@ -90,49 +99,58 @@ class JEOL_pts:
         # Specify interval by energy (keV) instead of channel numbers.
         >>>>plt.imshow(dc.map(interval=(8,10), energy=True))
         <matplotlib.image.AxesImage at 0x7f4fd0616950>
-        # If split_frames is active you can specify to plot the map
-        # of a single frame
+        # If option 'split_frames' was used to read the data you can plot
+        # the map of a single frame.
         >>>> plt.imshow(dc.map(frames=[3]))
         <matplotlib.image.AxesImage at 0x7f06c05ef750>
-        # Map correponding to a few frames.
+        # Map correponding to a few selected frames.
         >>>> m = dc.map(frames=[3,5,11,12,13])
         # Cu Kalpha map of all even frames
         >>>> m = dc.map(interval=(7.9, 8.1),
                         energy=True,
-                        frames=range(0, dc.meta.Sweep, 2))
-        # Correct for frame shifts with additional output
+                        frames=range(0, dc.dcube.shape[0], 2))
+        # Correct for frame shifts (with additional output).
         >>>> dc.map(align='yes', verbose=True)
-        Using channels 0 - 4096
+        Using channels 0 - 4000
+        Frame 0 used a reference
         Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
 
-        # Plot spectrum integrated over full image. If split_frames is
-        # active the following plots spectra for all frames added together.
+        # Plot spectrum integrated over full image. If option 'split_frames'
+        # was used to read the data the following plots spectra for all frames
+        added together.
         >>>> plt.plot(dc.spectrum())
         [<matplotlib.lines.Line2D at 0x7f7192feec10>]
         # Plot spectrum corresponding to a (rectangular) ROI specified as
         # tuple (left, right, top, bottom) of pixels.
         >>>> plt.plot(dc.spectrum(ROI=(10,20,50,100)))
         <matplotlib.lines.Line2D at 0x7f7192b58050>
-        # Plot spectrum for a single frame (if split_frames is active).
+        # Plot spectrum for a single frame ('split_frames' used).
         >>>> plt.plot(dc.spectrum(frames=[23]))
         <matplotlib.lines.Line2D at 0x7f06b3db32d0>
         # Extract spectrum corresponding to a few frames added.
         >>>> spec = dc.spectrum(frames=[0,2,5,6])
-        # Spectrum of all odd frames
-        >>>> spec = dc.spectrum(frames=range(1, dc.meta.Sweep, 2))
+        # Spectrum of all odd frames added.
+        >>>> spec = dc.spectrum(frames=range(1, dc.dcube.shape[0], 2))
 
         # Save extracted data cube. File name is the same as the '.pts' file
         # but extension is changed to 'npz'.
+        # This makes only sense if option 'split_frames' was used to read
+        # the data as otherwise the file size is larger than the '.pts' file
+        # and saving becomes time consuming.
         >>>> dc.save_dcube()
         # You can also supply your own filename, but use '.npz' as extension.
         >>>> dc.save_dcube(fname='my_new_filename.npz')
 
         # JEOL_pts object can also be initialized from a saved data cube. In
-        # this case, dtype is the same as in the stored data cube and a
-        # possible 'dtype=' keyword is ignored.
+        # this case, dtype of the data cube is the same as in the stored data
+        # and a possible 'dtype=' keyword is ignored.
+        # This only initializes the data cube. Most attributes are not loaded
+        # and are set to 'None'
         >>>> dc2 = JEOL_pts('128.npz')
         >>>> dc2.file_name
         '128.npz'
+        >>>> dc2.parameters is None
+        True
 
         # Get list of (possible) shifts [(dx0, dy0), (dx1, dx2), ...] in pixels
         # of individual frames using frame 0 as reference. The shifts are
@@ -185,8 +203,9 @@ class JEOL_pts:
         res *= (1 - noise / lVar)
         plt.imshow(m, extent=e)
 
-        # Calulate shifts for odd frames only
-        >>>> dc.shifts(frames=range(1, 50, 2), verbose=True)
+        # Calulate shifts for selected frames (odd frames) only. In this case
+        # the first frame given is used as reference.
+        >>>> dc.shifts(frames=range(1, dc.dcube.shape[0], 2), verbose=True)
         Frame 1 used a reference
         [(0, 0),
          (0, 0),
