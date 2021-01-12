@@ -24,7 +24,6 @@ class EDS_metadata:
                             file that does not contain metadata.
         """
         self.N_ch = self.__get_parameter('NumCH', header)
-        self.CH_Res = self.__get_parameter('CH Res', header)
         try:
             self.Sweep = self.__get_parameter('Sweep', header[1024:])
         except TypeError:
@@ -32,13 +31,6 @@ class EDS_metadata:
         self.im_size = self.__get_parameter('ScanLine', header)
         self.E_calib = (self.__get_parameter('CoefA', header),
                         self.__get_parameter('CoefB', header))
-        self.LiveTime = self.__get_parameter('LiveTime', header)
-        self.RealTime = self.__get_parameter('RealTime', header)
-        self.DwellTime = self.__get_parameter('DwellTime(msec)', header)
-        try:
-            self.DeadTime = 'T' + str(self.__get_parameter('DeadTime', header) + 1)
-        except TypeError:
-            self.DeadTime = None
 
     @staticmethod
     def __get_parameter(ParName, header):
