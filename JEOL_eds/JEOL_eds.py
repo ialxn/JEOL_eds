@@ -6,80 +6,10 @@ Created on Sat Nov  7 13:30:08 2020
 @author: alxneit
 """
 import os
-import struct
 from datetime import datetime, timedelta
 import numpy as np
 from scipy.signal import wiener, correlate
 
-class EDS_metadata:
-    """Class to store metadata.
-    """
-    def __init__(self, header):
-        """Populates meta data from parameters stored in header
-
-            Parameters
-            ----------
-                header:     Byte array (or None)
-                            Binary header or None if loading a '.npz'
-                            file that does not contain metadata.
-        """
-        self.im_size = self.__get_parameter('ScanLine', header)
-
-    @staticmethod
-    def __get_parameter(ParName, header):
-        """Returns parameter value extracted from header (or None).
-
-            Parameters
-            ----------
-                ParName:    Str
-                            Name of parameter to be extracted.
-                 header:    Byte array
-                            Binary header.
-
-            Returns
-            -------
-                value:      Any type (depends on parameter extracted)
-                            Value of parameter. Single number or array
-                            (or None, if reading from '.npz' file, i.e.
-                            when header is None).
-
-            Notes
-            -----
-                According to jeol_metadata.ods. Right after the parameter name
-                the numerical type of the parameter is encoded as '<u4' followed
-                by how many bytes are used to store it (parameter might contain
-                multiple items). This table is (partially) stored in a dict.
-
-                    3: ('<u4', 4)       code 3 -> 'uint32' is 4 bytes long
-        """
-        if header is None:
-            return None
-        items = {2 : ('<u2', 2),
-                 3 : ('<u4', 4),
-                 4 : ('<f4', 4),
-                 5 : ('<f8', 8),
-                 8 : ('<f4', 4)     # list of float32 values
-                 }
-        ParLen = len(ParName)
-        FormStr = b's' * ParLen
-        for offset in range(header.size - ParLen):
-            string = b''.join(list(struct.unpack(FormStr, header[offset:offset+ParLen])))
-            if string == ParName.encode():
-                offset += ParLen + 1
-                # After parameter name, first read code
-                ItemCode = np.frombuffer(header[offset: offset+4], dtype='<i4', count=1)[0]
-                offset += 4
-                # Read number of bytes needed to store parameter
-                NBytes = np.frombuffer(header[offset: offset+4], dtype='<i4', count=1)[0]
-                NItems = int(NBytes / items[ItemCode][1])   # How many items to be read
-                offset += 4
-                val = np.frombuffer(header[offset: offset+NBytes],
-                                    dtype=items[ItemCode][0],
-                                    count=NItems)
-                if val.size == 1:   # return single number
-                    return val[0]
-                return val          # return array
-        return None
 
 class JEOL_pts:
     """Work with JEOL '.pts' files
@@ -316,38 +246,12 @@ class JEOL_pts:
         else:
             self.file_name = fname
             self.parameters, data_offset = self.__parse_header(fname)
-            headersize, _ = self.__get_offset_and_size()
-            with open(fname, 'rb') as f:
-                header = np.fromfile(f, dtype='u1', count=headersize)
-                self.meta = EDS_metadata(header)
             self.dcube = self.__get_data_cube(dtype, data_offset,
                                               E_cutoff=E_cutoff, verbose=verbose)
         if read_drift and os.path.splitext(fname)[1] == '.pts':
             self.drift_images = self.__read_drift_images(fname)
         else:
             self.drift_images = None
-
-    def __get_offset_and_size(self):
-        """Returns length of header (bytes) and size of data (number of u2).
-
-            Returns
-            -------
-                offset:     Int
-                            Size of header (bytes) before data starts.
-                  size:     Int
-                            Number of data (u2) items.
-        """
-        with open(self.file_name, 'rb') as f:
-            np.fromfile(f, dtype='u1', count=4)     # skip
-            data = np.fromfile(f, dtype='u1', count=8)  # magic string
-            ftype = b''.join(list(struct.unpack('ssssssss', data)))
-            if ftype != b'PTTDFILE':    # wrong file format
-                raise ValueError('Wrong file format')
-            np.fromfile(f, dtype='u1', count=16)    # skip
-            offset = np.fromfile(f, dtype='<i4', count=1)[0]
-            size = np.fromfile(f, dtype='<i4', count=1)[0]  # total length bytes
-            size = (size - offset) / 2  # convert to number of u2 in data segment
-            return offset, int(size)
 
     def __parse_header(self, fname):
         """Extract meta data from header in JEOL ".pts" file.
@@ -514,6 +418,7 @@ class JEOL_pts:
         #                                                #
         ##################################################
         NumCH = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['NumCH']
+        ScanLine = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['ScanLine']
         if E_cutoff:
             CoefA = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefA']
             CoefB = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefB']
@@ -525,9 +430,9 @@ class JEOL_pts:
             data = np.fromfile(f, dtype='u2')
         if self.split_frames:
             Sweep = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['Sweep']
-            dcube = np.zeros([Sweep, self.meta.im_size, self.meta.im_size, N_spec], dtype=dtype)
+            dcube = np.zeros([Sweep, ScanLine, ScanLine, N_spec], dtype=dtype)
         else:
-            dcube = np.zeros([1, self.meta.im_size, self.meta.im_size, N_spec], dtype=dtype)
+            dcube = np.zeros([1, ScanLine, ScanLine, N_spec], dtype=dtype)
         N = 0
         N_err = 0
         unknown = {}
@@ -538,7 +443,7 @@ class JEOL_pts:
         #   36864 <= datum < 40960                  -> x-coordinate
         #   45056 <= datum < END (=45056 + NumCH)    -> count registered at energy
         END = 45056 + NumCH
-        scale = 4096 / self.meta.im_size
+        scale = 4096 / ScanLine
         # map the size x size image into 4096x4096
         for d in data:
             N += 1
@@ -598,6 +503,7 @@ class JEOL_pts:
             Based on a code fragment by @sempicor at
             https://github.com/hyperspy/hyperspy/pull/2488
         """
+        ScanLine = self.parameters["PTTD Data"]["AnalyzableMap MeasData"]["Doc"]["ScanLine"]
         with open(fname) as f:
             f.seek(8*16**3)     # data seems to be at fixed offset
             rawdata = np.fromfile(f, dtype='u2')
@@ -605,8 +511,8 @@ class JEOL_pts:
             if len(ipos) == 0:  # No data available
                 return None
             I = np.array(rawdata[ipos]-40960, dtype='uint16')
-            N_images = int(np.ceil(ipos.shape[0] / self.meta.im_size**2))
-            return I.reshape((N_images, self.meta.im_size, self.meta.im_size))
+            N_images = int(np.ceil(ipos.shape[0] / ScanLine**2))
+            return I.reshape((N_images, ScanLine, ScanLine))
 
     def drift_statistics(self, filtered=False, verbose=False):
         """Returns 2D frequency distribution of frame shifts (x, y).
@@ -689,24 +595,25 @@ class JEOL_pts:
                 c = correlate(ref, wiener(self.map(frames=[f])))
             else:
                 c = correlate(ref, self.map(frames=[f]))
-            # c has shape (2 * self.meta.im_size - 1, 2 * self.meta.im_size - 1)
-            # Autocorrelation peaks at [self.meta.im_size - 1, self.meta.im_size - 1]
-            # i.e. offset is at dy (dy) index_of_maximum - self.meta.im_size + 1.
+            # image size s=self.dcube.shape[1]
+            # c has shape (2 * s - 1, 2 * s - 1)
+            # Autocorrelation peaks at [s - 1, s - 1]
+            # i.e. offset is at dy (dy) index_of_maximum - s + 1.
             dx, dy = np.where(c==np.amax(c))
             if dx.shape[0] > 1 and verbose:
                 # Report cases where averging was applied
                 print('Average of', end=' ')
                 for x, y in zip(dx, dy):
-                    print('({}, {})'.format(x - self.meta.im_size + 1,
-                                            y - self.meta.im_size + 1),
+                    print('({}, {})'.format(x - self.dcube.shape[1] + 1,
+                                            y - self.dcube.shape[1] + 1),
                           end=' ')
-                print('set to ({}, {}) in frame {}'.format(round(dx.mean() - self.meta.im_size + 1),
-                                                           round(dy.mean() - self.meta.im_size + 1),
+                print('set to ({}, {}) in frame {}'.format(round(dx.mean() - self.dcube.shape[1] + 1),
+                                                           round(dy.mean() - self.dcube.shape[1] + 1),
                                                             f))
             # More than one maximum is possible, use average
             dx = round(dx.mean())
             dy = round(dy.mean())
-            shifts[f] = (dx - self.meta.im_size + 1, dy - self.meta.im_size + 1)
+            shifts[f] = (dx - self.dcube.shape[1] + 1, dy - self.dcube.shape[1] + 1)
         return shifts
 
     def map(self, interval=None, energy=False, frames=None, align='no',
@@ -760,11 +667,12 @@ class JEOL_pts:
             return self.dcube[0, :, :, interval[0]:interval[1]].sum(axis=-1)
 
         # split_frame is active but no alignment required
+        N = self.dcube.shape[1]     # image size
         if align == 'no':
             if frames is None:
                 return self.dcube[:, :, :, interval[0]:interval[1]].sum(axis=(0, -1))
             # Only sum frames specified
-            m = np.zeros((self.meta.im_size, self.meta.im_size))
+            m = np.zeros((N, N))
             for frame in frames:
                 m += self.dcube[frame, :, :, interval[0]:interval[1]].sum(axis=-1)
             return m
@@ -779,10 +687,9 @@ class JEOL_pts:
         if align == 'yes':
             shifts = self.shifts(frames=frames, verbose=verbose)
         # Allocate array for result
-        res = np.zeros((2*self.meta.im_size, 2*self.meta.im_size))
-        x0 = self.meta.im_size // 2
-        y0 = self.meta.im_size // 2
-        N = self.meta.im_size
+        res = np.zeros((2*N, 2*N))
+        x0 = N // 2
+        y0 = N // 2
         for f in frames:
             # map of this frame summed over all energy intervals
             dx, dy = shifts[f]
@@ -810,7 +717,7 @@ class JEOL_pts:
                             EDX spectrum
         """
         if not ROI:
-            ROI = (0, self.meta.im_size, 0, self.meta.im_size)
+            ROI = (0, self.dcube.shape[1], 0, self.dcube.shape[1])
         if not self.split_frames:   # only a single frame (0) present
             return self.dcube[0, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
 
@@ -850,4 +757,3 @@ class JEOL_pts:
         self.dcube = npzfile['arr_0']
         if self.dcube.shape[0] > 1:
             self.split_frames = True
-        self.meta.im_size = self.dcube.shape[1]
