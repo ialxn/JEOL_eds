@@ -23,7 +23,6 @@ class EDS_metadata:
                             Binary header or None if loading a '.npz'
                             file that does not contain metadata.
         """
-        self.N_ch = self.__get_parameter('NumCH', header)
         try:
             self.Sweep = self.__get_parameter('Sweep', header[1024:])
         except TypeError:
@@ -518,12 +517,13 @@ class JEOL_pts:
         #  tentative OFFSET by 96 channels (see #59_60)  #
         #                                                #
         ##################################################
+        NumCH = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['NumCH']
         if E_cutoff:
             CoefA = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefA']
             CoefB = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefB']
             N_spec = round((E_cutoff - CoefB) / CoefA)
         else:
-            N_spec = self.meta.N_ch - 96
+            N_spec = NumCH - 96
         with open(self.file_name, 'rb') as f:
             f.seek(offset)
             data = np.fromfile(f, dtype='u2')
@@ -539,8 +539,8 @@ class JEOL_pts:
         # Data is mapped as follows:
         #   32768 <= datum < 36864                  -> y-coordinate
         #   36864 <= datum < 40960                  -> x-coordinate
-        #   45056 <= datum < END (=45056 + N_ch)    -> count registered at energy
-        END = 45056 + self.meta.N_ch
+        #   45056 <= datum < END (=45056 + NumCH)    -> count registered at energy
+        END = 45056 + NumCH
         scale = 4096 / self.meta.im_size
         # map the size x size image into 4096x4096
         for d in data:
@@ -750,7 +750,7 @@ class JEOL_pts:
             raise
 
         if not interval:
-            interval = (0, self.meta.N_ch)
+            interval = (0, self.dcube.shape[3])
         if energy:
             CoefA = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefA']
             CoefB = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefB']
@@ -855,4 +855,3 @@ class JEOL_pts:
         if self.meta.Sweep > 1:
             self.split_frames = True
         self.meta.im_size = self.dcube.shape[1]
-        self.meta.N_ch = self.dcube.shape[3]
