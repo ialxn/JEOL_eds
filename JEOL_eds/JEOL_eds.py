@@ -29,8 +29,6 @@ class EDS_metadata:
         except TypeError:
             pass
         self.im_size = self.__get_parameter('ScanLine', header)
-        self.E_calib = (self.__get_parameter('CoefA', header),
-                        self.__get_parameter('CoefB', header))
 
     @staticmethod
     def __get_parameter(ParName, header):
@@ -521,7 +519,9 @@ class JEOL_pts:
         #                                                #
         ##################################################
         if E_cutoff:
-            N_spec = round((E_cutoff - self.meta.E_calib[1]) / self.meta.E_calib[0])
+            CoefA = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefA']
+            CoefB = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefB']
+            N_spec = round((E_cutoff - CoefB) / CoefA)
         else:
             N_spec = self.meta.N_ch - 96
         with open(self.file_name, 'rb') as f:
@@ -752,8 +752,10 @@ class JEOL_pts:
         if not interval:
             interval = (0, self.meta.N_ch)
         if energy:
-            interval = (int(round((interval[0] - self.meta.E_calib[1]) / self.meta.E_calib[0])),
-                        int(round((interval[1] - self.meta.E_calib[1]) / self.meta.E_calib[0])))
+            CoefA = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefA']
+            CoefB = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefB']
+            interval = (int(round((interval[0] - CoefB) / CoefA)),
+                        int(round((interval[1] - CoefB) / CoefA)))
         if verbose:
             print('Using channels {} - {}'.format(interval[0], interval[1]))
 
