@@ -772,6 +772,7 @@ class JEOL_pts:
                         File name of '.npz' file (must end in '.npz').
         """
         self.file_name = fname
+        self.file_date = None
         npzfile = np.load(fname)
         self.dcube = npzfile['arr_0']
         if self.dcube.shape[0] > 1:
