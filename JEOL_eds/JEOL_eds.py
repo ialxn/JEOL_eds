@@ -330,12 +330,12 @@ class JEOL_pts:
             self.__load_dcube(fname)
         else:
             self.file_name = fname
-            self.parameters = self.__parse_header(fname)
-            headersize, datasize = self.__get_offset_and_size()
+            self.parameters, data_offset = self.__parse_header(fname)
+            headersize, _ = self.__get_offset_and_size()
             with open(fname, 'rb') as f:
                 header = np.fromfile(f, dtype='u1', count=headersize)
                 self.meta = EDS_metadata(header)
-            self.dcube = self.__get_data_cube(dtype, headersize, datasize,
+            self.dcube = self.__get_data_cube(dtype, data_offset,
                                               E_cutoff=E_cutoff, verbose=verbose)
         if read_drift and os.path.splitext(fname)[1] == '.pts':
             self.drift_images = self.__read_drift_images(fname)
@@ -386,7 +386,7 @@ class JEOL_pts:
             _ = fd.read(132).rstrip(b"\x00").decode("utf-8")
             self.file_date = str(datetime(1899, 12, 30) + timedelta(days=np.fromfile(fd, "d", 1)[0]))
             fd.seek(head_pos + 12)
-            return self.__parsejeol(fd)
+            return self.__parsejeol(fd), data_pos
 
     @staticmethod
     def __parsejeol(fd):
@@ -499,7 +499,7 @@ class JEOL_pts:
                     mark = 0
         return final_dict
 
-    def __get_data_cube(self, dtype, hsize, Ndata,
+    def __get_data_cube(self, dtype, offset,
                         E_cutoff=None, verbose=False):
         """Returns data cube (F x X x Y x E).
 
@@ -509,8 +509,6 @@ class JEOL_pts:
                             Data type used to store data cube in memory.
                 hsize:      Int
                             Number of header bytes.
-                Ndata:      Int
-                            Number of data items ('u2') to be read.
              E_cutoff:      Float
                             Cutoff energy for spectra. Only store data below
                             this energy.
@@ -535,8 +533,8 @@ class JEOL_pts:
         else:
             N_spec = self.meta.N_ch - 96
         with open(self.file_name, 'rb') as f:
-            np.fromfile(f, dtype='u1', count=hsize)    # skip header
-            data = np.fromfile(f, dtype='u2', count=Ndata)
+            f.seek(offset)
+            data = np.fromfile(f, dtype='u2')
         if self.split_frames:
             dcube = np.zeros([self.meta.Sweep, self.meta.im_size, self.meta.im_size, N_spec], dtype=dtype)
         else:
