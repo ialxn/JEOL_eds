@@ -7,6 +7,7 @@ Created on Sat Nov  7 13:30:08 2020
 """
 import os
 import struct
+from datetime import datetime, timedelta
 import numpy as np
 from scipy.signal import wiener, correlate
 
@@ -325,10 +326,11 @@ class JEOL_pts:
         """
         self.split_frames = split_frames
         if os.path.splitext(fname)[1] == '.npz':
-            self.meta = EDS_metadata(None)
+            self.parameters = None
             self.__load_dcube(fname)
         else:
             self.file_name = fname
+            self.parameters = self.__parse_header(fname)
             headersize, datasize = self.__get_offset_and_size()
             with open(fname, 'rb') as f:
                 header = np.fromfile(f, dtype='u1', count=headersize)
@@ -361,6 +363,141 @@ class JEOL_pts:
             size = np.fromfile(f, dtype='<i4', count=1)[0]  # total length bytes
             size = (size - offset) / 2  # convert to number of u2 in data segment
             return offset, int(size)
+
+    def __parse_header(self, fname):
+        """Extract meta data from header in JEOL ".pts" file.
+
+            Parameters
+            ----------
+                fname:  Str
+                        Filename.
+
+            Returns
+            -------
+                        Dict
+                        Dictionary containing all meta data stored in header.
+        """
+        with open(fname, "br") as fd:
+            file_magic = np.fromfile(fd, "<I", 1)[0]
+            assert file_magic == 304
+            _ = fd.read(8).rstrip(b"\x00").decode("utf-8")
+            _, _, head_pos, head_len, data_pos, data_len = np.fromfile(fd, "<I", 6)
+            fd.read(128).rstrip(b"\x00").decode("utf-8")
+            _ = fd.read(132).rstrip(b"\x00").decode("utf-8")
+            self.file_date = datetime(1899, 12, 30) + timedelta(days=np.fromfile(fd, "d", 1)[0])
+            fd.seek(head_pos + 12)
+            return self.__parsejeol(fd)
+
+    @staticmethod
+    def __parsejeol(fd):
+        """Parse meta data.
+
+            Parameters
+            ----------
+                fd:     File descriptor positioned at start of parseable header
+
+            Returns
+            -------
+                        Dict
+                        Dictionary containing all meta data stored in header.
+        """
+        jTYPE = {
+            1: "B",
+            2: "H",
+            3: "i",
+            4: "f",
+            5: "d",
+            6: "B",
+            7: "H",
+            8: "i",
+            9: "f",
+            10: "d",
+            11: "?",
+            12: "c",
+            13: "c",
+            14: "H",
+            20: "c",
+            65553: "?",
+            65552: "?",
+            }
+
+        final_dict = {}
+        tmp_list = []
+        tmp_dict = final_dict
+        mark = 1
+        while abs(mark) == 1:
+            mark = np.fromfile(fd, "b", 1)[0]
+            if mark == 1:
+                str_len = np.fromfile(fd, "<i", 1)[0]
+                kwrd = fd.read(str_len).rstrip(b"\x00")
+                if (
+                    kwrd == b"\xce\xdf\xb0\xc4"
+                ):  # correct variable name which might be 'Port'
+                    kwrd = "Port"
+                elif (
+                    kwrd[-1] == 222
+                ):  # remove undecodable byte at the end of first ScanSize variable
+                    kwrd = kwrd[:-1].decode("utf-8")
+                else:
+                    kwrd = kwrd.decode("utf-8")
+                val_type, val_len = np.fromfile(fd, "<i", 2)
+                tmp_list.append(kwrd)
+                if val_type == 0:
+                    tmp_dict[kwrd] = {}
+                else:
+                    c_type = jTYPE[val_type]
+                    arr_len = val_len // np.dtype(c_type).itemsize
+                    if c_type == "c":
+                        value = fd.read(val_len).rstrip(b"\x00")
+                        value = value.decode("utf-8").split("\x00")
+                        # value = os.path.normpath(value.replace('\\','/')).split('\x00')
+                    else:
+                        value = np.fromfile(fd, c_type, arr_len)
+                    if len(value) == 1:
+                        value = value[0]
+                    if kwrd[-5:-1] == "PAGE":
+                        kwrd = kwrd + "_" + value
+                        tmp_dict[kwrd] = {}
+                        tmp_list[-1] = kwrd
+                    elif kwrd in ("CountRate", "DeadTime"):
+                        tmp_dict[kwrd] = {}
+                        tmp_dict[kwrd]["value"] = value
+                    elif kwrd == "Limits":
+                        pass
+                        # see https://github.com/hyperspy/hyperspy/pull/2488
+                        # first 16 bytes are encode in float32 and looks like
+                        # limit values ([20. , 1., 2000, 1.] or [1., 0., 1000., 0.001])
+                        # next 4 bytes are ascii character and looks like
+                        # number format (%.0f or %.3f)
+                        # next 12 bytes are unclear
+                        # next 4 bytes are ascii character and are units (kV or nA)
+                        # last 12 byes are unclear
+                    elif val_type == 14:
+                        tmp_dict[kwrd] = {}
+                        tmp_dict[kwrd]["index"] = value
+                    else:
+                        tmp_dict[kwrd] = value
+                if kwrd == "Limits":
+                    pass
+                    # see https://github.com/hyperspy/hyperspy/pull/2488
+                    # first 16 bytes are encode in int32 and looks like
+                    # limit values (10, 1, 100000000, 1)
+                    # next 4 bytes are ascii character and looks like number
+                    # format (%d)
+                    # next 12 bytes are unclear
+                    # next 4 bytes are ascii character and are units (mag)
+                    # last 12 byes are again unclear
+                else:
+                    tmp_dict = tmp_dict[kwrd]
+            else:
+                if len(tmp_list) != 0:
+                    del tmp_list[-1]
+                    tmp_dict = final_dict
+                    for k in tmp_list:
+                        tmp_dict = tmp_dict[k]
+                else:
+                    mark = 0
+        return final_dict
 
     def __get_data_cube(self, dtype, hsize, Ndata,
                         E_cutoff=None, verbose=False):
