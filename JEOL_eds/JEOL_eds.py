@@ -23,10 +23,6 @@ class EDS_metadata:
                             Binary header or None if loading a '.npz'
                             file that does not contain metadata.
         """
-        try:
-            self.Sweep = self.__get_parameter('Sweep', header[1024:])
-        except TypeError:
-            pass
         self.im_size = self.__get_parameter('ScanLine', header)
 
     @staticmethod
@@ -528,7 +524,8 @@ class JEOL_pts:
             f.seek(offset)
             data = np.fromfile(f, dtype='u2')
         if self.split_frames:
-            dcube = np.zeros([self.meta.Sweep, self.meta.im_size, self.meta.im_size, N_spec], dtype=dtype)
+            Sweep = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['Sweep']
+            dcube = np.zeros([Sweep, self.meta.im_size, self.meta.im_size, N_spec], dtype=dtype)
         else:
             dcube = np.zeros([1, self.meta.im_size, self.meta.im_size, N_spec], dtype=dtype)
         N = 0
@@ -674,17 +671,17 @@ class JEOL_pts:
                             elements and contains (0, 0) for frames that were
                             not in the list provided by keyword 'frames='.
         """
-        if self.meta.Sweep == 1:
+        if self.dcube.shape[0] == 1:
             # only a single frame present
             return []
         if frames is None:
-            frames = range(self.meta.Sweep)
+            frames = range(self.dcube.shape[0])
         # Always use first frame given as reference
         if filtered:
             ref = wiener(self.map(frames=[frames[0]]))
         else:
             ref = self.map(frames=[frames[0]])
-        shifts = [(0, 0)] * self.meta.Sweep
+        shifts = [(0, 0)] * self.dcube.shape[0]
         if verbose:
             print('Frame {} used a reference'.format(frames[0]))
         for f in frames[1:]:    # skip reference frame
@@ -775,7 +772,7 @@ class JEOL_pts:
         # Alignment is required
         if frames is None:
             # Sum all frames
-            frames = np.arange(self.meta.Sweep)
+            frames = np.arange(self.dcube.shape[0])
         # Calculate frame shifts
         if align == 'filter':
             shifts = self.shifts(frames=frames, filtered=True, verbose=verbose)
@@ -851,7 +848,6 @@ class JEOL_pts:
         self.file_name = fname
         npzfile = np.load(fname)
         self.dcube = npzfile['arr_0']
-        self.meta.Sweep = self.dcube.shape[0]
-        if self.meta.Sweep > 1:
+        if self.dcube.shape[0] > 1:
             self.split_frames = True
         self.meta.im_size = self.dcube.shape[1]
