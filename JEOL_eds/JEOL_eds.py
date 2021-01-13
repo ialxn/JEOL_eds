@@ -667,10 +667,8 @@ class JEOL_pts:
                 map:   Ndarray
                        Spectral Map.
         """
-        try: # Check for valid keyword arguments
-            ['yes', 'no', 'filter'].index(align)
-        except ValueError:
-            raise
+        # Check for valid keyword arguments
+        assert ['yes', 'no', 'filter'].index(align)
 
         if not interval:
             interval = (0, self.dcube.shape[3])
