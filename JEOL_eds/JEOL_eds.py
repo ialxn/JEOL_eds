@@ -417,6 +417,12 @@ class JEOL_pts:
                     mark = 0
         return final_dict
 
+    def __CH_offset_from_meta(self):
+        """Returns offset (channel corresponding to E=0).
+        """
+        Tpl_cond = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Tpl']
+        return self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond]['DigZ']
+
     def __get_data_cube(self, dtype, offset,
                         E_cutoff=None, verbose=False):
         """Returns data cube (F x X x Y x E).
@@ -440,12 +446,7 @@ class JEOL_pts:
                             was selected) otherwise N=1, image is size x size pixels,
                             spectra contain numCH channels.
         """
-        # set number of energy channels to be used in spectrum / data cube
-        ##################################################
-        #                                                #
-        #  tentative OFFSET by 96 channels (see #59_60)  #
-        #                                                #
-        ##################################################
+        CH_offset = self.__CH_offset_from_meta()
         NumCH = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['NumCH']
         ScanLine = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['ScanLine']
         if E_cutoff:
@@ -453,7 +454,7 @@ class JEOL_pts:
             CoefB = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefB']
             N_spec = round((E_cutoff - CoefB) / CoefA)
         else:
-            N_spec = NumCH - 96
+            N_spec = NumCH - CH_offset
         with open(self.file_name, 'rb') as f:
             f.seek(offset)
             data = np.fromfile(f, dtype='u2')
@@ -488,12 +489,7 @@ class JEOL_pts:
                 x = d
             elif 45056 <= d < END:
                 z = int(d - 45056)
-                ##################################################
-                #                                                #
-                #  tentative OFFSET by 96 channels (see #59_60)  #
-                #                                                #
-                ##################################################
-                z -= 96
+                z -= CH_offset
                 if N_spec > z >= 0:
                     dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
             else:
