@@ -797,17 +797,19 @@ class JEOL_pts:
         if not ROI:
             ROI = (0, self.dcube.shape[1], 0, self.dcube.shape[1])
         if not self.split_frames:   # only a single frame (0) present
-            return self.dcube[0, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
+            s = self.dcube[0, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
+            return self.__correct_spectrum(s)
 
         # split_frames is active
         if frames is None:  # no frames specified, sum all frames
-            return self.dcube[:, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1, 2))
+            s = self.dcube[:, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1, 2))
+            return self.__correct_spectrum(s)
 
         # only sum specified frames
-        spec = np.zeros(self.dcube.shape[-1])
+        s = np.zeros(self.dcube.shape[-1])
         for frame in frames:
-            spec += self.dcube[frame, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
-        return spec
+            s += self.dcube[frame, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
+        return self.__correct_spectrum(s)
 
     def save_dcube(self, fname=None):
         """Saves (compressed) data cube.
