@@ -720,6 +720,65 @@ class JEOL_pts:
                                                             interval[0]:interval[1]].sum(axis=-1)
         return res[x0:x0+N, y0:y0+N]
 
+    def __correct_spectrum(self, s):
+        """Apply non-linear energy correction at low energies to spectrum.
+
+            Parameters
+            ----------
+                    s:  Ndarray
+                        Uncorrected spectrum.
+
+            Returns
+            -------
+                        Ndarray
+                        Original or corrected spectrum, depending on whether
+                        correction is necessary.
+        """
+        def apply_correction(s, ExCoef):
+            """Applies the correction formula.
+
+                Parameters
+                ----------
+                        s:  Ndarray
+                            Original spectrum
+                   ExCoef:  List
+                            Correction coefficients.
+
+                Returns
+                -------
+                        s:  Ndarray
+                            Corrected spectrum.
+            """
+            E_uncorr = np.arange(0, ExCoef[3], 0.01)
+            N = E_uncorr.shape[0]
+            ###########################################################
+            #                                                         #
+            # Correction formula (guess) using the three parameters   #
+            # given in `ExCoef`.                                      #
+            #                                                         #
+            # The correction does not yet yield exactly the reference #
+            # spectrum at EDXRF. Peak positions are matched well but  #
+            # the line shape still shows some differences. I guess    #
+            # that this is related to the interpolation part.         #
+            #                                                         #
+            # With 'test/128.pts' as example:                         #                             #
+            #     >>>> ref_spec[0:100].sum()                          #                         #
+            #     200468                                              #
+            #     >>>> corrected_spec[0:100].sum()                    #                                #
+            #     200290                                              #
+            #                                                         #
+            ###########################################################
+            E_corr = ExCoef[0]*E_uncorr**2 + ExCoef[1]*E_uncorr + ExCoef[2]
+            s[0:N] = np.interp(E_uncorr, E_corr, s[0:N])
+            return s
+
+        Tpl_cond = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Tpl']
+        try:
+            ExCoef = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond]['ExCoef']
+            return apply_correction(s, ExCoef)
+        except KeyError:
+            return s
+
     def spectrum(self, ROI=None, frames=None):
         """Returns spectrum integrated over a ROI.
 
@@ -742,17 +801,19 @@ class JEOL_pts:
         if not ROI:
             ROI = (0, self.dcube.shape[1], 0, self.dcube.shape[1])
         if not self.split_frames:   # only a single frame (0) present
-            return self.dcube[0, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
+            s = self.dcube[0, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
+            return self.__correct_spectrum(s)
 
         # split_frames is active
         if frames is None:  # no frames specified, sum all frames
-            return self.dcube[:, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1, 2))
+            s = self.dcube[:, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1, 2))
+            return self.__correct_spectrum(s)
 
         # only sum specified frames
-        spec = np.zeros(self.dcube.shape[-1])
+        s = np.zeros(self.dcube.shape[-1])
         for frame in frames:
-            spec += self.dcube[frame, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
-        return spec
+            s += self.dcube[frame, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
+        return self.__correct_spectrum(s)
 
     def save_dcube(self, fname=None):
         """Saves (compressed) data cube.
