@@ -716,6 +716,65 @@ class JEOL_pts:
                                                             interval[0]:interval[1]].sum(axis=-1)
         return res[x0:x0+N, y0:y0+N]
 
+    def __correct_spectrum(self, s):
+        """Apply non-linear energy correction at low energies to spectrum.
+
+            Parameters
+            ----------
+                    s:  Ndarray
+                        Uncorrected spectrum.
+
+            Returns
+            -------
+                        Ndarray
+                        Original or corrected spectrum, depending on whether
+                        correction is necessary.
+        """
+        def apply_correction(s, ExCoef):
+            """Applies the correction formula.
+
+                Parameters
+                ----------
+                        s:  Ndarray
+                            Original spectrum
+                   ExCoef:  List
+                            Correction coefficients.
+
+                Returns
+                -------
+                        s:  Ndarray
+                            Corrected spectrum.
+            """
+            E_uncorr = np.arange(0, ExCoef[3], 0.01)
+            N = E_uncorr.shape[0]
+            ###########################################################
+            #                                                         #
+            # Correction formula (guess) using the three parameters   #
+            # given in `ExCoef`.                                      #
+            #                                                         #
+            # The correction does not yet yield exactly the reference #
+            # spectrum at EDXRF. Peak positions are matched well but  #
+            # the line shape still shows some differences. I guess    #
+            # that this is related to the interpolation part.         #
+            #                                                         #
+            # With 'test/128.pts' as example:                         #                             #
+            #     >>>> ref_spec[0:100].sum()                          #                         #
+            #     200468                                              #
+            #     >>>> corrected_spec[0:100].sum()                    #                                #
+            #     200290                                              #
+            #                                                         #
+            ###########################################################
+            E_corr = ExCoef[0]*E_uncorr**2 + ExCoef[1]*E_uncorr + ExCoef[2]
+            s[0:N] = np.interp(E_uncorr, E_corr, s[0:N])
+            return s
+
+        Tpl_cond = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Tpl']
+        try:
+            ExCoef = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond]['ExCoef']
+            return apply_correction(s, ExCoef)
+        except KeyError:
+            return s
+
     def spectrum(self, ROI=None, frames=None):
         """Returns spectrum integrated over a ROI.
 
