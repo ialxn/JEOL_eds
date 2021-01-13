@@ -120,6 +120,11 @@ class JEOL_pts:
         added together.
         >>>> plt.plot(dc.spectrum())
         [<matplotlib.lines.Line2D at 0x7f7192feec10>]
+        # The integrated spectrum is also stored in the raw data and can be
+        # accessed much quicker.
+        >>>> plt.plot(dc.ref_spectrum)
+        [<matplotlib.lines.Line2D at 0x7f3131a489d0>]
+
         # Plot spectrum corresponding to a (rectangular) ROI specified as
         # tuple (left, right, top, bottom) of pixels.
         >>>> plt.plot(dc.spectrum(ROI=(10,20,50,100)))
@@ -267,6 +272,11 @@ class JEOL_pts:
             self.parameters, data_offset = self.__parse_header(fname)
             self.dcube = self.__get_data_cube(dtype, data_offset,
                                               E_cutoff=E_cutoff, verbose=verbose)
+        if self.parameters:
+            self.ref_spectrum = self.parameters['EDS Data']['AnalyzableMap MeasData']['Data']['EDXRF'][0:self.dcube.shape[3]]
+        else:
+            self.ref_spectrum = None
+
         if read_drift and os.path.splitext(fname)[1] == '.pts':
             self.drift_images = self.__read_drift_images(fname)
         else:
