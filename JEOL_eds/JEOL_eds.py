@@ -306,6 +306,9 @@ class JEOL_pts:
             -------
                         Dict
                         Dictionary containing all meta data stored in header.
+            Notes
+            -----
+                    Copied almost verbatiom from Hyperspy (hyperspy/io_plugins/jeol.py).
         """
         with open(fname, "br") as fd:
             file_magic = np.fromfile(fd, "<I", 1)[0]
@@ -330,6 +333,10 @@ class JEOL_pts:
             -------
                         Dict
                         Dictionary containing all meta data stored in header.
+
+            Notes
+            -----
+                    Copied almost verbatiom from Hyperspy (hyperspy/io_plugins/jeol.py).
         """
         jTYPE = {
             1: "B",
