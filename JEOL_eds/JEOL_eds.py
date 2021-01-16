@@ -420,7 +420,7 @@ class JEOL_pts:
         return dcube
 
     def __read_drift_images(self, fname):
-        """Read BF images stored (option "correct for sample movement" was active)
+        """Read BF images stored in raw data
 
             Parameters
             ----------
@@ -437,9 +437,11 @@ class JEOL_pts:
             Based on a code fragment by @sempicor at
             https://github.com/hyperspy/hyperspy/pull/2488
         """
-        ScanLine = self.parameters["PTTD Data"]["AnalyzableMap MeasData"]["Doc"]["ScanLine"]
+        ScanLine = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['ScanLine']
         with open(fname) as f:
-            f.seek(8*16**3)     # data seems to be at fixed offset
+            f.seek(28)  # see self.__parse_header()
+            data_pos = np.fromfile(f, "<I", 1)[0]
+            f.seek(data_pos)
             rawdata = np.fromfile(f, dtype='u2')
             ipos = np.where(np.logical_and(rawdata >= 40960, rawdata < 45056))[0]
             if len(ipos) == 0:  # No data available
