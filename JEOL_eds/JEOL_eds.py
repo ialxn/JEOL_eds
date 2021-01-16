@@ -749,7 +749,8 @@ class JEOL_pts:
                         s:  Ndarray
                             Corrected spectrum.
             """
-            E_uncorr = np.arange(0, ExCoef[3], 0.01)
+            CH_Res = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['CH Res']
+            E_uncorr = np.arange(0, ExCoef[3], CH_Res)
             N = E_uncorr.shape[0]
             ###########################################################
             #                                                         #
