@@ -1,9 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sat Nov  7 13:30:08 2020
+Copyright 2020-2021 Ivo Alxneit (ivo.alxneit@psi.ch)
 
-@author: alxneit
+This file is part of JEOL_eds.
+JEOL_eds is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+JEOL_eds is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 """
 import os
 from datetime import datetime, timedelta
@@ -183,6 +195,9 @@ class JEOL_pts:
             -------
                         Dict
                         Dictionary containing all meta data stored in header.
+            Notes
+            -----
+                    Copied almost verbatiom from Hyperspy (hyperspy/io_plugins/jeol.py).
         """
         with open(fname, "br") as fd:
             file_magic = np.fromfile(fd, "<I", 1)[0]
@@ -207,6 +222,10 @@ class JEOL_pts:
             -------
                         Dict
                         Dictionary containing all meta data stored in header.
+
+            Notes
+            -----
+                    Copied almost verbatiom from Hyperspy (hyperspy/io_plugins/jeol.py).
         """
         jTYPE = {
             1: "B",
