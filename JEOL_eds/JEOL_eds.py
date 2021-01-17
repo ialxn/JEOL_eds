@@ -200,14 +200,14 @@ class JEOL_pts:
             -----
                     Copied almost verbatiom from Hyperspy (hyperspy/io_plugins/jeol.py).
         """
-        with open(fname, "br") as fd:
-            file_magic = np.fromfile(fd, "<I", 1)[0]
+        with open(fname, 'br') as fd:
+            file_magic = np.fromfile(fd, '<I', 1)[0]
             assert file_magic == 304
-            _ = fd.read(8).rstrip(b"\x00").decode("utf-8")
-            _, _, head_pos, head_len, data_pos, data_len = np.fromfile(fd, "<I", 6)
-            fd.read(128).rstrip(b"\x00").decode("utf-8")
-            _ = fd.read(132).rstrip(b"\x00").decode("utf-8")
-            self.file_date = str(datetime(1899, 12, 30) + timedelta(days=np.fromfile(fd, "d", 1)[0]))
+            fd.read(16)
+            head_pos, head_len, data_pos, data_len = np.fromfile(fd, '<I', 4)
+            fd.read(260)
+            self.file_date = (str(datetime(1899, 12, 30) +
+                                  timedelta(days=np.fromfile(fd, 'd', 1)[0])))
             fd.seek(head_pos + 12)
             return self.__parsejeol(fd), data_pos
 
