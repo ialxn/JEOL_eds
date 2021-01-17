@@ -440,7 +440,7 @@ class JEOL_pts:
         ScanLine = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['ScanLine']
         with open(fname) as f:
             f.seek(28)  # see self.__parse_header()
-            data_pos = np.fromfile(f, "<I", 1)[0]
+            data_pos = np.fromfile(f, '<I', 1)[0]
             f.seek(data_pos)
             rawdata = np.fromfile(f, dtype='u2')
             ipos = np.where(np.logical_and(rawdata >= 40960, rawdata < 45056))[0]
