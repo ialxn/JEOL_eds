@@ -229,23 +229,23 @@ class JEOL_pts:
                     Copied almost verbatiom from Hyperspy (hyperspy/io_plugins/jeol.py).
         """
         jTYPE = {
-            1: "B",
-            2: "H",
-            3: "i",
-            4: "f",
-            5: "d",
-            6: "B",
-            7: "H",
-            8: "i",
-            9: "f",
-            10: "d",
-            11: "?",
-            12: "c",
-            13: "c",
-            14: "H",
-            20: "c",
-            65553: "?",
-            65552: "?",
+            1: 'B',
+            2: 'H',
+            3: 'i',
+            4: 'f',
+            5: 'd',
+            6: 'B',
+            7: 'H',
+            8: 'i',
+            9: 'f',
+            10: 'd',
+            11: '?',
+            12: 'c',
+            13: 'c',
+            14: 'H',
+            20: 'c',
+            65553: '?',
+            65552: '?',
             }
 
         final_dict = {}
@@ -253,43 +253,43 @@ class JEOL_pts:
         tmp_dict = final_dict
         mark = 1
         while abs(mark) == 1:
-            mark = np.fromfile(fd, "b", 1)[0]
+            mark = np.fromfile(fd, 'b', 1)[0]
             if mark == 1:
-                str_len = np.fromfile(fd, "<i", 1)[0]
-                kwrd = fd.read(str_len).rstrip(b"\x00")
+                str_len = np.fromfile(fd, '<i', 1)[0]
+                kwrd = fd.read(str_len).rstrip(b'\x00')
                 if (
-                    kwrd == b"\xce\xdf\xb0\xc4"
+                    kwrd == b'\xce\xdf\xb0\xc4'
                 ):  # correct variable name which might be 'Port'
-                    kwrd = "Port"
+                    kwrd = 'Port'
                 elif (
                     kwrd[-1] == 222
                 ):  # remove undecodable byte at the end of first ScanSize variable
-                    kwrd = kwrd[:-1].decode("utf-8")
+                    kwrd = kwrd[:-1].decode('utf-8')
                 else:
-                    kwrd = kwrd.decode("utf-8")
-                val_type, val_len = np.fromfile(fd, "<i", 2)
+                    kwrd = kwrd.decode('utf-8')
+                val_type, val_len = np.fromfile(fd, '<i', 2)
                 tmp_list.append(kwrd)
                 if val_type == 0:
                     tmp_dict[kwrd] = {}
                 else:
                     c_type = jTYPE[val_type]
                     arr_len = val_len // np.dtype(c_type).itemsize
-                    if c_type == "c":
-                        value = fd.read(val_len).rstrip(b"\x00")
-                        value = value.decode("utf-8").split("\x00")
+                    if c_type == 'c':
+                        value = fd.read(val_len).rstrip(b'\x00')
+                        value = value.decode('utf-8').split('\x00')
                         # value = os.path.normpath(value.replace('\\','/')).split('\x00')
                     else:
                         value = np.fromfile(fd, c_type, arr_len)
                     if len(value) == 1:
                         value = value[0]
-                    if kwrd[-5:-1] == "PAGE":
-                        kwrd = kwrd + "_" + value
+                    if kwrd[-5:-1] == 'PAGE':
+                        kwrd = kwrd + '_' + value
                         tmp_dict[kwrd] = {}
                         tmp_list[-1] = kwrd
-                    elif kwrd in ("CountRate", "DeadTime"):
+                    elif kwrd in ('CountRate', 'DeadTime'):
                         tmp_dict[kwrd] = {}
-                        tmp_dict[kwrd]["value"] = value
-                    elif kwrd == "Limits":
+                        tmp_dict[kwrd]['value'] = value
+                    elif kwrd == 'Limits':
                         pass
                         # see https://github.com/hyperspy/hyperspy/pull/2488
                         # first 16 bytes are encode in float32 and looks like
@@ -301,10 +301,10 @@ class JEOL_pts:
                         # last 12 byes are unclear
                     elif val_type == 14:
                         tmp_dict[kwrd] = {}
-                        tmp_dict[kwrd]["index"] = value
+                        tmp_dict[kwrd]['index'] = value
                     else:
                         tmp_dict[kwrd] = value
-                if kwrd == "Limits":
+                if kwrd == 'Limits':
                     pass
                     # see https://github.com/hyperspy/hyperspy/pull/2488
                     # first 16 bytes are encode in int32 and looks like
