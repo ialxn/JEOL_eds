@@ -712,7 +712,7 @@ class JEOL_pts:
                   res *= (1 - noise / lVar)
         """
         # Check for valid keyword arguments
-        assert ['yes', 'no', 'filter'].index(align)
+        assert align.lower() in ['yes', 'no', 'filter']
 
         if not interval:
             interval = (0, self.dcube.shape[3])
