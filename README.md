@@ -11,7 +11,7 @@ This module does not aim to replace HyperSpy which is much more feature-rich. In
 Python 3.6+
 numpy
 scipy
-(matplotlib for plotting)
+matplotlib for plotting
 (pip for installation)
 ```
 
@@ -66,5 +66,11 @@ Frame 5 used a reference
 # as tuple (left, right, top, bottom) of pixels for selected frames.
 >>>> plt.plot(dc.spectrum(ROI=(10, 20, 50, 100), frames=[0,1,2,10,11,12,30,31,32]))
 <matplotlib.lines.Line2D at 0x7f7192b58050>
+
+
+# Make movie of drift_images and total EDS intensity and store it
+# as 'test/128.mp4'.
+>>>> dc = JEOL_pts('test/128.pts', split_frames=True, read_drift=True)
+>>>> dc.make_movie()
 ```
 
