@@ -919,6 +919,13 @@ class JEOL_pts:
         except KeyError:
             pass
 
+        # maxima of the two type of images used to normalize images of both series
+        try:
+            STEM_max = self.drift_images.max()
+        except TypeError:   # no drift_image availabe
+            STEM_max = 1.0
+        EDS_max = max([self.map(frames=[i]).max() for i in range(self.dcube.shape[0])])
+
         fig = plt.figure()
         ax = fig.add_subplot(111)
         frames = []
@@ -928,8 +935,7 @@ class JEOL_pts:
                 STEM_image = self.drift_images[i]
             except TypeError:   # no drift_image availabe, dummy image
                 STEM_image = np.full_like(EDS_map, np.nan)
-            image = np.concatenate((STEM_image / STEM_image.max(),
-                                    EDS_map / EDS_map.max()),
+            image = np.concatenate((STEM_image / STEM_max, EDS_map / EDS_max),
                                    axis=1)
             frame = plt.imshow(image, animated=True)
             text = ax.annotate(i, (1, -5), annotation_clip=False) # add text
