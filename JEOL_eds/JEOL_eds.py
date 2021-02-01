@@ -883,7 +883,7 @@ class JEOL_pts:
             s += self.dcube[frame, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
         return self.__correct_spectrum(s)
 
-    def make_movie(self, fname=None):
+    def make_movie(self, fname=None, **kws):
         """Makes a movie of EDS data and drift_images
 
             Parameters
@@ -902,7 +902,8 @@ class JEOL_pts:
 
             # Make movie and store is as 'test/128.mp4'.
             >>>> dc.make_movie()
-
+            # Only use Cu K_alpha line.
+            >>>> dc.make_movie(interval=(7.9, 8.1), energy=True)
 
             # Make movie (one frame only, drift_image will be blank) and
             # save is as 'dummy.mp4'.
@@ -912,11 +913,17 @@ class JEOL_pts:
         if fname is None:
             fname = os.path.splitext(self.file_name)[0] + '.mp4'
 
+        # remove `frames=` keyword from dict as it would interfer later
+        try:
+            kws.pop('frames')
+        except KeyError:
+            pass
+
         fig = plt.figure()
         ax = fig.add_subplot(111)
         frames = []
         for i in range(self.dcube.shape[0]):
-            EDS_map = self.map(frames=[i])
+            EDS_map = self.map(frames=[i], **kws)
             try:
                 STEM_image = self.drift_images[i]
             except TypeError:   # no drift_image availabe, dummy image
