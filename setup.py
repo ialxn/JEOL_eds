@@ -8,5 +8,6 @@ setup(name='JEOL_eds',
       author_email='ivo.alxneit@psi.ch',
       packages=['JEOL_eds'],
       install_requires=['numpy',
-                        'scipy'],
+                        'scipy',
+			'matplotlib'],
       zip_safe=False)
