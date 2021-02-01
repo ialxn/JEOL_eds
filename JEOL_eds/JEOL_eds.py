@@ -22,7 +22,8 @@ import os
 from datetime import datetime, timedelta
 import numpy as np
 from scipy.signal import wiener, correlate
-
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 class JEOL_pts:
     """Work with JEOL '.pts' files
@@ -881,6 +882,55 @@ class JEOL_pts:
         for frame in frames:
             s += self.dcube[frame, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
         return self.__correct_spectrum(s)
+
+    def make_movie(self, fname=None):
+        """Makes a movie of EDS data and drift_images
+
+            Parameters
+            ----------
+                fname :     Str (or None)
+                            Filename for movie file. If none is supplied the base
+                            name of the '.pts' file is used.
+
+            Returns
+            -------
+                            None.
+
+            Examples
+            --------
+            >>>> dc = JEOL_pts('test/128.pts', split_frames=True, read_drift=True)
+
+            # Make movie and store is as 'test/128.mp4'.
+            >>>> dc.make_movie()
+
+
+            # Make movie (one frame only, drift_image will be blank) and
+            # save is as 'dummy.mp4'.
+            >>>> dc = JEOL_pts('test/128.pts')
+            >>>> dc.make_movie(fname='dummy.mp4')
+        """
+        if fname is None:
+            fname = os.path.splitext(self.file_name)[0] + '.mp4'
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        frames = []
+        for i in range(self.dcube.shape[0]):
+            EDS_map = self.map(frames=[i])
+            try:
+                STEM_image = self.drift_images[i]
+            except TypeError:   # no drift_image availabe, dummy image
+                STEM_image = np.full_like(EDS_map, np.nan)
+            image = np.concatenate((STEM_image / STEM_image.max(),
+                                    EDS_map / EDS_map.max()),
+                                   axis=1)
+            frame = plt.imshow(image, animated=True)
+            text = ax.annotate(i, (1, -5), annotation_clip=False) # add text
+            frames.append([frame, text])
+
+        ani = animation.ArtistAnimation(fig, frames, interval=50, blit=True,
+                                        repeat_delay=1000)
+        ani.save(fname)
 
     def save_dcube(self, fname=None):
         """Saves (compressed) data cube.
