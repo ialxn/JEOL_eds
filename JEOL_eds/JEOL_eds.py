@@ -415,9 +415,10 @@ class JEOL_pts:
                         unknown[str(d)] = 1
                     N_err += 1
         if verbose:
-            print('Unidentified data items ({} out of {}, {:.2f}%) found:'.format(N, N_err, 100*N_err/N))
+            print(f'Unidentified data items ({N} out of {N_err}, '
+                  f'{100 * N_err / N:.2f}%) found:')
             for key in sorted(unknown):
-                print('\t{}: found {} times'.format(key, unknown[key]))
+                print(f'\t{key}: found {unknown[key]}')
         return dcube
 
     def __read_drift_images(self, fname):
@@ -514,9 +515,8 @@ class JEOL_pts:
                 print('Shifts (filtered):')
             else:
                 print('Shifts (unfiltered):')
-            print('   Range: {} - {}'.format(int(np.asarray(sh).min()),
-                                             int(np.asarray(sh).max())))
-            print('   Maximum {} at ({}, {})'.format(peak_val, mx, my))
+            print(f'   Range: {int(np.asarray(sh).min())} - {int(np.asarray(sh).max())}')
+            print(f'   Maximum {peak_val} at ({max}, {my})')
         return h, extent
 
     def shifts(self, frames=None, filtered=False, verbose=False):
@@ -602,7 +602,7 @@ class JEOL_pts:
             ref = self.map(frames=[frames[0]])
         shifts = [(0, 0)] * self.dcube.shape[0]
         if verbose:
-            print('Frame {} used a reference'.format(frames[0]))
+            print(f'Frame {frames[0]} used a reference')
         for f in frames[1:]:    # skip reference frame
             if filtered:
                 c = correlate(ref, wiener(self.map(frames=[f])))
@@ -617,12 +617,12 @@ class JEOL_pts:
                 # Report cases where averging was applied
                 print('Average of', end=' ')
                 for x, y in zip(dx, dy):
-                    print('({}, {})'.format(x - self.dcube.shape[1] + 1,
-                                            y - self.dcube.shape[1] + 1),
+                    print(f'({x - self.dcube.shape[1] + 1}, '
+                          f'{y - self.dcube.shape[1] + 1})',
                           end=' ')
-                print('set to ({}, {}) in frame {}'.format(round(dx.mean() - self.dcube.shape[1] + 1),
-                                                           round(dy.mean() - self.dcube.shape[1] + 1),
-                                                            f))
+                print(f'set to ({round(dx.mean() - self.dcube.shape[1] + 1)}, '
+                      f'{round(dy.mean() - self.dcube.shape[1] + 1)}) '
+                      f'in frame {f}')
             # More than one maximum is possible, use average
             dx = round(dx.mean())
             dy = round(dy.mean())
@@ -723,7 +723,7 @@ class JEOL_pts:
             interval = (int(round((interval[0] - CoefB) / CoefA)),
                         int(round((interval[1] - CoefB) / CoefA)))
         if verbose:
-            print('Using channels {} - {}'.format(interval[0], interval[1]))
+            print(f'Using channels {interval[0]} - {interval[1]}')
 
         if not self.split_frames:   # only a single frame (0) present
             return self.dcube[0, :, :, interval[0]:interval[1]].sum(axis=-1)
