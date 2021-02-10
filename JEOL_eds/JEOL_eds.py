@@ -415,7 +415,7 @@ class JEOL_pts:
                         unknown[str(d)] = 1
                     N_err += 1
         if verbose:
-            print(f'Unidentified data items ({N} out of {N_err}, '
+            print(f'Unidentified data items ({N_err} out of {N}, '
                   f'{100 * N_err / N:.2f}%) found:')
             for key in sorted(unknown):
                 print(f'\t{key}: found {unknown[key]}')
