@@ -11,7 +11,7 @@ This module does not aim to replace HyperSpy which is much more feature-rich. In
 Python 3.6+
 numpy
 scipy
-matplotlib for plotting
+matplotlib
 (pip for installation)
 ```
 
