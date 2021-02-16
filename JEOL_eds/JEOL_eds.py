@@ -176,7 +176,9 @@ class JEOL_pts:
             self.dcube = self.__get_data_cube(dtype, data_offset,
                                               E_cutoff=E_cutoff, verbose=verbose)
         if self.parameters:
-            self.ref_spectrum = self.parameters['EDS Data']['AnalyzableMap MeasData']['Data']['EDXRF'][0:self.dcube.shape[3]]
+            self.ref_spectrum = self.parameters['EDS Data'] \
+                                               ['AnalyzableMap MeasData']['Data'] \
+                                               ['EDXRF'][0:self.dcube.shape[3]]
         else:
             self.ref_spectrum = None
 
@@ -330,8 +332,12 @@ class JEOL_pts:
     def __CH_offset_from_meta(self):
         """Returns offset (channel corresponding to E=0).
         """
-        Tpl_cond = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Tpl']
-        return self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond]['DigZ']
+        Tpl_cond = self.parameters['EDS Data'] \
+                                  ['AnalyzableMap MeasData']['Meas Cond'] \
+                                  ['Tpl']
+        return self.parameters['PTTD Param'] \
+                              ['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond] \
+                              ['DigZ']
 
     def __get_data_cube(self, dtype, offset,
                         E_cutoff=None, verbose=False):
@@ -357,11 +363,19 @@ class JEOL_pts:
                             spectra contain numCH channels.
         """
         CH_offset = self.__CH_offset_from_meta()
-        NumCH = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['NumCH']
-        ScanLine = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['ScanLine']
+        NumCH = self.parameters['PTTD Param'] \
+                               ['Params']['PARAMPAGE1_EDXRF'] \
+                               ['NumCH']
+        ScanLine = self.parameters['PTTD Data'] \
+                                  ['AnalyzableMap MeasData']['Doc'] \
+                                  ['ScanLine']
         if E_cutoff:
-            CoefA = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefA']
-            CoefB = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefB']
+            CoefA = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefA']
+            CoefB = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefB']
             N_spec = round((E_cutoff - CoefB) / CoefA)
         else:
             N_spec = NumCH - CH_offset
@@ -369,7 +383,9 @@ class JEOL_pts:
             f.seek(offset)
             data = np.fromfile(f, dtype='u2')
         if self.split_frames:
-            Sweep = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['Sweep']
+            Sweep = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['Sweep']
             dcube = np.zeros([Sweep, ScanLine, ScanLine, N_spec], dtype=dtype)
         else:
             dcube = np.zeros([1, ScanLine, ScanLine, N_spec], dtype=dtype)
@@ -439,7 +455,9 @@ class JEOL_pts:
             Based on a code fragment by @sempicor at
             https://github.com/hyperspy/hyperspy/pull/2488
         """
-        ScanLine = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['ScanLine']
+        ScanLine = self.parameters['PTTD Data'] \
+                                  ['AnalyzableMap MeasData']['Doc'] \
+                                  ['ScanLine']
         with open(fname) as f:
             f.seek(28)  # see self.__parse_header()
             data_pos = np.fromfile(f, '<I', 1)[0]
@@ -718,8 +736,12 @@ class JEOL_pts:
         if not interval:
             interval = (0, self.dcube.shape[3])
         if energy:
-            CoefA = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefA']
-            CoefB = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefB']
+            CoefA = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefA']
+            CoefB = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefB']
             interval = (int(round((interval[0] - CoefB) / CoefA)),
                         int(round((interval[1] - CoefB) / CoefA)))
         if verbose:
@@ -788,7 +810,9 @@ class JEOL_pts:
                         s:  Ndarray
                             Corrected spectrum.
             """
-            CH_Res = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['CH Res']
+            CH_Res = self.parameters['PTTD Param'] \
+                                    ['Params']['PARAMPAGE1_EDXRF'] \
+                                    ['CH Res']
             E_uncorr = np.arange(0, ExCoef[3], CH_Res)
             N = E_uncorr.shape[0]
             ###########################################################
@@ -812,9 +836,13 @@ class JEOL_pts:
             s[0:N] = np.interp(E_uncorr, E_corr, s[0:N])
             return s
 
-        Tpl_cond = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Tpl']
+        Tpl_cond = self.parameters['EDS Data'] \
+                                  ['AnalyzableMap MeasData']['Meas Cond'] \
+                                  ['Tpl']
         try:
-            ExCoef = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond]['ExCoef']
+            ExCoef = self.parameters['PTTD Param'] \
+                                    ['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond] \
+                                    ['ExCoef']
             return apply_correction(s, ExCoef)
         except KeyError:
             return s
