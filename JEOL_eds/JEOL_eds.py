@@ -781,8 +781,9 @@ class JEOL_pts:
         for f in frames:
             # map of this frame summed over all energy intervals
             dx, dy = shifts[f]
-            res[x0-dx:x0-dx+N, y0-dy:y0-dy+N] += self.dcube[f, :, :,
-                                                            interval[0]:interval[1]].sum(axis=-1)
+            res[x0-dx:x0-dx+N, y0-dy:y0-dy+N] += \
+                    self.dcube[f, :, :, interval[0]:interval[1]].sum(axis=-1)
+
         return res[x0:x0+N, y0:y0+N]
 
     def __correct_spectrum(self, s):
