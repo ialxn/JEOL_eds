@@ -174,7 +174,8 @@ class JEOL_pts:
             self.file_name = fname
             self.parameters, data_offset = self.__parse_header(fname)
             self.dcube = self.__get_data_cube(dtype, data_offset,
-                                              E_cutoff=E_cutoff, verbose=verbose)
+                                              E_cutoff=E_cutoff,
+                                              verbose=verbose)
         if self.parameters:
             self.ref_spectrum = self.parameters['EDS Data'] \
                                                ['AnalyzableMap MeasData']['Data'] \
@@ -386,9 +387,11 @@ class JEOL_pts:
             Sweep = self.parameters['PTTD Data'] \
                                    ['AnalyzableMap MeasData']['Doc'] \
                                    ['Sweep']
-            dcube = np.zeros([Sweep, ScanLine, ScanLine, N_spec], dtype=dtype)
+            dcube = np.zeros([Sweep, ScanLine, ScanLine, N_spec],
+                             dtype=dtype)
         else:
-            dcube = np.zeros([1, ScanLine, ScanLine, N_spec], dtype=dtype)
+            dcube = np.zeros([1, ScanLine, ScanLine, N_spec],
+                             dtype=dtype)
         N = 0
         N_err = 0
         unknown = {}
@@ -644,7 +647,8 @@ class JEOL_pts:
             # More than one maximum is possible, use average
             dx = round(dx.mean())
             dy = round(dy.mean())
-            shifts[f] = (dx - self.dcube.shape[1] + 1, dy - self.dcube.shape[1] + 1)
+            shifts[f] = (dx - self.dcube.shape[1] + 1,
+                         dy - self.dcube.shape[1] + 1)
         return shifts
 
     def map(self, interval=None, energy=False, frames=None, align='no',
