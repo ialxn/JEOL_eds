@@ -174,9 +174,12 @@ class JEOL_pts:
             self.file_name = fname
             self.parameters, data_offset = self.__parse_header(fname)
             self.dcube = self.__get_data_cube(dtype, data_offset,
-                                              E_cutoff=E_cutoff, verbose=verbose)
+                                              E_cutoff=E_cutoff,
+                                              verbose=verbose)
         if self.parameters:
-            self.ref_spectrum = self.parameters['EDS Data']['AnalyzableMap MeasData']['Data']['EDXRF'][0:self.dcube.shape[3]]
+            self.ref_spectrum = self.parameters['EDS Data'] \
+                                               ['AnalyzableMap MeasData']['Data'] \
+                                               ['EDXRF'][0:self.dcube.shape[3]]
         else:
             self.ref_spectrum = None
 
@@ -330,8 +333,12 @@ class JEOL_pts:
     def __CH_offset_from_meta(self):
         """Returns offset (channel corresponding to E=0).
         """
-        Tpl_cond = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Tpl']
-        return self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond]['DigZ']
+        Tpl_cond = self.parameters['EDS Data'] \
+                                  ['AnalyzableMap MeasData']['Meas Cond'] \
+                                  ['Tpl']
+        return self.parameters['PTTD Param'] \
+                              ['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond] \
+                              ['DigZ']
 
     def __get_data_cube(self, dtype, offset,
                         E_cutoff=None, verbose=False):
@@ -357,11 +364,19 @@ class JEOL_pts:
                             spectra contain numCH channels.
         """
         CH_offset = self.__CH_offset_from_meta()
-        NumCH = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['NumCH']
-        ScanLine = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['ScanLine']
+        NumCH = self.parameters['PTTD Param'] \
+                               ['Params']['PARAMPAGE1_EDXRF'] \
+                               ['NumCH']
+        ScanLine = self.parameters['PTTD Data'] \
+                                  ['AnalyzableMap MeasData']['Doc'] \
+                                  ['ScanLine']
         if E_cutoff:
-            CoefA = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefA']
-            CoefB = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefB']
+            CoefA = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefA']
+            CoefB = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefB']
             N_spec = round((E_cutoff - CoefB) / CoefA)
         else:
             N_spec = NumCH - CH_offset
@@ -369,10 +384,14 @@ class JEOL_pts:
             f.seek(offset)
             data = np.fromfile(f, dtype='u2')
         if self.split_frames:
-            Sweep = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['Sweep']
-            dcube = np.zeros([Sweep, ScanLine, ScanLine, N_spec], dtype=dtype)
+            Sweep = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['Sweep']
+            dcube = np.zeros([Sweep, ScanLine, ScanLine, N_spec],
+                             dtype=dtype)
         else:
-            dcube = np.zeros([1, ScanLine, ScanLine, N_spec], dtype=dtype)
+            dcube = np.zeros([1, ScanLine, ScanLine, N_spec],
+                             dtype=dtype)
         N = 0
         N_err = 0
         unknown = {}
@@ -415,9 +434,10 @@ class JEOL_pts:
                         unknown[str(d)] = 1
                     N_err += 1
         if verbose:
-            print('Unidentified data items ({} out of {}, {:.2f}%) found:'.format(N, N_err, 100*N_err/N))
+            print(f'Unidentified data items ({N_err} out of {N}, '
+                  f'{100 * N_err / N:.2f}%) found:')
             for key in sorted(unknown):
-                print('\t{}: found {} times'.format(key, unknown[key]))
+                print(f'\t{key}: found {unknown[key]}')
         return dcube
 
     def __read_drift_images(self, fname):
@@ -438,7 +458,9 @@ class JEOL_pts:
             Based on a code fragment by @sempicor at
             https://github.com/hyperspy/hyperspy/pull/2488
         """
-        ScanLine = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['ScanLine']
+        ScanLine = self.parameters['PTTD Data'] \
+                                  ['AnalyzableMap MeasData']['Doc'] \
+                                  ['ScanLine']
         with open(fname) as f:
             f.seek(28)  # see self.__parse_header()
             data_pos = np.fromfile(f, '<I', 1)[0]
@@ -514,9 +536,8 @@ class JEOL_pts:
                 print('Shifts (filtered):')
             else:
                 print('Shifts (unfiltered):')
-            print('   Range: {} - {}'.format(int(np.asarray(sh).min()),
-                                             int(np.asarray(sh).max())))
-            print('   Maximum {} at ({}, {})'.format(peak_val, mx, my))
+            print(f'   Range: {int(np.asarray(sh).min())} - {int(np.asarray(sh).max())}')
+            print(f'   Maximum {peak_val} at ({max}, {my})')
         return h, extent
 
     def shifts(self, frames=None, filtered=False, verbose=False):
@@ -602,7 +623,7 @@ class JEOL_pts:
             ref = self.map(frames=[frames[0]])
         shifts = [(0, 0)] * self.dcube.shape[0]
         if verbose:
-            print('Frame {} used a reference'.format(frames[0]))
+            print(f'Frame {frames[0]} used a reference')
         for f in frames[1:]:    # skip reference frame
             if filtered:
                 c = correlate(ref, wiener(self.map(frames=[f])))
@@ -617,16 +638,17 @@ class JEOL_pts:
                 # Report cases where averging was applied
                 print('Average of', end=' ')
                 for x, y in zip(dx, dy):
-                    print('({}, {})'.format(x - self.dcube.shape[1] + 1,
-                                            y - self.dcube.shape[1] + 1),
+                    print(f'({x - self.dcube.shape[1] + 1}, '
+                          f'{y - self.dcube.shape[1] + 1})',
                           end=' ')
-                print('set to ({}, {}) in frame {}'.format(round(dx.mean() - self.dcube.shape[1] + 1),
-                                                           round(dy.mean() - self.dcube.shape[1] + 1),
-                                                            f))
+                print(f'set to ({round(dx.mean() - self.dcube.shape[1] + 1)}, '
+                      f'{round(dy.mean() - self.dcube.shape[1] + 1)}) '
+                      f'in frame {f}')
             # More than one maximum is possible, use average
             dx = round(dx.mean())
             dy = round(dy.mean())
-            shifts[f] = (dx - self.dcube.shape[1] + 1, dy - self.dcube.shape[1] + 1)
+            shifts[f] = (dx - self.dcube.shape[1] + 1,
+                         dy - self.dcube.shape[1] + 1)
         return shifts
 
     def map(self, interval=None, energy=False, frames=None, align='no',
@@ -718,12 +740,16 @@ class JEOL_pts:
         if not interval:
             interval = (0, self.dcube.shape[3])
         if energy:
-            CoefA = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefA']
-            CoefB = self.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['CoefB']
+            CoefA = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefA']
+            CoefB = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefB']
             interval = (int(round((interval[0] - CoefB) / CoefA)),
                         int(round((interval[1] - CoefB) / CoefA)))
         if verbose:
-            print('Using channels {} - {}'.format(interval[0], interval[1]))
+            print(f'Using channels {interval[0]} - {interval[1]}')
 
         if not self.split_frames:   # only a single frame (0) present
             return self.dcube[0, :, :, interval[0]:interval[1]].sum(axis=-1)
@@ -755,8 +781,9 @@ class JEOL_pts:
         for f in frames:
             # map of this frame summed over all energy intervals
             dx, dy = shifts[f]
-            res[x0-dx:x0-dx+N, y0-dy:y0-dy+N] += self.dcube[f, :, :,
-                                                            interval[0]:interval[1]].sum(axis=-1)
+            res[x0-dx:x0-dx+N, y0-dy:y0-dy+N] += \
+                    self.dcube[f, :, :, interval[0]:interval[1]].sum(axis=-1)
+
         return res[x0:x0+N, y0:y0+N]
 
     def __correct_spectrum(self, s):
@@ -788,7 +815,9 @@ class JEOL_pts:
                         s:  Ndarray
                             Corrected spectrum.
             """
-            CH_Res = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['CH Res']
+            CH_Res = self.parameters['PTTD Param'] \
+                                    ['Params']['PARAMPAGE1_EDXRF'] \
+                                    ['CH Res']
             E_uncorr = np.arange(0, ExCoef[3], CH_Res)
             N = E_uncorr.shape[0]
             ###########################################################
@@ -812,9 +841,13 @@ class JEOL_pts:
             s[0:N] = np.interp(E_uncorr, E_corr, s[0:N])
             return s
 
-        Tpl_cond = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Tpl']
+        Tpl_cond = self.parameters['EDS Data'] \
+                                  ['AnalyzableMap MeasData']['Meas Cond'] \
+                                  ['Tpl']
         try:
-            ExCoef = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond]['ExCoef']
+            ExCoef = self.parameters['PTTD Param'] \
+                                    ['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond] \
+                                    ['ExCoef']
             return apply_correction(s, ExCoef)
         except KeyError:
             return s
