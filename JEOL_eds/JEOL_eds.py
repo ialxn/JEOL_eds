@@ -166,7 +166,6 @@ class JEOL_pts:
                verbose:     Bool
                             Turn on (various) output.
         """
-        self.split_frames = split_frames
         if os.path.splitext(fname)[1] == '.npz':
             self.parameters = None
             self.__load_dcube(fname)
@@ -174,6 +173,7 @@ class JEOL_pts:
             self.file_name = fname
             self.parameters, data_offset = self.__parse_header(fname)
             self.dcube = self.__get_data_cube(dtype, data_offset,
+                                              split_frames=split_frames,
                                               E_cutoff=E_cutoff,
                                               verbose=verbose)
         if self.parameters:
@@ -340,7 +340,7 @@ class JEOL_pts:
                               ['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond] \
                               ['DigZ']
 
-    def __get_data_cube(self, dtype, offset,
+    def __get_data_cube(self, dtype, offset, split_frames=False,
                         E_cutoff=None, verbose=False):
         """Returns data cube (F x X x Y x E).
 
@@ -350,6 +350,10 @@ class JEOL_pts:
                             Data type used to store data cube in memory.
                 hsize:      Int
                             Number of header bytes.
+         split_frames:      Bool
+                            Store individual frames in the data cube (if
+                            True), otherwise add all frames and store in
+                            a single frame (default).
              E_cutoff:      Float
                             Cutoff energy for spectra. Only store data below
                             this energy.
@@ -383,7 +387,7 @@ class JEOL_pts:
         with open(self.file_name, 'rb') as f:
             f.seek(offset)
             data = np.fromfile(f, dtype='u2')
-        if self.split_frames:
+        if split_frames:
             Sweep = self.parameters['PTTD Data'] \
                                    ['AnalyzableMap MeasData']['Doc'] \
                                    ['Sweep']
@@ -410,7 +414,7 @@ class JEOL_pts:
                 y = int((d - 32768) / scale)
             elif 36864 <= d < 40960:
                 d = int((d - 36864) / scale)
-                if self.split_frames and d < x:
+                if split_frames and d < x:
                     # A new frame starts once the slow axis (x) restarts. This
                     # does not necessary happen at x=zero, if we have very few
                     # counts and nothing registers on first scan line.
@@ -751,7 +755,7 @@ class JEOL_pts:
         if verbose:
             print(f'Using channels {interval[0]} - {interval[1]}')
 
-        if not self.split_frames:   # only a single frame (0) present
+        if self.dcube.shape[0] == 1:   # only a single frame (0) present
             return self.dcube[0, :, :, interval[0]:interval[1]].sum(axis=-1)
 
         # split_frame is active but no alignment required
@@ -901,7 +905,7 @@ class JEOL_pts:
         """
         if not ROI:
             ROI = (0, self.dcube.shape[1], 0, self.dcube.shape[1])
-        if not self.split_frames:   # only a single frame (0) present
+        if self.dcube.shape[0] == 1:   # only a single frame (0) present
             s = self.dcube[0, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
             return self.__correct_spectrum(s)
 
@@ -1028,5 +1032,3 @@ class JEOL_pts:
         self.file_date = None
         npzfile = np.load(fname)
         self.dcube = npzfile['arr_0']
-        if self.dcube.shape[0] > 1:
-            self.split_frames = True
