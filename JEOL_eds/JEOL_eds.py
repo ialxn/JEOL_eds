@@ -187,7 +187,6 @@ class JEOL_pts:
                verbose:     Bool
                             Turn on (various) output.
         """
-        self.drift_images = None    # Will be overwritten depending on file type
         if os.path.splitext(fname)[1] == '.pts':
             self.file_name = fname
             self.parameters, data_offset = self.__parse_header(fname)
@@ -197,11 +196,16 @@ class JEOL_pts:
                                               verbose=verbose)
             if read_drift:
                 self.drift_images = self.__read_drift_images(fname)
+            else:
+                self.drift_images = None
+
         elif os.path.splitext(fname)[1] == '.npz':
             self.parameters = None
             self.__load_dcube(fname)
+
         elif os.path.splitext(fname)[1] == '.h5':
             self.__load_hdf5(fname)
+
         else:
             raise OSError(f"Unknown type of file '{fname}'")
 
@@ -1055,6 +1059,7 @@ class JEOL_pts:
         """
         self.file_name = fname
         self.file_date = None
+        self.drift_images = None
         npzfile = np.load(fname)
         self.dcube = npzfile['arr_0']
 
@@ -1135,6 +1140,8 @@ class JEOL_pts:
             self.dcube = hf['dcube'][()]
             if 'drift_images' in hf.keys():
                 self.drift_images = hf['drift_images'][()]
+            else:
+                self.drift_images = None
 
             self.file_date = hf.attrs['file_date']
             self.file_name = hf.attrs['file_name']
