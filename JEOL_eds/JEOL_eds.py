@@ -19,7 +19,10 @@ You should have received a copy of the GNU General Public License
 along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 """
 import os
+import sys
 from datetime import datetime, timedelta
+import h5py
+import asteval
 import numpy as np
 from scipy.signal import wiener, correlate
 import matplotlib.pyplot as plt
@@ -135,6 +138,12 @@ class JEOL_pts:
         '128.npz'
         >>>> dc2.parameters is None
         True
+
+        # Additionally, JEOL_pts object can be saved as hdf5 files.
+        # This has the benefit that all attributes (drift_images, parameters)
+        # are also stored.
+        # Use basename of original file.
+        >>>> dc.save_hdf5()
     """
 
     def __init__(self, fname, dtype='uint16',
@@ -1032,3 +1041,81 @@ class JEOL_pts:
         self.file_date = None
         npzfile = np.load(fname)
         self.dcube = npzfile['arr_0']
+
+    def save_hdf5(self, fname=None):
+        """Saves all data including attributes to hdf5 file
+
+            Parameters
+            ----------
+                fname:  Str
+                        File name of '.h5' file (must end in '.h5').
+                        If none is supplied the base name of the
+                        '.pts' file is used.
+
+            Examples
+            --------
+                # Save data with file name based on the '.pts' file but
+                # extension is changed to 'h5'.
+                >>>> dc.save_hdf5()
+
+                # You can also supply your own filename, but use '.h5' as
+                # extension.
+                >>>> dc.save_hdf5(fname='my_new_filename.h5')
+
+                # If you want to read the data cube into your own program.
+                >>>> hf = h5py.File('my_file.h5', 'r')
+
+                # List data sets available
+                >>>> for name in hf:
+                         print(name)
+                EDXRF
+                dcube
+                drift_images
+
+                # Use '[()]' to get actual data not just a reference to
+                # stored data in file
+                >>>> hf['EDXRF'][()]
+               array([    0,     0,     0,     0,   876,   719,   339,   531,   904,
+                       1223,  1268,  1099,   899,   695,   621,   584,   519,   525,
+                        .
+                        .
+                         22,    33,    23,    20,    20,    15,    29,    27,    17,
+                         19], dtype=int32)
+
+                # List attributes
+                >>>> print(hf1.attrs.keys())
+                <KeysViewHDF5 ['file_date', 'file_name', 'parameters']>
+                >>>> hf.attrs['file_name']
+                'test/128.pts'
+        """
+        if fname is None:
+            fname = os.path.splitext(self.file_name)[0] + '.h5'
+
+        with h5py.File(fname, 'w') as hf:
+            hf.create_dataset('dcube', data=self.dcube)
+            if self.drift_images is not None:
+                hf.create_dataset('drift_images', data=self.drift_images)
+
+            hf.attrs['file_name'] = self.file_name
+            hf.attrs['file_date'] = self.file_date
+            # avoid printing of ellipsis in arrays / lists
+            np.set_printoptions(threshold=sys.maxsize)
+            hf.attrs['parameters'] = str(self.parameters)
+
+    def __load_hdf5(self, fname):
+        """Loads data including attributes from hdf5 file
+
+            Parameters
+            ----------
+                fname:  Str
+                        File name of '.h5' file (must end in '.h5').
+        """
+        with h5py.File(fname, 'r') as hf:
+            self.dcube = hf['dcube'][()]
+            if 'drift_images' in hf.keys():
+                self.drift_images = hf['drift_images'][()]
+
+            self.file_date = hf.attrs['file_date']
+            self.file_name = hf.attrs['file_name']
+            aeval = asteval.Interpreter()
+            self.parameters = aeval(hf.attrs['parameters'])
