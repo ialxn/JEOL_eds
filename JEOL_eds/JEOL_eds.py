@@ -144,6 +144,17 @@ class JEOL_pts:
         # are also stored.
         # Use basename of original file.
         >>>> dc.save_hdf5()
+
+        # Initialize from hdf5 file. Only filename is used, additional keywords
+        # are ignored.
+        >>>> dc3 = JEOL_pts('128.h5')
+        >>>> dc3.parameters
+        {'PTTD Cond': {'Meas Cond': {'CONDPAGE0_C.R': {'Tpl': {'index': 3,
+             'List': ['T1', 'T2', 'T3', 'T4']},
+        .
+        .
+        .
+            'FocusMP': 16043213}}}}
     """
 
     def __init__(self, fname, dtype='uint16',
@@ -175,16 +186,25 @@ class JEOL_pts:
                verbose:     Bool
                             Turn on (various) output.
         """
-        if os.path.splitext(fname)[1] == '.npz':
-            self.parameters = None
-            self.__load_dcube(fname)
-        else:
+        self.drift_images = None    # Will be overwritten depending on file type
+        if os.path.splitext(fname)[1] == '.pts':
             self.file_name = fname
             self.parameters, data_offset = self.__parse_header(fname)
             self.dcube = self.__get_data_cube(dtype, data_offset,
                                               split_frames=split_frames,
                                               E_cutoff=E_cutoff,
                                               verbose=verbose)
+            if read_drift:
+                self.drift_images = self.__read_drift_images(fname)
+        elif os.path.splitext(fname)[1] == '.npz':
+            self.parameters = None
+            self.__load_dcube(fname)
+        elif os.path.splitext(fname)[1] == '.h5':
+            self.__load_hdf5(fname)
+        else:
+            print(f"unknown file type: '{os.path.splitext(fname)[1]}'")
+            return None
+
         if self.parameters:
             self.ref_spectrum = self.parameters['EDS Data'] \
                                                ['AnalyzableMap MeasData']['Data'] \
@@ -192,10 +212,6 @@ class JEOL_pts:
         else:
             self.ref_spectrum = None
 
-        if read_drift and os.path.splitext(fname)[1] == '.pts':
-            self.drift_images = self.__read_drift_images(fname)
-        else:
-            self.drift_images = None
 
     def __parse_header(self, fname):
         """Extract meta data from header in JEOL ".pts" file.
