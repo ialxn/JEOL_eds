@@ -74,5 +74,23 @@ Frame 5 used a reference
 # as 'test/128.mp4'.
 >>>> dc = JEOL_pts('test/128.pts', split_frames=True, read_drift=True)
 >>>> dc.make_movie()
+
+# Additionally, JEOL_pts object can be saved as hdf5 files.
+# This has the benefit that all attributes (drift_images, parameters)
+# are also stored.
+# Use basename of original file and pass along keywords to
+# `h5py.create_dataset()`.
+>>>> dc.save_hdf5(compression='gzip', compression_opts=9)
+
+# Initialize from hdf5 file. Only filename is used, additional keywords
+# are ignored.
+>>>> dc3 = JEOL_pts('128.h5')
+>>>> dc3.parameters
+{'PTTD Cond': {'Meas Cond': {'CONDPAGE0_C.R': {'Tpl': {'index': 3,
+     'List': ['T1', 'T2', 'T3', 'T4']},
+.
+.
+.
+    'FocusMP': 16043213}}}}
 ```
 
