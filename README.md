@@ -12,6 +12,8 @@ Python 3.6+
 numpy
 scipy
 matplotlib
+asteval
+h5py
 (pip for installation)
 ```
 

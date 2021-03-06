@@ -9,5 +9,7 @@ setup(name='JEOL_eds',
       packages=['JEOL_eds'],
       install_requires=['numpy',
                         'scipy',
-			'matplotlib'],
+			'matplotlib',
+			'h5py',
+			'asteval'],
       zip_safe=False)
