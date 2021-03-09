@@ -19,7 +19,10 @@ You should have received a copy of the GNU General Public License
 along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 """
 import os
+import sys
 from datetime import datetime, timedelta
+import h5py
+import asteval
 import numpy as np
 from scipy.signal import wiener, correlate
 import matplotlib.pyplot as plt
@@ -135,6 +138,24 @@ class JEOL_pts:
         '128.npz'
         >>>> dc2.parameters is None
         True
+
+        # Additionally, JEOL_pts object can be saved as hdf5 files.
+        # This has the benefit that all attributes (drift_images, parameters)
+        # are also stored.
+        # Use basename of original file and pass along keywords to
+        # `h5py.create_dataset()`.
+        >>>> dc.save_hdf5(compression='gzip', compression_opts=9)
+
+        # Initialize from hdf5 file. Only filename is used, additional keywords
+        # are ignored.
+        >>>> dc3 = JEOL_pts('128.h5')
+        >>>> dc3.parameters
+        {'PTTD Cond': {'Meas Cond': {'CONDPAGE0_C.R': {'Tpl': {'index': 3,
+             'List': ['T1', 'T2', 'T3', 'T4']},
+        .
+        .
+        .
+            'FocusMP': 16043213}}}}
     """
 
     def __init__(self, fname, dtype='uint16',
@@ -166,16 +187,28 @@ class JEOL_pts:
                verbose:     Bool
                             Turn on (various) output.
         """
-        self.split_frames = split_frames
-        if os.path.splitext(fname)[1] == '.npz':
-            self.parameters = None
-            self.__load_dcube(fname)
-        else:
+        if os.path.splitext(fname)[1] == '.pts':
             self.file_name = fname
             self.parameters, data_offset = self.__parse_header(fname)
             self.dcube = self.__get_data_cube(dtype, data_offset,
+                                              split_frames=split_frames,
                                               E_cutoff=E_cutoff,
                                               verbose=verbose)
+            if read_drift:
+                self.drift_images = self.__read_drift_images(fname)
+            else:
+                self.drift_images = None
+
+        elif os.path.splitext(fname)[1] == '.npz':
+            self.parameters = None
+            self.__load_dcube(fname)
+
+        elif os.path.splitext(fname)[1] == '.h5':
+            self.__load_hdf5(fname)
+
+        else:
+            raise OSError(f"Unknown type of file '{fname}'")
+
         if self.parameters:
             self.ref_spectrum = self.parameters['EDS Data'] \
                                                ['AnalyzableMap MeasData']['Data'] \
@@ -183,10 +216,6 @@ class JEOL_pts:
         else:
             self.ref_spectrum = None
 
-        if read_drift and os.path.splitext(fname)[1] == '.pts':
-            self.drift_images = self.__read_drift_images(fname)
-        else:
-            self.drift_images = None
 
     def __parse_header(self, fname):
         """Extract meta data from header in JEOL ".pts" file.
@@ -340,7 +369,7 @@ class JEOL_pts:
                               ['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond] \
                               ['DigZ']
 
-    def __get_data_cube(self, dtype, offset,
+    def __get_data_cube(self, dtype, offset, split_frames=False,
                         E_cutoff=None, verbose=False):
         """Returns data cube (F x X x Y x E).
 
@@ -350,6 +379,10 @@ class JEOL_pts:
                             Data type used to store data cube in memory.
                 hsize:      Int
                             Number of header bytes.
+         split_frames:      Bool
+                            Store individual frames in the data cube (if
+                            True), otherwise add all frames and store in
+                            a single frame (default).
              E_cutoff:      Float
                             Cutoff energy for spectra. Only store data below
                             this energy.
@@ -383,7 +416,7 @@ class JEOL_pts:
         with open(self.file_name, 'rb') as f:
             f.seek(offset)
             data = np.fromfile(f, dtype='u2')
-        if self.split_frames:
+        if split_frames:
             Sweep = self.parameters['PTTD Data'] \
                                    ['AnalyzableMap MeasData']['Doc'] \
                                    ['Sweep']
@@ -410,7 +443,7 @@ class JEOL_pts:
                 y = int((d - 32768) / scale)
             elif 36864 <= d < 40960:
                 d = int((d - 36864) / scale)
-                if self.split_frames and d < x:
+                if split_frames and d < x:
                     # A new frame starts once the slow axis (x) restarts. This
                     # does not necessary happen at x=zero, if we have very few
                     # counts and nothing registers on first scan line.
@@ -751,7 +784,7 @@ class JEOL_pts:
         if verbose:
             print(f'Using channels {interval[0]} - {interval[1]}')
 
-        if not self.split_frames:   # only a single frame (0) present
+        if self.dcube.shape[0] == 1:   # only a single frame (0) present
             return self.dcube[0, :, :, interval[0]:interval[1]].sum(axis=-1)
 
         # split_frame is active but no alignment required
@@ -901,7 +934,7 @@ class JEOL_pts:
         """
         if not ROI:
             ROI = (0, self.dcube.shape[1], 0, self.dcube.shape[1])
-        if not self.split_frames:   # only a single frame (0) present
+        if self.dcube.shape[0] == 1:   # only a single frame (0) present
             s = self.dcube[0, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
             return self.__correct_spectrum(s)
 
@@ -1026,7 +1059,91 @@ class JEOL_pts:
         """
         self.file_name = fname
         self.file_date = None
+        self.drift_images = None
         npzfile = np.load(fname)
         self.dcube = npzfile['arr_0']
-        if self.dcube.shape[0] > 1:
-            self.split_frames = True
+
+    def save_hdf5(self, fname=None, **kws):
+        """Saves all data including attributes to hdf5 file
+
+            Parameters
+            ----------
+                fname:  Str
+                        File name of '.h5' file (must end in '.h5').
+                        If none is supplied the base name of the
+                        '.pts' file is used.
+
+            Examples
+            --------
+                # Save data with file name based on the '.pts' file but
+                # extension is changed to 'h5'.
+                >>>> dc.save_hdf5()
+
+                # You can also supply your own filename, but use '.h5' as
+                # extension.
+                >>>> dc.save_hdf5(fname='my_new_filename.h5')
+
+                # Pass along keyword arguments such as e.g. compression
+                >>>> dc.save_hdf5('compressed.h5',
+                                  compression='gzip',
+                                  compression_opts=9)
+
+                # If you want to read the data cube into your own program.
+                >>>> hf = h5py.File('my_file.h5', 'r')
+
+                # List data sets available
+                >>>> for name in hf:
+                         print(name)
+                EDXRF
+                dcube
+                drift_images
+
+                # Use '[()]' to get actual data not just a reference to
+                # stored data in file
+                >>>> hf['EDXRF'][()]
+               array([    0,     0,     0,     0,   876,   719,   339,   531,   904,
+                       1223,  1268,  1099,   899,   695,   621,   584,   519,   525,
+                        .
+                        .
+                         22,    33,    23,    20,    20,    15,    29,    27,    17,
+                         19], dtype=int32)
+
+                # List attributes
+                >>>> print(hf1.attrs.keys())
+                <KeysViewHDF5 ['file_date', 'file_name', 'parameters']>
+                >>>> hf.attrs['file_name']
+                'test/128.pts'
+        """
+        if fname is None:
+            fname = os.path.splitext(self.file_name)[0] + '.h5'
+
+        with h5py.File(fname, 'w') as hf:
+            hf.create_dataset('dcube', data=self.dcube, **kws)
+            if self.drift_images is not None:
+                hf.create_dataset('drift_images', data=self.drift_images, **kws)
+
+            hf.attrs['file_name'] = self.file_name
+            hf.attrs['file_date'] = self.file_date
+            # avoid printing of ellipsis in arrays / lists
+            np.set_printoptions(threshold=sys.maxsize)
+            hf.attrs['parameters'] = str(self.parameters)
+
+    def __load_hdf5(self, fname):
+        """Loads data including attributes from hdf5 file
+
+            Parameters
+            ----------
+                fname:  Str
+                        File name of '.h5' file (must end in '.h5').
+        """
+        with h5py.File(fname, 'r') as hf:
+            self.dcube = hf['dcube'][()]
+            if 'drift_images' in hf.keys():
+                self.drift_images = hf['drift_images'][()]
+            else:
+                self.drift_images = None
+
+            self.file_date = hf.attrs['file_date']
+            self.file_name = hf.attrs['file_name']
+            aeval = asteval.Interpreter()
+            self.parameters = aeval(hf.attrs['parameters'])

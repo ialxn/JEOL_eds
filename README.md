@@ -12,6 +12,8 @@ Python 3.6+
 numpy
 scipy
 matplotlib
+asteval
+h5py
 (pip for installation)
 ```
 
@@ -72,5 +74,74 @@ Frame 5 used a reference
 # as 'test/128.mp4'.
 >>>> dc = JEOL_pts('test/128.pts', split_frames=True, read_drift=True)
 >>>> dc.make_movie()
+
+# Additionally, JEOL_pts object can be saved as hdf5 files.
+# This has the benefit that all attributes (drift_images, parameters)
+# are also stored.
+# Use basename of original file and pass along keywords to
+# `h5py.create_dataset()`.
+>>>> dc.save_hdf5(compression='gzip', compression_opts=9)
+
+# Initialize from hdf5 file. Only filename is used, additional keywords
+# are ignored.
+>>>> dc3 = JEOL_pts('128.h5')
+>>>> dc3.parameters
+{'PTTD Cond': {'Meas Cond': {'CONDPAGE0_C.R': {'Tpl': {'index': 3,
+     'List': ['T1', 'T2', 'T3', 'T4']},
+.
+.
+.
+    'FocusMP': 16043213}}}}
 ```
 
+## Bugs
+
+Paramteres loaded from '.pts' with the ones loaded from 'h5' files might have
+different types. Thus take extra care if you need to compare them:
+```python
+# Load and store as hdf5.
+>>>> dc = JEOL_pts('128.pts')
+>>>> dc.save_hdf5(compression='gzip', compression_opts=9)
+# Initialize from hdf5
+>>>> dc_hdf5 = JEOL_pts('128.h5')
+
+# Compare parameters dict gives unexpected result.
+>>>> p = dc.parameters['PTTD Data']['AnalyzableMap MeasData']['MeasCond']
+>>>> p_hdf5 = dc_hdf5.parameters['PTTD Data']['AnalyzableMap MeasData']['MeasCond']
+>>>> p == p_hdf5
+False
+
+# But they seem identical.
+>>>> p
+{'AccKV': 200.0,
+ 'AccNA': 7.475,
+ 'Mag': 800000,
+ 'WD': 3.2,
+ 'ScanR': 270.0,
+ 'FocusMP': 16043213}
+
+>>>> p_hdf5
+{'AccKV': 200.0,
+ 'AccNA': 7.475,
+ 'Mag': 800000,
+ 'WD': 3.2,
+ 'ScanR': 270.0,
+ 'FocusMP': 16043213}
+
+# The issue is different types.
+# This works.
+>>>> p['AccKV'] == p_hdf5['AccKV']
+True
+>>>> type(p['AccKV'])
+numpy.float32
+>>>> type(p_hdf5['AccKV'])
+float
+
+# This causes the issue.
+>>>> p['AccKV'] == p_hdf5['AccKV']
+False
+>>>> type(p['AccKV'])
+numpy.float32
+>>>> type(p_hdf5['AccKV'])
+float
+````
