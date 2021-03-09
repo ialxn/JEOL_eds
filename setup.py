@@ -3,11 +3,13 @@ from setuptools import setup
 
 setup(name='JEOL_eds',
       description='Read binary ".pts" files',
-      version='1.1',
+      version='1.2',
       author='Ivo Alxneit',
       author_email='ivo.alxneit@psi.ch',
       packages=['JEOL_eds'],
       install_requires=['numpy',
                         'scipy',
-			'matplotlib'],
+			'matplotlib',
+			'h5py',
+			'asteval'],
       zip_safe=False)
