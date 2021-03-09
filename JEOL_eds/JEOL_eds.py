@@ -203,8 +203,7 @@ class JEOL_pts:
         elif os.path.splitext(fname)[1] == '.h5':
             self.__load_hdf5(fname)
         else:
-            print(f"unknown file type: '{os.path.splitext(fname)[1]}'")
-            return None
+            raise OSError(f"Unknown type of file '{fname}'")
 
         if self.parameters:
             self.ref_spectrum = self.parameters['EDS Data'] \
