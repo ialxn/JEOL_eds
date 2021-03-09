@@ -142,8 +142,9 @@ class JEOL_pts:
         # Additionally, JEOL_pts object can be saved as hdf5 files.
         # This has the benefit that all attributes (drift_images, parameters)
         # are also stored.
-        # Use basename of original file.
-        >>>> dc.save_hdf5()
+        # Use basename of original file and pass along keywords to
+        # `h5py.create_dataset()`.
+        >>>> dc.save_hdf5(compression='gzip', compression_opts=9)
 
         # Initialize from hdf5 file. Only filename is used, additional keywords
         # are ignored.
@@ -1058,7 +1059,7 @@ class JEOL_pts:
         npzfile = np.load(fname)
         self.dcube = npzfile['arr_0']
 
-    def save_hdf5(self, fname=None):
+    def save_hdf5(self, fname=None, **kws):
         """Saves all data including attributes to hdf5 file
 
             Parameters
@@ -1077,6 +1078,11 @@ class JEOL_pts:
                 # You can also supply your own filename, but use '.h5' as
                 # extension.
                 >>>> dc.save_hdf5(fname='my_new_filename.h5')
+
+                # Pass along keyword arguments such as e.g. compression
+                >>>> dc.save_hdf5('compressed.h5',
+                                  compression='gzip',
+                                  compression_opts=9)
 
                 # If you want to read the data cube into your own program.
                 >>>> hf = h5py.File('my_file.h5', 'r')
@@ -1108,9 +1114,9 @@ class JEOL_pts:
             fname = os.path.splitext(self.file_name)[0] + '.h5'
 
         with h5py.File(fname, 'w') as hf:
-            hf.create_dataset('dcube', data=self.dcube)
+            hf.create_dataset('dcube', data=self.dcube, **kws)
             if self.drift_images is not None:
-                hf.create_dataset('drift_images', data=self.drift_images)
+                hf.create_dataset('drift_images', data=self.drift_images, **kws)
 
             hf.attrs['file_name'] = self.file_name
             hf.attrs['file_date'] = self.file_date
