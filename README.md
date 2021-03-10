@@ -18,10 +18,14 @@ h5py
 ```
 
 Download zip and extract or clone repository. From the resulting folder run
-
 ```bash
 $ pip install .
 ```
+or
+```bash
+$ pip install . -U
+```
+to upgrade an existing installation.
 
 ## Usage
 ```python
