@@ -96,8 +96,8 @@ Frame 5 used a reference
 
 ## Bugs
 
-Paramteres loaded from '.pts' with the ones loaded from 'h5' files might have
-different types. Thus take extra care if you need to compare them:
+Paramteres loaded from '.pts' might have different types than the ones
+loaded from 'h5' files. Thus take extra care if you need to compare them:
 ```python
 # Load and store as hdf5.
 >>>> dc = JEOL_pts('128.pts')
