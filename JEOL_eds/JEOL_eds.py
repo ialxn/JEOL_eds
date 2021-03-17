@@ -504,7 +504,14 @@ class JEOL_pts:
                 return None
             I = np.array(rawdata[ipos]-40960, dtype='uint16')
             N_images = int(np.ceil(ipos.shape[0] / ScanLine**2))
-            return I.reshape((N_images, ScanLine, ScanLine))
+            try:
+                return I.reshape((N_images, ScanLine, ScanLine))
+            except ValueError:  # incomplete image
+                # Add `N_addl` NaNs before reshape()
+                N_addl = N_images * ScanLine**2 - I.shape[0]
+                I = np.append(I, np.full((N_addl), np.nan, dtype='uint16'))
+                return I.reshape((N_images, ScanLine, ScanLine))
+
 
     def drift_statistics(self, filtered=False, verbose=False):
         """Returns 2D frequency distribution of frame shifts (x, y).
