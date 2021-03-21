@@ -143,10 +143,10 @@ numpy.float32
 float
 
 # This causes the issue.
->>>> p['AccKV'] == p_hdf5['AccKV']
+>>>> p['AccNA'] == p_hdf5['AccNA']
 False
->>>> type(p['AccKV'])
+>>>> type(p['AccNA'])
 numpy.float32
->>>> type(p_hdf5['AccKV'])
+>>>> type(p_hdf5['AccNA'])
 float
 ````
