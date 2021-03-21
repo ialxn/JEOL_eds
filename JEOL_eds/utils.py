@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-def create_overlay(images, colors):
+def create_overlay(images, colors, legends=None):
     """Plots overlay of `images` with `colors`.
 
         Parameters
@@ -20,6 +20,9 @@ def create_overlay(images, colors):
                     List of colors used to overlay the images provided
                     in the same order as `images`. Surplus colors provided
                     are ignored.
+          legends:  List or tuple.
+                    List of legends used to annotate individual maps in
+                    overlay.
 
         Notes
         -----
@@ -43,23 +46,45 @@ def create_overlay(images, colors):
         >>>> O = dc.map(interval=(0.45, 0.6), energy=True)  # Ka,b
 
         # Create overlay. Oxygen is hardly visible as it covered by silicon and
-        # iron. Focus is on iron distribution.
+        # iron. Focus is on iron distribution. No legends plotted.
         >>>> create_overlay((O, Si, Fe), ('Red', 'Green', 'Blue'))
 
         # Focus on oxygen. Follows both, iron and silicon distributions.
-        >>>> create_overlay([Fe, Si, O], ['Blue', 'Red', 'Green'])
+        >>>> create_overlay([Fe, Si, O],
+                            ['Blue', 'Red', 'Green'],
+                            legends=['Fe', 'Si', 'O'])
     """
     assert isinstance(images, (list, tuple))
     assert isinstance(colors, (list, tuple))
     assert len(colors) >= len(images)   # Sufficient colors provided
     assert all(image.shape==images[0].shape for image in images)    # all same shape
+    if legends:
+        assert isinstance(legends,(list, tuple))
+        assert len(legends) == len(images)
 
     # Create overlays. Use fake image `base` with fully saturated color and
     # use real image as alpha channel (transparency)
     base = np.ones_like(images[0])
-    for image, color in zip(images, colors):
+    for image, color, legend in zip(images, colors, legends):
+        base = np.ones_like(image)
         # Custom colormap that contains only `color` at full sauration
         cmap = LinearSegmentedColormap.from_list("cmap", (color, color))
         alpha = image / image.max()
         plt.imshow(base, cmap=cmap, alpha=alpha,
                    vmin=0, vmax=1)
+
+    # Fine tune plot
+    ax = plt.gca()
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    # Add legends. Position and font size depends on image size
+    if legends:
+        isize = images[0].shape[0]
+        fontsize = isize // 12
+        x = isize + fontsize
+        for i in range(len(images)):
+            y = i * fontsize
+            ax.text(x, y, legends[i],
+                    size=fontsize,
+                    color=colors[i], backgroundcolor='white')
