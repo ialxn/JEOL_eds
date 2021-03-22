@@ -992,19 +992,36 @@ class JEOL_pts:
             STEM_max = 1.0
         EDS_max = max([self.map(frames=[i]).max() for i in range(self.dcube.shape[0])])
 
+        # Default dtype for maps is 'float64'. To minimize memory use select
+        # smallest dtype passible.
+        if EDS_max < 2**8:
+            EDS_dtype = 'uint8'
+        elif EDS_max < 2**16:
+            EDS_dtype = 'uint16'
+        elif EDS_max < 2**32:
+            EDS_dtype = 'uint32'
+        else:
+            EDS_dtype = 'float64'
+
+        # `self.drift_images.dtype` is 'uint16'. Select 'uint8' if possible.
+        if STEM_max < 2**8:
+            STEM_dtype = 'uint8'
+        else:
+            STEM_dtype = 'uint16'
+
         fig = plt.figure()
         ax = fig.add_subplot(111)
         frames = []
         for i in range(self.dcube.shape[0]):
-            EDS_map = self.map(frames=[i], **kws)
+            EDS_map = self.map(frames=[i], **kws).astype(EDS_dtype)
             try:
-                STEM_image = self.drift_images[i]
+                STEM_image = self.drift_images[i].astype(STEM_dtype)
             except TypeError:   # no drift_image availabe, dummy image
-                STEM_image = np.full_like(EDS_map, np.nan)
+                STEM_image = np.full_like(EDS_map, np.nan).astype('uint8')
             image = np.concatenate((STEM_image / STEM_max, EDS_map / EDS_max),
                                    axis=1)
             frame = plt.imshow(image, animated=True)
-            text = ax.annotate(i, (1, -5), annotation_clip=False) # add text
+            text = ax.annotate(i, (1, -5), annotation_clip=False) # add frame number
             frames.append([frame, text])
 
         ani = animation.ArtistAnimation(fig, frames, interval=50, blit=True,
