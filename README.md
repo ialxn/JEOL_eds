@@ -56,6 +56,7 @@ Frame 5 used a reference
 /../scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
   res *= (1 - noise / lVar)
 
+
 # Plot spectrum integrated over full image.
 # If option 'split_frames' was used to read the data the
 # following plots the sum spectrum of all frames added.
@@ -67,17 +68,38 @@ Frame 5 used a reference
 >>>> plt.plot(dc.ref_spectrum)
 [<matplotlib.lines.Line2D at 0x7f3131a489d0>]
 
-
 # Plot sum spectrum corresponding to a (rectangular) ROI specified
 # as tuple (left, right, top, bottom) of pixels for selected frames.
 >>>> plt.plot(dc.spectrum(ROI=(10, 20, 50, 100), frames=[0,1,2,10,11,12,30,31,32]))
 <matplotlib.lines.Line2D at 0x7f7192b58050>
 
 
+# Create overlay of elemental maps
+>>>> from JEOL_eds.utils import create_overlay
+
+# Load data.
+>>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
+
+# Generate elemental maps by adding contribution of all available lines.
+>>>> Fe = dc.map(interval=(6.2, 7.25), energy=True)  # Ka,b
+>>>> Fe += dc.map(interval=(0.65, 0.8), energy=True)     # Add contribution of La,b
+>>>> Si = dc.map(interval=(1.65, 1.825), energy=True)   # Ka,b
+>>>> O = dc.map(interval=(0.45, 0.6), energy=True)  # Ka,b
+
+# Create overlay. Oxygen is hardly visible as it covered by silicon and
+# iron. Focus is on iron distribution. Add legends and save plot as
+# 'test.pdf'.
+>>>> create_overlay((O, Si, Fe),
+		    ('Red', 'Green', 'Blue'),
+                    legends=['O', 'Si', 'Fe'],
+                    outfile='OSiFe_overlay.pdf')
+
+
 # Make movie of drift_images and total EDS intensity and store it
 # as 'test/128.mp4'.
 >>>> dc = JEOL_pts('test/128.pts', split_frames=True, read_drift=True)
 >>>> dc.make_movie()
+
 
 # Additionally, JEOL_pts object can be saved as hdf5 files.
 # This has the benefit that all attributes (drift_images, parameters)
@@ -142,10 +164,10 @@ numpy.float32
 float
 
 # This causes the issue.
->>>> p['AccKV'] == p_hdf5['AccKV']
+>>>> p['AccNA'] == p_hdf5['AccNA']
 False
->>>> type(p['AccKV'])
+>>>> type(p['AccNA'])
 numpy.float32
->>>> type(p_hdf5['AccKV'])
+>>>> type(p_hdf5['AccNA'])
 float
 ````
