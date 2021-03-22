@@ -5,11 +5,12 @@ Created on Fri Mar 19 15:11:53 2021
 
 @author: alxneit
 """
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-def create_overlay(images, colors, legends=None):
+def create_overlay(images, colors, legends=None, outfile=None):
     """Plots overlay of `images` with `colors`.
 
         Parameters
@@ -23,6 +24,10 @@ def create_overlay(images, colors, legends=None):
           legends:  List or tuple.
                     List of legends used to annotate individual maps in
                     overlay.
+          outfile:  Str.
+                    Plot is saved as `outfile`. Graphics file type is inferred
+                    from extension. Available formats might depend on your
+                    installation.
 
         Notes
         -----
@@ -47,7 +52,9 @@ def create_overlay(images, colors, legends=None):
 
         # Create overlay. Oxygen is hardly visible as it covered by silicon and
         # iron. Focus is on iron distribution. No legends plotted.
-        >>>> create_overlay((O, Si, Fe), ('Red', 'Green', 'Blue'))
+        # File is saved
+        >>>> create_overlay((O, Si, Fe), ('Red', 'Green', 'Blue'),
+                            outfile='test.pdf')
 
         # Focus on oxygen. Follows both, iron and silicon distributions.
         >>>> create_overlay([Fe, Si, O],
@@ -61,6 +68,10 @@ def create_overlay(images, colors, legends=None):
     if legends:
         assert isinstance(legends,(list, tuple))
         assert len(legends) == len(images)
+    if outfile:
+        ext = os.path.splitext(outfile)[1][1:].lower()
+        supported = plt.figure().canvas.get_supported_filetypes()
+        assert ext in supported
 
     # Create overlays. Use fake image `base` with fully saturated color and
     # use real image as alpha channel (transparency)
@@ -88,3 +99,6 @@ def create_overlay(images, colors, legends=None):
             ax.text(x, y, legends[i],
                     size=fontsize,
                     color=colors[i], backgroundcolor='white')
+
+    if outfile:
+        plt.savefig(outfile)
