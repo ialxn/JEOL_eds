@@ -56,6 +56,7 @@ Frame 5 used a reference
 /../scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
   res *= (1 - noise / lVar)
 
+
 # Plot spectrum integrated over full image.
 # If option 'split_frames' was used to read the data the
 # following plots the sum spectrum of all frames added.
@@ -67,7 +68,6 @@ Frame 5 used a reference
 >>>> plt.plot(dc.ref_spectrum)
 [<matplotlib.lines.Line2D at 0x7f3131a489d0>]
 
-
 # Plot sum spectrum corresponding to a (rectangular) ROI specified
 # as tuple (left, right, top, bottom) of pixels for selected frames.
 >>>> plt.plot(dc.spectrum(ROI=(10, 20, 50, 100), frames=[0,1,2,10,11,12,30,31,32]))
@@ -78,6 +78,7 @@ Frame 5 used a reference
 # as 'test/128.mp4'.
 >>>> dc = JEOL_pts('test/128.pts', split_frames=True, read_drift=True)
 >>>> dc.make_movie()
+
 
 # Additionally, JEOL_pts object can be saved as hdf5 files.
 # This has the benefit that all attributes (drift_images, parameters)
@@ -142,10 +143,10 @@ numpy.float32
 float
 
 # This causes the issue.
->>>> p['AccKV'] == p_hdf5['AccKV']
+>>>> p['AccNA'] == p_hdf5['AccNA']
 False
->>>> type(p['AccKV'])
+>>>> type(p['AccNA'])
 numpy.float32
->>>> type(p_hdf5['AccKV'])
+>>>> type(p_hdf5['AccNA'])
 float
 ````
