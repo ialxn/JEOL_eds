@@ -74,6 +74,27 @@ Frame 5 used a reference
 <matplotlib.lines.Line2D at 0x7f7192b58050>
 
 
+# Create overlay of elemental maps
+>>>> from JEOL_eds.utils import create_overlay
+
+# Load data.
+>>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
+
+# Generate elemental maps by adding contribution of all available lines.
+>>>> Fe = dc.map(interval=(6.2, 7.25), energy=True)  # Ka,b
+>>>> Fe += dc.map(interval=(0.65, 0.8), energy=True)     # Add contribution of La,b
+>>>> Si = dc.map(interval=(1.65, 1.825), energy=True)   # Ka,b
+>>>> O = dc.map(interval=(0.45, 0.6), energy=True)  # Ka,b
+
+# Create overlay. Oxygen is hardly visible as it covered by silicon and
+# iron. Focus is on iron distribution. Add legends and save plot as
+# 'test.pdf'.
+>>>> create_overlay((O, Si, Fe),
+		    ('Red', 'Green', 'Blue'),
+                    legends=['O', 'Si', 'Fe'],
+                    outfile='OSiFe_overlay.pdf')
+
+
 # Make movie of drift_images and total EDS intensity and store it
 # as 'test/128.mp4'.
 >>>> dc = JEOL_pts('test/128.pts', split_frames=True, read_drift=True)
