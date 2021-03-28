@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-def create_overlay(images, colors, legends=None, outfile=None):
+def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
     """Plots overlay of `images` with `colors`.
 
         Parameters
@@ -24,6 +24,9 @@ def create_overlay(images, colors, legends=None, outfile=None):
           legends:  List or tuple.
                     List of legends used to annotate individual maps in
                     overlay.
+         BG_image:  Ndarray.
+                    Background image (grey scale). Must be of same shape as
+                    `images`.
           outfile:  Str.
                     Plot is saved as `outfile`. Graphics file type is inferred
                     from extension. Available formats might depend on your
@@ -42,7 +45,7 @@ def create_overlay(images, colors, legends=None, outfile=None):
         >>>> from JEOL_eds.utils import create_overlay
 
         # Load data.
-        >>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
+        >>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5, read_drift=True)
 
         # Extract elemental maps. Add contribution of all available lines.
         >>>> Fe = dc.map(interval=(6.2, 7.25), energy=True)  # Ka,b
@@ -60,6 +63,12 @@ def create_overlay(images, colors, legends=None, outfile=None):
         >>>> create_overlay([Fe, Si, O],
                             ['Blue', 'Red', 'Green'],
                             legends=['Fe', 'Si', 'O'])
+
+        # FeOx distribution using first of the `drift_images` as background
+        >>>> create_overlay([Fe, O],
+                            ['Red', 'Blue'],
+                            legends=['Fe', 'O'],
+                            BG_image=dc.drift_images[0])
     """
     assert isinstance(images, (list, tuple))
     assert isinstance(colors, (list, tuple))
@@ -68,11 +77,16 @@ def create_overlay(images, colors, legends=None, outfile=None):
     if legends:
         assert isinstance(legends,(list, tuple))
         assert len(legends) == len(images)
+    if BG_image is not None:
+        assert images[0].shape == BG_image.shape
     if outfile:
         ext = os.path.splitext(outfile)[1][1:].lower()
         supported = plt.figure().canvas.get_supported_filetypes()
         assert ext in supported
 
+    # Show background image
+    if BG_image is not None:
+        plt.imshow(BG_image, cmap='gist_gray')
     # Create overlays. Use fake image `base` with fully saturated color and
     # use real image as alpha channel (transparency)
     base = np.ones_like(images[0])
