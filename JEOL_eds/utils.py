@@ -76,8 +76,7 @@ def create_overlay(images, colors, legends=None, outfile=None):
     # Create overlays. Use fake image `base` with fully saturated color and
     # use real image as alpha channel (transparency)
     base = np.ones_like(images[0])
-    for image, color, legend in zip(images, colors, legends):
-        base = np.ones_like(image)
+    for image, color in zip(images, colors):
         # Custom colormap that contains only `color` at full sauration
         cmap = LinearSegmentedColormap.from_list("cmap", (color, color))
         alpha = image / image.max()
