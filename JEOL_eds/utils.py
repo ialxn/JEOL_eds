@@ -9,6 +9,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.ticker import AutoMinorLocator
 
 def create_overlay(images, colors, legends=None, outfile=None):
     """Plots overlay of `images` with `colors`.
@@ -104,7 +105,7 @@ def create_overlay(images, colors, legends=None, outfile=None):
         plt.savefig(outfile)
 
 
-def plot_spectrum(s, E_range=None, outfile=None):
+def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None):
     """Plots a nice spectrum
 
         Parameters
@@ -114,6 +115,9 @@ def plot_spectrum(s, E_range=None, outfile=None):
                     0.0 < E <= E_max at an resolution of 0.01 eV per data point.
           E_range:  Tuple (E_low, E_high).
                     Energy range to be plotted.
+          M_ticks:  Tuple (mx, my).
+                    Number of minor ticks used for x and y axis. If you want to
+                    plot minor ticks for a single axis, use None for other axis.
           outfile:  Str.
                     Plot is saved as `outfile`. Graphics file type is inferred
                     from extension. Available formats might depend on your
@@ -131,8 +135,10 @@ def plot_spectrum(s, E_range=None, outfile=None):
         >>>> plot_spectrum(dc.ref_spectrum)
 
         # Plot and save reference spectrum between 1.0 and 2.5 eV.
+        # Plot one minor tick on x-axis and four on y-axis.
         >>>> plot_spectrum(dc.ref_spectrum,
                            E_range=(1, 2.5),
+                           M_ticks=(1,4),
                            outfile='ref_spectrum.pdf')
     """
     F = 1/100     # Calibration factor (Energy per channel)
@@ -156,6 +162,14 @@ def plot_spectrum(s, E_range=None, outfile=None):
     ax = plt.gca()
     ax.set_xlabel('E  [eV]')
     ax.set_ylabel('counts  [-]')
+    # Plot minor ticks on the axis required. Careful: matplotlib specifies the
+    # number of intervals which is one more than the number of ticks!
+    if M_ticks is not None:
+        mx, my = M_ticks
+        if mx is not None:
+            ax.xaxis.set_minor_locator(AutoMinorLocator(mx + 1))
+        if my is not None:
+            ax.yaxis.set_minor_locator(AutoMinorLocator(my + 1))
 
     if outfile:
         plt.savefig(outfile)
