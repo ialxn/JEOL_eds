@@ -102,3 +102,46 @@ def create_overlay(images, colors, legends=None, outfile=None):
 
     if outfile:
         plt.savefig(outfile)
+
+
+def plot_spectrum(s, outfile=None):
+    """Plots a nice spectrum
+
+        Parameters
+        ----------
+                s:  ndarray.
+                    Spectral data which is expected to cover the energy range
+                    0.0 < E <= E_max at an resolution of 0.01 eV per data point.
+          outfile:  Str.
+                    Plot is saved as `outfile`. Graphics file type is inferred
+                    from extension. Available formats might depend on your
+                    installation.
+
+        Examples
+        --------
+        >>>> from JEOL_eds import JEOL_pts
+        >>>> from JEOL_eds.utils import plot_spectrum
+
+        # Load data.
+        >>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
+
+        # Plot full reference spectrum.
+        >>>> plot_spectrum(dc.ref_spectrum)
+
+        # Plot and save full reference spectrum.
+        >>>> plot_spectrum(dc.ref_spectrum, outfile='ref_spectrum.pdf')
+    """
+    if outfile:
+        ext = os.path.splitext(outfile)[1][1:].lower()
+        supported = plt.figure().canvas.get_supported_filetypes()
+        assert ext in supported
+
+    x = np.linspace(0, s.shape[0]/100.0, s.shape[0])
+
+    plt.plot(x, s)
+    ax = plt.gca()
+    ax.set_xlabel('E  [eV]')
+    ax.set_ylabel('counts  [-]')
+
+    if outfile:
+        plt.savefig(outfile)
