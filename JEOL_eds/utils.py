@@ -105,7 +105,7 @@ def create_overlay(images, colors, legends=None, outfile=None):
         plt.savefig(outfile)
 
 
-def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None):
+def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
     """Plots a nice spectrum
 
         Parameters
@@ -135,11 +135,13 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None):
         >>>> plot_spectrum(dc.ref_spectrum)
 
         # Plot and save reference spectrum between 1.0 and 2.5 eV.
-        # Plot one minor tick on x-axis and four on y-axis.
+        # Plot one minor tick on x-axis and four on y-axis. Pass
+        # some keywords to `matplotlib.pyplot.plot()`.
         >>>> plot_spectrum(dc.ref_spectrum,
                            E_range=(1, 2.5),
                            M_ticks=(1,4),
-                           outfile='ref_spectrum.pdf')
+                           outfile='ref_spectrum.pdf',
+                           color='Red', linestyle='-.', linewidth=1.0)
     """
     F = 1/100     # Calibration factor (Energy per channel)
     if outfile:
@@ -158,7 +160,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None):
     i_low = int(np.round(E_low / F))
     i_high = int(np.round(E_high / F))
 
-    plt.plot(x, s[i_low:i_high])
+    plt.plot(x, s[i_low:i_high], **kws)
     ax = plt.gca()
     ax.set_xlabel('E  [eV]')
     ax.set_ylabel('counts  [-]')
