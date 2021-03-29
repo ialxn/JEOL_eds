@@ -86,13 +86,14 @@ Frame 5 used a reference
 >>>> Si = dc.map(interval=(1.65, 1.825), energy=True)   # Ka,b
 >>>> O = dc.map(interval=(0.45, 0.6), energy=True)  # Ka,b
 
-# Create overlay. Oxygen is hardly visible as it covered by silicon and
-# iron. Focus is on iron distribution. Add legends and save plot as
-# 'test.pdf'.
+# Create overlay using the first of the drift images as gray background.
+# Oxygen is hardly visible as it covered by silicon and iron. Focus is
+# on iron distribution. Add legends and save plot as 'test.pdf'.
 >>>> create_overlay((O, Si, Fe),
-		    ('Red', 'Green', 'Blue'),
+                    ('Red', 'Green', 'Blue'),
                     legends=['O', 'Si', 'Fe'],
-                    outfile='OSiFe_overlay.pdf')
+                    outfile='OSiFe_overlay.pdf',
+                    BG_image=dc.drift_images[0])
 
 
 # Make movie of drift_images and total EDS intensity and store it
