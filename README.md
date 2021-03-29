@@ -96,6 +96,22 @@ Frame 5 used a reference
                     BG_image=dc.drift_images[0])
 
 
+# Plot spectra
+>>>> from JEOL_eds.utils import plot_spectrum
+
+# Load data.
+>>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
+
+# Plot and save reference spectrum between 1.0 and 2.5 eV.
+# Plot one minor tick on x-axis and four on y-axis. Pass
+# some keywords to `matplotlib.pyplot.plot()`.
+>>>> plot_spectrum(dc.ref_spectrum,
+                   E_range=(1, 2.5),
+                   M_ticks=(1, 4),
+                   outfile='ref_spectrum.pdf',
+                   color='Red', linestyle='-.', linewidth=1.0)
+
+
 # Make movie of drift_images and total EDS intensity and store it
 # as 'test/128.mp4'.
 >>>> dc = JEOL_pts('test/128.pts', split_frames=True, read_drift=True)
