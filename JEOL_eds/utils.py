@@ -125,7 +125,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
         ----------
                 s:  ndarray.
                     Spectral data which is expected to cover the energy range
-                    0.0 < E <= E_max at an resolution of 0.01 eV per data point.
+                    0.0 < E <= E_max at an resolution of 0.01 keV per data point.
           E_range:  Tuple (E_low, E_high).
                     Energy range to be plotted.
           M_ticks:  Tuple (mx, my).
@@ -147,7 +147,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
         # Plot full reference spectrum.
         >>>> plot_spectrum(dc.ref_spectrum)
 
-        # Plot and save reference spectrum between 1.0 and 2.5 eV.
+        # Plot and save reference spectrum between 1.0 and 2.5 keV.
         # Plot one minor tick on x-axis and four on y-axis. Pass
         # some keywords to `matplotlib.pyplot.plot()`.
         >>>> plot_spectrum(dc.ref_spectrum,
@@ -175,7 +175,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
 
     plt.plot(x, s[i_low:i_high], **kws)
     ax = plt.gca()
-    ax.set_xlabel('E  [eV]')
+    ax.set_xlabel('E  [keV]')
     ax.set_ylabel('counts  [-]')
     # Plot minor ticks on the axis required. Careful: matplotlib specifies the
     # number of intervals which is one more than the number of ticks!
