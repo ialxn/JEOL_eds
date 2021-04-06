@@ -164,6 +164,8 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
 
     if E_range is not None:
         E_low, E_high = E_range
+        if E_high > s.shape[0] * F: # E_high is out of range
+            E_high = s.shape[0] * F
     else:
         E_low, E_high = 0, s.shape[0] * F
 
