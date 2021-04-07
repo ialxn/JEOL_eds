@@ -561,6 +561,8 @@ class JEOL_pts:
             return None, None
         sh = self.shifts(filtered=filtered, verbose=verbose)
         amax = np.abs(np.asarray(sh)).max()
+        if amax == 0:   # all shifts are zero, prevent SyntaxError in np.histogram2d()
+            amax = 1
         # bin edges for square histogram centered at 0,0
         bins = np.arange(-amax - 0.5, amax + 1.5)
         extent = [-amax, amax, -amax, amax]
