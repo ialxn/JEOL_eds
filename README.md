@@ -78,7 +78,7 @@ Frame 5 used a reference
 >>>> from JEOL_eds.utils import create_overlay
 
 # Load data.
->>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
+>>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5, read_drift=True)
 
 # Generate elemental maps by adding contribution of all available lines.
 >>>> Fe = dc.map(interval=(6.2, 7.25), energy=True)  # Ka,b
@@ -98,9 +98,6 @@ Frame 5 used a reference
 
 # Plot spectra
 >>>> from JEOL_eds.utils import plot_spectrum
-
-# Load data.
->>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
 
 # Plot and save reference spectrum between 1.0 and 2.5 eV.
 # Plot one minor tick on x-axis and four on y-axis. Pass
