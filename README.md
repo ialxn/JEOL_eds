@@ -109,6 +109,22 @@ Frame 5 used a reference
                    color='Red', linestyle='-.', linewidth=1.0)
 
 
+# To insert the output of the different plot functions imported from
+# `JEOL_eds.utils` into a sub-plot, use the following code fragment
+fig, (ax1, ax2) = plt.subplots(1, 2)
+# Use `ax1` for overlay
+>>>> plt.sca(ax1)
+>>>> create_overlay((O, Si, Fe),
+                    ('Red', 'Green', 'Blue'),
+                    legends=['O', 'Si', 'Fe'],
+                    BG_image=dc.drift_images[0])
+# Use `ax2` for spectrum
+>>>> plt.sca(ax2)
+>>>> plot_spectrum(dc.ref_spectrum, E_range=(1,3))
+>>>> plt.tight_layout() 	# Prevents overlapping labels
+>>>> plt.savefig('demo.pdf')
+
+
 # Make movie of drift_images and total EDS intensity and store it
 # as 'test/128.mp4'.
 >>>> dc = JEOL_pts('test/128.pts', split_frames=True, read_drift=True)
