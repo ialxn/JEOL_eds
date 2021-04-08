@@ -956,6 +956,57 @@ class JEOL_pts:
             s += self.dcube[frame, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
         return self.__correct_spectrum(s)
 
+    def time_series(self, interval=None, energy=False):
+        """Returns x-ray intensity integrated in `interval` for all frames.
+
+            Parameters
+            ----------
+                interval:   Tuple (number, number).
+                            Defines interval (channels, or energy [keV]) to be
+                            used for map. None implies that all channels are
+                            integrated.
+                  energy:   Bool.
+                            If false (default) interval is specified as channel
+                            numbers otherwise (True) interval is specified as
+                            'keV'.
+
+            Returns
+            -------
+                            Ndarray
+                            Time evolution of intergrated intensity in interval.
+
+            Examples
+            --------
+                # Intgrate carbon Ka peak (interval specified as channels)
+                >>>> dc.time_series(interval=(20,40))
+                array([1696, 1781, 1721, 1795, 1744, 1721, 1777, 1711, 1692, 1752, 1651,
+                       1664, 1693, 1696, 1736, 1682, 1707, 1710, 1685, 1785, 1731, 1752,
+                       1729, 1757, 1678, 1752, 1721, 1740, 1696, 1718, 1737, 1740, 1719,
+                       1670, 1692, 1649, 1718, 1660, 1700, 1702, 1693, 1722, 1675, 1716,
+                       1664, 1761, 1691, 1731, 1663, 1669], dtype=uint64)
+
+                # Integrate oxygen Ka peak (interval specified as energy [keV])
+                >>>> dc.time_series(interval=(0.45, 0.6), energy=True)
+                array([1042, 1128, 1032, 1016, 1031, 1019, 1070, 1014, 1078, 1078, 1086,
+                       1079, 1029, 1025, 1028, 1040, 1084, 1020, 1015, 1099, 1074, 1108,
+                       1059, 1032, 1131, 1029, 1073,  990, 1088, 1092, 1093, 1038, 1119,
+                       1023, 1129, 1054, 1072, 1051, 1039, 1048, 1062, 1099, 1063, 1092,
+                       1073, 1050, 1088, 1018, 1070, 1089], dtype=uint64)
+
+        """
+        if not interval:
+            interval = (0, self.dcube.shape[3])
+        if energy:
+            CoefA = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefA']
+            CoefB = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefB']
+            interval = (int(round((interval[0] - CoefB) / CoefA)),
+                        int(round((interval[1] - CoefB) / CoefA)))
+        return self.dcube[:, :, :, interval[0]:interval[1]].sum(axis=(1, 2, 3))
+
     def make_movie(self, fname=None, **kws):
         """Makes a movie of EDS data and drift_images
 
