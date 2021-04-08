@@ -956,7 +956,7 @@ class JEOL_pts:
             s += self.dcube[frame, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
         return self.__correct_spectrum(s)
 
-    def time_series(self, interval=None, energy=False):
+    def time_series(self, interval=None, energy=False, frames=None):
         """Returns x-ray intensity integrated in `interval` for all frames.
 
             Parameters
@@ -969,6 +969,10 @@ class JEOL_pts:
                             If false (default) interval is specified as channel
                             numbers otherwise (True) interval is specified as
                             'keV'.
+                  frames:   Iterable (tuple, list, array, range object).
+                            Frame numbers included in time series (or None if
+                            all frames are used). The integrated number of
+                            counts is set to 'NaN' for all other frames.
 
             Returns
             -------
@@ -979,19 +983,23 @@ class JEOL_pts:
             --------
                 # Intgrate carbon Ka peak (interval specified as channels)
                 >>>> dc.time_series(interval=(20,40))
-                array([1696, 1781, 1721, 1795, 1744, 1721, 1777, 1711, 1692, 1752, 1651,
-                       1664, 1693, 1696, 1736, 1682, 1707, 1710, 1685, 1785, 1731, 1752,
-                       1729, 1757, 1678, 1752, 1721, 1740, 1696, 1718, 1737, 1740, 1719,
-                       1670, 1692, 1649, 1718, 1660, 1700, 1702, 1693, 1722, 1675, 1716,
-                       1664, 1761, 1691, 1731, 1663, 1669], dtype=uint64)
+                array([1696., 1781., 1721., 1795., 1744., 1721., 1777., 1711., 1692.,
+                       1752., 1651., 1664., 1693., 1696., 1736., 1682., 1707., 1710.,
+                       1685., 1785., 1731., 1752., 1729., 1757., 1678., 1752., 1721.,
+                       1740., 1696., 1718., 1737., 1740., 1719., 1670., 1692., 1649.,
+                       1718., 1660., 1700., 1702., 1693., 1722., 1675., 1716., 1664.,
+                       1761., 1691., 1731., 1663., 1669.])array([1696, 1781, 1721, 1795, 1744, 1721, 1777, 1711, 1692, 1752, 1651,
 
                 # Integrate oxygen Ka peak (interval specified as energy [keV])
-                >>>> dc.time_series(interval=(0.45, 0.6), energy=True)
-                array([1042, 1128, 1032, 1016, 1031, 1019, 1070, 1014, 1078, 1078, 1086,
-                       1079, 1029, 1025, 1028, 1040, 1084, 1020, 1015, 1099, 1074, 1108,
-                       1059, 1032, 1131, 1029, 1073,  990, 1088, 1092, 1093, 1038, 1119,
-                       1023, 1129, 1054, 1072, 1051, 1039, 1048, 1062, 1099, 1063, 1092,
-                       1073, 1050, 1088, 1018, 1070, 1089], dtype=uint64)
+                # and remove a few bad frames (11,12) from time series.
+                >>>> frames = [f for f in range(dc.dcube.shape[0]) if f not in [11, 12]]
+                >>>> dc.time_series(interval=(0.45, 0.6), energy=True, frames=frames)
+                array([1042., 1128., 1032., 1016., 1031., 1019., 1070., 1014., 1078.,
+                       1078., 1086.,   nan,   nan, 1025., 1028., 1040., 1084., 1020.,
+                       1015., 1099., 1074., 1108., 1059., 1032., 1131., 1029., 1073.,
+                       990., 1088., 1092., 1093., 1038., 1119., 1023., 1129., 1054.,
+                       1072., 1051., 1039., 1048., 1062., 1099., 1063., 1092., 1073.,
+                       1050., 1088., 1018., 1070., 1089.])
 
         """
         if not interval:
@@ -1005,7 +1013,15 @@ class JEOL_pts:
                                    ['CoefB']
             interval = (int(round((interval[0] - CoefB) / CoefA)),
                         int(round((interval[1] - CoefB) / CoefA)))
-        return self.dcube[:, :, :, interval[0]:interval[1]].sum(axis=(1, 2, 3))
+        if frames is None:
+            # For consistency, explicitly set dtype to 'float'. We need to
+            # allow for NaN in unspecified frames in the else-clause below.
+            ts = self.dcube[:, :, :, interval[0]:interval[1]].sum(axis=(1, 2, 3)).astype('float')
+        else:
+            ts = np.full((self.dcube.shape[0],), np.nan)
+            for f in frames:
+                ts[f] =self.dcube[f, :, :, interval[0]:interval[1]].sum(axis=(0, 1, 2))
+        return ts
 
     def make_movie(self, fname=None, **kws):
         """Makes a movie of EDS data and drift_images
