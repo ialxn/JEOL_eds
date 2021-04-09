@@ -118,6 +118,17 @@ Frame 5 used a reference
 >>>> dc.make_movie()
 
 
+# Check for contamination by carbon.
+# Integrate carbon Ka line.
+>>>> ts = dc.time_series(interval=(0.45, 0.6), energy=True)
+# Plot and save the time series.
+>>>> from JEOL_eds.utils import plot_tseries
+>>>> plot_tseries(ts,
+                  M_ticks=(9,4),
+                  outfile='carbon_Ka.pdf',
+                  color='Red', linestyle='-.', linewidth=1.0)
+
+
 # Additionally, JEOL_pts object can be saved as hdf5 files.
 # This has the benefit that all attributes (drift_images, parameters)
 # are also stored.

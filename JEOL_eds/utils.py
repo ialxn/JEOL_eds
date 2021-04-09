@@ -188,3 +188,61 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
 
     if outfile:
         plt.savefig(outfile)
+
+
+def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
+    """Plots a nice time series.
+        Parameters
+        ----------
+               ts:  Ndarray.
+                    Time series (integrated x-ray intensities.
+          M_ticks:  Tuple (mx, my).
+                    Number of minor ticks used for x and y axis. If you want to
+                    plot minor ticks for a single axis, use None for other axis.
+          outfile:  Str.
+                    Plot is saved as `outfile`. Graphics file type is inferred
+                    from extension. Available formats might depend on your
+                    installation.
+
+        Examples
+        --------
+        >>>> from JEOL_eds import JEOL_pts
+        >>>> from JEOL_eds.utils import plot_tseries
+
+        # Load data.
+        >>>> dc = JEOL_pts('test/128.pts', split_frames=True)
+
+        # Get integrated x-ray intensity for carbon Ka peak but exclude
+        # frames 11 and 12)
+        >>>> frames = list(range(dc.dcube.shape[0]))
+        >>>> frames.remove(11)
+        >>>> frames.remove(12)
+        >>>> ts = dc.time_series(interval=(0.22, 0.34), energy=True, frames=frames)
+
+        # Plot and save time series
+        # some keywords to `matplotlib.pyplot.plot()`.
+        >>>> plot_tseries(ts,
+                          M_ticks=(9,4),
+                          outfile='carbon_Ka.pdf',
+                          color='Red', linestyle='-.', linewidth=1.0)
+    """
+    if outfile:
+        ext = os.path.splitext(outfile)[1][1:].lower()
+        supported = plt.figure().canvas.get_supported_filetypes()
+        assert ext in supported
+
+    plt.plot(ts, **kws)
+    ax = plt.gca()
+    ax.set_xlabel('frame index  [-]')
+    ax.set_ylabel('counts  [-]')
+    # Plot minor ticks on the axis required. Careful: matplotlib specifies the
+    # number of intervals which is one more than the number of ticks!
+    if M_ticks is not None:
+        mx, my = M_ticks
+        if mx is not None:
+            ax.xaxis.set_minor_locator(AutoMinorLocator(mx + 1))
+        if my is not None:
+            ax.yaxis.set_minor_locator(AutoMinorLocator(my + 1))
+
+    if outfile:
+        plt.savefig(outfile)
