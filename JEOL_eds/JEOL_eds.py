@@ -36,7 +36,7 @@ class JEOL_pts:
             fname:      Str
                         Filename.
             dtype:      Str
-                        Data type used to store (not read) datacube.
+                        Data type used to store (not read) data cube.
                         Can be any of the dtype supported by numpy.
                         If a '.npz' file is loaded, this parameter is
                         ignored and the dtype corresponds to the one
@@ -84,7 +84,7 @@ class JEOL_pts:
         >>>> dc.dcube.shape
         (50, 128, 128, 4000)
 
-        # Only import spectr up to cutoff energy [keV]
+        # Only import spectrum up to cutoff energy [keV]
         >>>> dc = JEOL_pts('128.pts', E_cutoff=10.0)
         >>>> dc.dcube.shape
         (1, 128, 128, 1000)
@@ -142,7 +142,7 @@ class JEOL_pts:
         # Additionally, JEOL_pts object can be saved as hdf5 files.
         # This has the benefit that all attributes (drift_images, parameters)
         # are also stored.
-        # Use basename of original file and pass along keywords to
+        # Use base name of original file and pass along keywords to
         # `h5py.create_dataset()`.
         >>>> dc.save_hdf5(compression='gzip', compression_opts=9)
 
@@ -161,14 +161,14 @@ class JEOL_pts:
     def __init__(self, fname, dtype='uint16',
                  split_frames=False, E_cutoff=False, read_drift=False,
                  verbose=False):
-        """Reads datacube from JEOL '.pts' file or from previously saved data cube.
+        """Reads data cube from JEOL '.pts' file or from previously saved data cube.
 
             Parameters
             ----------
                  fname:     Str
                             Filename.
                  dtype:     Str
-                            Data type used to store (not read) datacube.
+                            Data type used to store (not read) data cube.
                             Can be any of the dtype supported by numpy.
                             If a '.npz' file is loaded, this parameter is
                             ignored and the dtype corresponds to the one
@@ -231,7 +231,7 @@ class JEOL_pts:
                         Dictionary containing all meta data stored in header.
             Notes
             -----
-                    Copied almost verbatiom from Hyperspy (hyperspy/io_plugins/jeol.py).
+                    Copied almost verbatim from Hyperspy (hyperspy/io_plugins/jeol.py).
         """
         with open(fname, 'br') as fd:
             file_magic = np.fromfile(fd, '<I', 1)[0]
@@ -259,7 +259,7 @@ class JEOL_pts:
 
             Notes
             -----
-                    Copied almost verbatiom from Hyperspy (hyperspy/io_plugins/jeol.py).
+                    Copied almost verbatim from Hyperspy (hyperspy/io_plugins/jeol.py).
         """
         jTYPE = {
             1: 'B',
@@ -483,7 +483,7 @@ class JEOL_pts:
 
             Returns
             -------
-                ndarray or None if data is not available
+                Ndarray or None if data is not available
                 Stack of images with shape (N_images, im_size, im_size)
 
         Notes
@@ -636,7 +636,7 @@ class JEOL_pts:
                  .
                  (0, -1)]
 
-                # Calulate shifts for selected frames (odd frames) only. In
+                # Calculate shifts for selected frames (odd frames) only. In
                 # this case `dc.drift_images[1]` (first frame given) is used
                 # as reference.
                 # Verbose output.
@@ -677,7 +677,7 @@ class JEOL_pts:
             # i.e. offset is at dy (dy) index_of_maximum - s + 1.
             dx, dy = np.where(c==np.amax(c))
             if dx.shape[0] > 1 and verbose:
-                # Report cases where averging was applied
+                # Report cases where averaging was applied
                 print('Average of', end=' ')
                 for x, y in zip(dx, dy):
                     print(f'({x - self.dcube.shape[1] + 1}, '
@@ -712,7 +712,7 @@ class JEOL_pts:
                             active and frames is not specified all frames are
                             included.
                    align:   Str
-                            'no': Do not aligne individual frames.
+                            'no': Do not align individual frames.
                             'yes': Align frames (use unfiltered frames in
                                    cross correlation).
                             'filter': Align frames (use  Wiener filtered
@@ -745,7 +745,7 @@ class JEOL_pts:
                 >>>> plt.imshow(dc.map(frames=[3]))
                 <matplotlib.image.AxesImage at 0x7f06c05ef750>
 
-                # Map correponding to the sum of a few selected frames.
+                # Map corresponding to the sum of a few selected frames.
                 >>>> m = dc.map(frames=[3,5,11,12,13])
 
                 # Cu Kalpha map of all even frames.
@@ -872,10 +872,10 @@ class JEOL_pts:
             # the line shape still shows some differences. I guess    #
             # that this is related to the interpolation part.         #
             #                                                         #
-            # With 'test/128.pts' as example:                         #                             #
-            #     >>>> ref_spec[0:100].sum()                          #                         #
+            # With 'test/128.pts' as example:                         #
+            #     >>>> ref_spec[0:100].sum()                          #
             #     200468                                              #
-            #     >>>> corrected_spec[0:100].sum()                    #                                #
+            #     >>>> corrected_spec[0:100].sum()                    #
             #     200290                                              #
             #                                                         #
             ###########################################################
@@ -988,7 +988,7 @@ class JEOL_pts:
         if fname is None:
             fname = os.path.splitext(self.file_name)[0] + '.mp4'
 
-        # remove `frames=` keyword from dict as it would interfer later
+        # remove `frames=` keyword from dict as it would interfere later
         try:
             kws.pop('frames')
         except KeyError:
@@ -997,12 +997,12 @@ class JEOL_pts:
         # maxima of the two type of images used to normalize images of both series
         try:
             STEM_max = self.drift_images.max()
-        except TypeError:   # no drift_image availabe
+        except TypeError:   # no drift_image available
             STEM_max = 1.0
         EDS_max = max([self.map(frames=[i]).max() for i in range(self.dcube.shape[0])])
 
         # Default dtype for maps is 'float64'. To minimize memory use select
-        # smallest dtype passible.
+        # smallest dtype possible.
         if EDS_max < 2**8:
             EDS_dtype = 'uint8'
         elif EDS_max < 2**16:
@@ -1025,7 +1025,7 @@ class JEOL_pts:
             EDS_map = self.map(frames=[i], **kws).astype(EDS_dtype)
             try:
                 STEM_image = self.drift_images[i].astype(STEM_dtype)
-            except TypeError:   # no drift_image availabe, dummy image
+            except TypeError:   # no drift_image available, dummy image
                 STEM_image = np.full_like(EDS_map, np.nan).astype('uint8')
             image = np.concatenate((STEM_image / STEM_max, EDS_map / EDS_max),
                                    axis=1)

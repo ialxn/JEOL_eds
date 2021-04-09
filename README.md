@@ -99,7 +99,7 @@ Frame 5 used a reference
 # Plot spectra
 >>>> from JEOL_eds.utils import plot_spectrum
 
-# Plot and save reference spectrum between 1.0 and 2.5 eV.
+# Plot and save reference spectrum between 1.0 and 2.5 keV.
 # Plot one minor tick on x-axis and four on y-axis. Pass
 # some keywords to `matplotlib.pyplot.plot()`.
 >>>> plot_spectrum(dc.ref_spectrum,
@@ -134,7 +134,7 @@ fig, (ax1, ax2) = plt.subplots(1, 2)
 # Additionally, JEOL_pts object can be saved as hdf5 files.
 # This has the benefit that all attributes (drift_images, parameters)
 # are also stored.
-# Use basename of original file and pass along keywords to
+# Use base name of original file and pass along keywords to
 # `h5py.create_dataset()`.
 >>>> dc.save_hdf5(compression='gzip', compression_opts=9)
 
@@ -152,7 +152,7 @@ fig, (ax1, ax2) = plt.subplots(1, 2)
 
 ## Bugs
 
-Paramteres loaded from '.pts' might have different types than the ones
+Parameters loaded from '.pts' might have different types than the ones
 loaded from 'h5' files. Thus take extra care if you need to compare them:
 ```python
 # Load and store as hdf5.
