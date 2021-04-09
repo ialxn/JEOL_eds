@@ -78,7 +78,7 @@ Frame 5 used a reference
 >>>> from JEOL_eds.utils import create_overlay
 
 # Load data.
->>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
+>>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5, read_drift=True)
 
 # Generate elemental maps by adding contribution of all available lines.
 >>>> Fe = dc.map(interval=(6.2, 7.25), energy=True)  # Ka,b
@@ -99,10 +99,7 @@ Frame 5 used a reference
 # Plot spectra
 >>>> from JEOL_eds.utils import plot_spectrum
 
-# Load data.
->>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
-
-# Plot and save reference spectrum between 1.0 and 2.5 eV.
+# Plot and save reference spectrum between 1.0 and 2.5 keV.
 # Plot one minor tick on x-axis and four on y-axis. Pass
 # some keywords to `matplotlib.pyplot.plot()`.
 >>>> plot_spectrum(dc.ref_spectrum,
@@ -110,6 +107,22 @@ Frame 5 used a reference
                    M_ticks=(1, 4),
                    outfile='ref_spectrum.pdf',
                    color='Red', linestyle='-.', linewidth=1.0)
+
+
+# To insert the output of the different plot functions imported from
+# `JEOL_eds.utils` into a sub-plot, use the following code fragment
+fig, (ax1, ax2) = plt.subplots(1, 2)
+# Use `ax1` for overlay
+>>>> plt.sca(ax1)
+>>>> create_overlay((O, Si, Fe),
+                    ('Red', 'Green', 'Blue'),
+                    legends=['O', 'Si', 'Fe'],
+                    BG_image=dc.drift_images[0])
+# Use `ax2` for spectrum
+>>>> plt.sca(ax2)
+>>>> plot_spectrum(dc.ref_spectrum, E_range=(1,3))
+>>>> plt.tight_layout() 	# Prevents overlapping labels
+>>>> plt.savefig('demo.pdf')
 
 
 # Make movie of drift_images and total EDS intensity and store it
@@ -132,7 +145,7 @@ Frame 5 used a reference
 # Additionally, JEOL_pts object can be saved as hdf5 files.
 # This has the benefit that all attributes (drift_images, parameters)
 # are also stored.
-# Use basename of original file and pass along keywords to
+# Use base name of original file and pass along keywords to
 # `h5py.create_dataset()`.
 >>>> dc.save_hdf5(compression='gzip', compression_opts=9)
 
@@ -150,7 +163,7 @@ Frame 5 used a reference
 
 ## Bugs
 
-Paramteres loaded from '.pts' might have different types than the ones
+Parameters loaded from '.pts' might have different types than the ones
 loaded from 'h5' files. Thus take extra care if you need to compare them:
 ```python
 # Load and store as hdf5.

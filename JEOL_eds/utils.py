@@ -17,7 +17,7 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
         Parameters
         ----------
            images:  List or tuple.
-                    Images to be overlayed (must be of identical shape).
+                    Images to be overlaid (must be of identical shape).
            colors:  List or tuple.
                     List of colors used to overlay the images provided
                     in the same order as `images`. Surplus colors provided
@@ -35,7 +35,7 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
 
         Notes
         -----
-                `images` are ovelayed in the sequence given. Thus fully saturated
+                `images` are overlaid in the sequence given. Thus fully saturated
                 pixels of only the last image given are visible. Therefore the
                 final figure depends on the order of the images given with the
                 most important image last.
@@ -92,7 +92,7 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
     # use real image as alpha channel (transparency)
     base = np.ones_like(images[0])
     for image, color in zip(images, colors):
-        # Custom colormap that contains only `color` at full sauration
+        # Custom color map that contains only `color` at full saturation
         cmap = LinearSegmentedColormap.from_list("cmap", (color, color))
         alpha = image / image.max()
         plt.imshow(base, cmap=cmap, alpha=alpha,
@@ -123,9 +123,9 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
 
         Parameters
         ----------
-                s:  ndarray.
+                s:  Ndarray.
                     Spectral data which is expected to cover the energy range
-                    0.0 < E <= E_max at an resolution of 0.01 eV per data point.
+                    0.0 < E <= E_max at an resolution of 0.01 keV per data point.
           E_range:  Tuple (E_low, E_high).
                     Energy range to be plotted.
           M_ticks:  Tuple (mx, my).
@@ -147,7 +147,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
         # Plot full reference spectrum.
         >>>> plot_spectrum(dc.ref_spectrum)
 
-        # Plot and save reference spectrum between 1.0 and 2.5 eV.
+        # Plot and save reference spectrum between 1.0 and 2.5 keV.
         # Plot one minor tick on x-axis and four on y-axis. Pass
         # some keywords to `matplotlib.pyplot.plot()`.
         >>>> plot_spectrum(dc.ref_spectrum,
@@ -164,6 +164,8 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
 
     if E_range is not None:
         E_low, E_high = E_range
+        if E_high > s.shape[0] * F: # E_high is out of range
+            E_high = s.shape[0] * F
     else:
         E_low, E_high = 0, s.shape[0] * F
 
@@ -175,7 +177,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
 
     plt.plot(x, s[i_low:i_high], **kws)
     ax = plt.gca()
-    ax.set_xlabel('E  [eV]')
+    ax.set_xlabel('E  [keV]')
     ax.set_ylabel('counts  [-]')
     # Plot minor ticks on the axis required. Careful: matplotlib specifies the
     # number of intervals which is one more than the number of ticks!
