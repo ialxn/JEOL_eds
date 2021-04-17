@@ -118,7 +118,8 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
         plt.savefig(outfile)
 
 
-def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
+def plot_spectrum(s, E_range=None, M_ticks=None,
+                  log_y=False, outfile=None, **kws):
     """Plots a nice spectrum
 
         Parameters
@@ -131,6 +132,9 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
           M_ticks:  Tuple (mx, my).
                     Number of minor ticks used for x and y axis. If you want to
                     plot minor ticks for a single axis, use None for other axis.
+                    Parameter for y axis is ignored in logarithmic plots.
+            log_y:  Bool.
+                    Plot linear or logarithmic y-axis.
           outfile:  Str.
                     Plot is saved as `outfile`. Graphics file type is inferred
                     from extension. Available formats might depend on your
@@ -144,8 +148,8 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
         # Load data.
         >>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
 
-        # Plot full reference spectrum.
-        >>>> plot_spectrum(dc.ref_spectrum)
+        # Plot full reference spectrum with logaritmic y-axis.
+        >>>> plot_spectrum(dc.ref_spectrum, log_y=True)
 
         # Plot and save reference spectrum between 1.0 and 2.5 keV.
         # Plot one minor tick on x-axis and four on y-axis. Pass
@@ -179,6 +183,9 @@ def plot_spectrum(s, E_range=None, M_ticks=None, outfile=None, **kws):
     ax = plt.gca()
     ax.set_xlabel('E  [keV]')
     ax.set_ylabel('counts  [-]')
+
+    if log_y:
+        ax.set_yscale('log')
     # Plot minor ticks on the axis required. Careful: matplotlib specifies the
     # number of intervals which is one more than the number of ticks!
     if M_ticks is not None:
