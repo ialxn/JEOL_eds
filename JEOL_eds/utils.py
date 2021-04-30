@@ -198,6 +198,55 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
     if outfile:
         plt.savefig(outfile)
 
+def export_spectrum(s, outfile, E_range=None):
+    """Exports spectrum as tab delimited ASCII.
+
+        Parameters
+        ----------
+                s:  Ndarray.
+                    Spectral data which is expected to cover the energy range
+                    0.0 < E <= E_max at an resolution of 0.01 keV per data point.
+          outfile:  Str.
+                    Data is saved in `outfile`.
+          E_range:  Tuple (E_low, E_high).
+                    Energy range to be plotted.
+
+        Examples
+        --------
+        >>>> from JEOL_eds import JEOL_pts
+        >>>> from JEOL_eds.utils import export_spectrum
+
+        # Load data.
+        >>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
+
+        # Export full reference spectrum as 'test_spectrum.dat'.
+        >>>> export_spectrum(dc.ref_spectrum, 'test_spectrum.dat')
+
+        # Only export data between 1.0 and 2.5 keV.
+        >>>> export_spectrum(dc.ref_spectrum, 'test_spectrum.dat',
+                             E_range=(1, 2.5))
+    """
+    F = 1/100     # Calibration factor (Energy per channel)
+
+    if E_range is not None:
+        E_low, E_high = E_range
+        if E_high > s.shape[0] * F: # E_high is out of range
+            E_high = s.shape[0] * F
+    else:
+        E_low, E_high = 0, s.shape[0] * F
+
+    N = int(np.round((E_high - E_low) / F))    # Number of data points
+    data = np.zeros((N, 2))
+    data[:, 0] = np.linspace(E_low, E_high, N)   # Energy axis
+    # Indices corresponding to spectral interval
+    i_low = int(np.round(E_low / F))
+    i_high = int(np.round(E_high / F))
+    data[:, 1] = s[i_low:i_high]    # copy desired range
+
+    header = '# E [keV]        counts [-]'
+    fmt = '%.2f\t%d'
+    np.savetxt(outfile, data, header=header, fmt=fmt)
+
 
 def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
     """Plots a nice time series.
