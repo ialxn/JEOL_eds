@@ -304,3 +304,39 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
 
     if outfile:
         plt.savefig(outfile)
+
+def export_tseries(ts, outfile):
+    """Export time series as tab delimited ASCII.
+        Parameters
+        ----------
+               ts:  Ndarray.
+                    Time series (integrated x-ray intensities.
+          outfile:  Str.
+                    Data is saved as `outfile`.
+
+        Examples
+        --------
+        >>>> from JEOL_eds import JEOL_pts
+        >>>> from JEOL_eds.utils import export_tseries
+
+        # Load data.
+        >>>> dc = JEOL_pts('test/128.pts', split_frames=True)
+
+        # Get integrated x-ray intensity for carbon Ka peak but exclude
+        # frames 11 and 12)
+        >>>> frames = list(range(dc.dcube.shape[0]))
+        >>>> frames.remove(11)
+        >>>> frames.remove(12)
+        >>>> ts = dc.time_series(interval=(0.22, 0.34), energy=True, frames=frames)
+
+        # Export time series
+        >>>> export_tseries(ts, 'test_tseries.dat')
+    """
+    N = ts.shape[0]
+    data = np.zeros((N, 2))
+    data[:, 0] = range(N)
+    data[:, 1] = ts
+
+    header = '# Frame idx [-]        counts [-]'
+    fmt = '%d\t%d'
+    np.savetxt(outfile, data, header=header, fmt=fmt)
