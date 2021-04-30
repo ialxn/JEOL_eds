@@ -21,6 +21,7 @@ along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
 from datetime import datetime, timedelta
+from warnings import warn
 import h5py
 import asteval
 import numpy as np
@@ -792,6 +793,9 @@ class JEOL_pts:
                         int(round((interval[1] - CoefB) / CoefA)))
         if verbose:
             print(f'Using channels {interval[0]} - {interval[1]}')
+
+        if interval[0] > self.dcube.shape[3] or interval[1] > self.dcube.shape[3]:
+            warn(f'Interval {interval[0]}-{interval[1]} lies (partly) outside of data range 0-{self.dcube.shape[3]}')
 
         if self.dcube.shape[0] == 1:   # only a single frame (0) present
             return self.dcube[0, :, :, interval[0]:interval[1]].sum(axis=-1)
