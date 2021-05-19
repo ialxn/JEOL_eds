@@ -1025,6 +1025,10 @@ class JEOL_pts:
         if len(ROI) == 3:   # circular ROI, special
             return self.__correct_spectrum(self.__spectrum_cROI(ROI, frames))
 
+        # check that ROI lies fully within the data cube
+        if not all(0 <= val < self.dcube.shape[1] for val in ROI):
+            raise ValueError(f"ROI {ROI} lies partially outside data cube")
+
         if self.dcube.shape[0] == 1:   # only a single frame (0) present
             s = self.dcube[0, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
             return self.__correct_spectrum(s)
