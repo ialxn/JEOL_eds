@@ -909,7 +909,10 @@ class JEOL_pts:
             ----------
                      ROI:   Tuple (int, int, int, int) or None
                             Defines ROI for which spectrum is extracted. ROI is
-                            defined by its boundaries (left, right, top, bottom).
+                            defined by its boundaries (top, bottom, left, right).
+                            Note, that this implies y-axis before x-axis and the
+                            order is the same as when applied in a python
+                            slice ([top:bottom, left:right]).
                             None implies that the whole image is used.
                   frames:   Iterable (tuple, list, array, range object)
                             Frame numbers included in spectrum. If split_frames
@@ -935,7 +938,7 @@ class JEOL_pts:
                 [<matplotlib.lines.Line2D at 0x7f3131a489d0>]
 
                 # Plot spectrum corresponding to a (rectangular) ROI specified
-                # as tuple (left, right, top, bottom) of pixels.
+                # as tuple (top, bottom, left, right) of pixels.
                 >>>> plt.plot(dc.spectrum(ROI=(10, 20, 50, 100)))
                 <matplotlib.lines.Line2D at 0x7f7192b58050>
 
