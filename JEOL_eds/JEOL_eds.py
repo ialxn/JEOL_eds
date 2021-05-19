@@ -908,12 +908,15 @@ class JEOL_pts:
             Parameters
             ----------
                      ROI:   Tuple (int, int, int, int) or None
-                            Defines ROI for which spectrum is extracted. ROI is
-                            defined by its boundaries (top, bottom, left, right).
-                            Note, that this implies y-axis before x-axis and the
-                            order is the same as when applied in a python
-                            slice ([top:bottom, left:right]).
-                            None implies that the whole image is used.
+                            Defines ROI for which spectrum is extracted. None
+                            implies that the whole image is used. ROI is
+                            defined by its boundaries (top, bottom, left, right)
+                            which are all included in the ROI. Numbers are in
+                            pixel coordinates in the range 0 <= N < ScanSize.
+                            Note, that this definition implies y-axis before
+                            x-axis and the order of the numbers is the same as
+                            when applied in a python slice ([top:bottom, left:right]).
+                            Defines ROI for which spectrum is extracted.
                   frames:   Iterable (tuple, list, array, range object)
                             Frame numbers included in spectrum. If split_frames
                             is active and frames is not specified all frames
@@ -953,20 +956,20 @@ class JEOL_pts:
                 >>>> spec = dc.spectrum(frames=range(1, dc.dcube.shape[0], 2))
         """
         if not ROI:
-            ROI = (0, self.dcube.shape[1], 0, self.dcube.shape[1])
+            ROI = (0, self.dcube.shape[1] - 1, 0, self.dcube.shape[1] - 1)
         if self.dcube.shape[0] == 1:   # only a single frame (0) present
-            s = self.dcube[0, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
+            s = self.dcube[0, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
             return self.__correct_spectrum(s)
 
         # split_frames is active
         if frames is None:  # no frames specified, sum all frames
-            s = self.dcube[:, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1, 2))
+            s = self.dcube[:, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1, 2))
             return self.__correct_spectrum(s)
 
         # only sum specified frames
         s = np.zeros(self.dcube.shape[-1])
         for frame in frames:
-            s += self.dcube[frame, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
+            s += self.dcube[frame, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
         return self.__correct_spectrum(s)
 
     def time_series(self, interval=None, energy=False, frames=None):
