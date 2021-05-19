@@ -45,31 +45,41 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
         >>>> from JEOL_eds import JEOL_pts
         >>>> from JEOL_eds.utils import create_overlay
 
-        # Load data.
-        >>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5, read_drift=True)
+        # Load data. Data does not contain drift images and all frames were
+        # added, thus only a single frame is present.
+        >>>> dc = JEOL_pts('test/complex_oxide.h5')
 
-        # Extract elemental maps. Add contribution of all available lines.
-        >>>> Fe = dc.map(interval=(6.2, 7.25), energy=True)  # Ka,b
-        >>>> Fe += dc.map(interval=(0.65, 0.8), energy=True)     # La,b
-        >>>> Si = dc.map(interval=(1.65, 1.825), energy=True)   # Ka,b
-        >>>> O = dc.map(interval=(0.45, 0.6), energy=True)  # Ka,b
+        # Extract some elemental maps. Where possible, dd contribution of
+        # several lines.
+        >>>> Ti = dc.map(interval=(4.4, 5.1), energy=True)      # Ka,b
+        >>>> Fe = dc.map(interval=(6.25, 6.6), energy=True)     # Ka
+        >>>> Sr = dc.map(interval=(13.9, 14.4), energy=True)    # Ka
+        >>>> Co = dc.map(interval=(6.75, 7.0), energy=True)     # Ka
+        >>>> Co += dc.map(interval=(7.5, 7.8), energy=True)     # Kb
+        >>>> O = dc.map(interval=(0.45, 0.6), energy=True)
 
-        # Create overlay. Oxygen is hardly visible as it covered by silicon and
-        # iron. Focus is on iron distribution. No legends plotted.
+        # Create overlays. Visualize the SrTiO3 base oxide. No legends plotted.
         # File is saved
-        >>>> create_overlay((O, Si, Fe), ('Red', 'Green', 'Blue'),
+        >>>> create_overlay((Sr, Ti, O), ('Red', 'Green', 'Blue'),
                             outfile='test.pdf')
 
-        # Focus on oxygen. Follows both, iron and silicon distributions.
-        >>>> create_overlay([Fe, Si, O],
+        # Focus on the metals as they are plotted last, include legends.
+        >>>> create_overlay([O, Sr, Ti],
                             ['Blue', 'Red', 'Green'],
-                            legends=['Fe', 'Si', 'O'])
+                            legends=['O', 'Sr', 'Ti'])
 
-        # FeOx distribution using first of the `drift_images` as background
-        >>>> create_overlay([Fe, O],
-                            ['Red', 'Blue'],
-                            legends=['Fe', 'O'],
+        # Visualize the CoFeOx distribution using first of the `drift_images`
+        # as background. Note that drift images were not stored in the test
+        # data supplied and this will raise a TypeError.
+        >>>> create_overlay([Fe, Co],
+                            ['Maroon', 'Violet'],
+                            legends=['Fe', 'Co'],
                             BG_image=dc.drift_images[0])
+
+        # Switch plotting order to obtain a slightly better result.
+        >>>> create_overlay([Co, Fe],
+                            ['Violet', 'Maroon'])
+
     """
     assert isinstance(images, (list, tuple))
     assert isinstance(colors, (list, tuple))
@@ -146,7 +156,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
         >>>> from JEOL_eds.utils import plot_spectrum
 
         # Load data.
-        >>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
+        >>>> dc = JEOL_pts('test/complex_oxide.h5')
 
         # Plot full reference spectrum with logaritmic y-axis.
         >>>> plot_spectrum(dc.ref_spectrum, log_y=True)
@@ -217,7 +227,7 @@ def export_spectrum(s, outfile, E_range=None):
         >>>> from JEOL_eds.utils import export_spectrum
 
         # Load data.
-        >>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
+        >>>> dc = JEOL_pts('test/complex_oxide.h5')
 
         # Export full reference spectrum as 'test_spectrum.dat'.
         >>>> export_spectrum(dc.ref_spectrum, 'test_spectrum.dat')
