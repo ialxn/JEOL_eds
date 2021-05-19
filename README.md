@@ -69,7 +69,7 @@ Frame 5 used a reference
 [<matplotlib.lines.Line2D at 0x7f3131a489d0>]
 
 # Plot sum spectrum corresponding to a (rectangular) ROI specified
-# as tuple (left, right, top, bottom) of pixels for selected frames.
+# as tuple (top, bottom, left, light) of pixels for selected frames.
 >>>> plt.plot(dc.spectrum(ROI=(10, 20, 50, 100), frames=[0,1,2,10,11,12,30,31,32]))
 <matplotlib.lines.Line2D at 0x7f7192b58050>
 
@@ -77,22 +77,25 @@ Frame 5 used a reference
 # Create overlay of elemental maps
 >>>> from JEOL_eds.utils import create_overlay
 
-# Load data.
->>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5, read_drift=True)
+# Load data. Data does not contain drift images and all frames were
+# added, thus only a single frame is present.
+>>>> dc = JEOL_pts('test/complex_oxide.h5')
 
-# Generate elemental maps by adding contribution of all available lines.
->>>> Fe = dc.map(interval=(6.2, 7.25), energy=True)  # Ka,b
->>>> Fe += dc.map(interval=(0.65, 0.8), energy=True)     # Add contribution of La,b
->>>> Si = dc.map(interval=(1.65, 1.825), energy=True)   # Ka,b
->>>> O = dc.map(interval=(0.45, 0.6), energy=True)  # Ka,b
+# Extract some elemental maps. Where possible, dd contribution of
+# several lines.
+>>>> Ti = dc.map(interval=(4.4, 5.1), energy=True)      # Ka,b
+>>>> Fe = dc.map(interval=(6.25, 6.6), energy=True)     # Ka
+>>>> Sr = dc.map(interval=(13.9, 14.4), energy=True)    # Ka
+>>>> Co = dc.map(interval=(6.75, 7.0), energy=True)     # Ka
+>>>> Co += dc.map(interval=(7.5, 7.8), energy=True)     # Kb
+>>>> O = dc.map(interval=(0.45, 0.6), energy=True)
 
-# Create overlay using the first of the drift images as gray background.
-# Oxygen is hardly visible as it covered by silicon and iron. Focus is
-# on iron distribution. Add legends and save plot as 'test.pdf'.
->>>> create_overlay((O, Si, Fe),
-                    ('Red', 'Green', 'Blue'),
-                    legends=['O', 'Si', 'Fe'],
-                    outfile='OSiFe_overlay.pdf',
+# Visualize the CoFeOx distribution using first of the `drift_images`
+# as background. Note that drift images were not stored in the test
+# data supplied and this will raise a TypeError.
+>>>> create_overlay([Fe, Co],
+                    ['Maroon', 'Violet'],
+                    legends=['Fe', 'Co'],
                     BG_image=dc.drift_images[0])
 
 
@@ -103,7 +106,7 @@ Frame 5 used a reference
 # Plot one minor tick on x-axis and four on y-axis. Pass
 # some keywords to `matplotlib.pyplot.plot()`.
 >>>> plot_spectrum(dc.ref_spectrum,
-                   E_range=(1, 2.5),
+                   E_range=(4, 17.5),
                    M_ticks=(1, 4),
                    outfile='ref_spectrum.pdf',
                    color='Red', linestyle='-.', linewidth=1.0)
@@ -114,13 +117,13 @@ Frame 5 used a reference
 fig, (ax1, ax2) = plt.subplots(1, 2)
 # Use `ax1` for overlay
 >>>> plt.sca(ax1)
->>>> create_overlay((O, Si, Fe),
-                    ('Red', 'Green', 'Blue'),
-                    legends=['O', 'Si', 'Fe'],
+>>>> create_overlay((O, Sr, Ti),
+                    ('Blue', 'Green', 'Red'),
+                    legends=['O', 'Sr', 'Ti'],
                     BG_image=dc.drift_images[0])
 # Use `ax2` for spectrum
 >>>> plt.sca(ax2)
->>>> plot_spectrum(dc.ref_spectrum, E_range=(1,3))
+>>>> plot_spectrum(dc.ref_spectrum, E_range=(4, 17.5))
 >>>> plt.tight_layout() 	# Prevents overlapping labels
 >>>> plt.savefig('demo.pdf')
 
