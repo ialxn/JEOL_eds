@@ -880,7 +880,7 @@ class JEOL_pts:
             # the line shape still shows some differences. I guess    #
             # that this is related to the interpolation part.         #
             #                                                         #
-            # With 'test/128.pts' as example:                         #
+            # With 'data/128.pts' as example:                         #
             #     >>>> ref_spec[0:100].sum()                          #
             #     200468                                              #
             #     >>>> corrected_spec[0:100].sum()                    #
@@ -1133,16 +1133,16 @@ class JEOL_pts:
 
             Examples
             --------
-            >>>> dc = JEOL_pts('test/128.pts', split_frames=True, read_drift=True)
+            >>>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift=True)
 
-            # Make movie and store is as 'test/128.mp4'.
+            # Make movie and store is as 'data/128.mp4'.
             >>>> dc.make_movie()
             # Only use Cu K_alpha line.
             >>>> dc.make_movie(interval=(7.9, 8.1), energy=True)
 
             # Make movie (one frame only, drift_image will be blank) and
             # save is as 'dummy.mp4'.
-            >>>> dc = JEOL_pts('test/128.pts')
+            >>>> dc = JEOL_pts('data/128.pts')
             >>>> dc.make_movie(fname='dummy.mp4')
         """
         if fname is None:
@@ -1298,7 +1298,7 @@ class JEOL_pts:
                 >>>> print(hf1.attrs.keys())
                 <KeysViewHDF5 ['file_date', 'file_name', 'parameters']>
                 >>>> hf.attrs['file_name']
-                'test/128.pts'
+                'data/128.pts'
         """
         if fname is None:
             fname = os.path.splitext(self.file_name)[0] + '.h5'

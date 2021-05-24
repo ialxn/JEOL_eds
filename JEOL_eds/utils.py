@@ -48,7 +48,7 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
 
         # Load data. Data does not contain drift images and all frames were
         # added, thus only a single frame is present.
-        >>>> dc = JEOL_pts('test/complex_oxide.h5')
+        >>>> dc = JEOL_pts('data/complex_oxide.h5')
 
         # Extract some elemental maps. Where possible, dd contribution of
         # several lines.
@@ -70,8 +70,8 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
                             legends=['O', 'Sr', 'Ti'])
 
         # Visualize the CoFeOx distribution using first of the `drift_images`
-        # as background. Note that drift images were not stored in the test
-        # data supplied and this will raise a TypeError.
+        # as background. Note that drift images were not stored in the data
+        # supplied and this will raise a TypeError.
         >>>> create_overlay([Fe, Co],
                             ['Maroon', 'Violet'],
                             legends=['Fe', 'Co'],
@@ -158,7 +158,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
         >>>> from JEOL_eds.utils import plot_spectrum
 
         # Load data.
-        >>>> dc = JEOL_pts('test/complex_oxide.h5')
+        >>>> dc = JEOL_pts('data/complex_oxide.h5')
 
         # Plot full reference spectrum with logaritmic y-axis.
         >>>> plot_spectrum(dc.ref_spectrum, log_y=True)
@@ -229,7 +229,7 @@ def export_spectrum(s, outfile, E_range=None):
         >>>> from JEOL_eds.utils import export_spectrum
 
         # Load data.
-        >>>> dc = JEOL_pts('test/complex_oxide.h5')
+        >>>> dc = JEOL_pts('data/complex_oxide.h5')
 
         # Export full reference spectrum as 'test_spectrum.dat'.
         >>>> export_spectrum(dc.ref_spectrum, 'test_spectrum.dat')
@@ -281,7 +281,7 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
         >>>> from JEOL_eds.utils import plot_tseries
 
         # Load data.
-        >>>> dc = JEOL_pts('test/128.pts', split_frames=True)
+        >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
         # Get integrated x-ray intensity for carbon Ka peak but exclude
         # frames 11 and 12)
@@ -334,7 +334,7 @@ def export_tseries(ts, outfile):
         >>>> from JEOL_eds.utils import export_tseries
 
         # Load data.
-        >>>> dc = JEOL_pts('test/128.pts', split_frames=True)
+        >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
         # Get integrated x-ray intensity for carbon Ka peak but exclude
         # frames 11 and 12)
@@ -448,7 +448,7 @@ def get_profile(image, line, linewidth=1):
         >>>> import matplotlib.pyplot as plt
 
         # Load data.
-        >>>> dc = JEOL_pts('test/128.pts')
+        >>>> dc = JEOL_pts('data/128.pts')
 
         # Carbon map
         >>>> C_map = dc.map(interval=(0.22, 0.34), energy=True)
@@ -493,7 +493,7 @@ def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
         >>>> from JEOL_eds.utils import show_ROI
 
         # Load data and create map of total x-ray intensity.
-        >>>> dc = JEOL_pts('test/complex_oxide.h5)
+        >>>> dc = JEOL_pts('data/complex_oxide.h5)
         >>>> my_map = dc.map()
 
         # We want to get the spectrum of the SrTiO3 substrate on the left
