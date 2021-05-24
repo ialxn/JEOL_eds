@@ -907,16 +907,19 @@ class JEOL_pts:
 
             Parameters
             ----------
-                     ROI:   Tuple (int, int, int, int) or None
-                            Defines ROI for which spectrum is extracted. None
-                            implies that the whole image is used. ROI is
-                            defined by its boundaries (top, bottom, left, right)
-                            which are all included in the ROI. Numbers are in
-                            pixel coordinates in the range 0 <= N < ScanSize.
+                     ROI:   Tuple (int, int)
+                            Tuple (int, int, int, int)
+                            or None.
+                            Defines ROI for which spectrum is extracted.
+                            None implies that the whole data cube is used.
+                            A tuple (v, h) defines a single point ROI given by
+                            its vertical and horizontal pixel index.
+                            A tuple (top, bottom, left, right) defines a
+                            rectangular ROI with boundaries included. Numbers
+                            are pixel indices in the range 0 <= N < ScanSize.
                             Note, that this definition implies y-axis before
                             x-axis and the order of the numbers is the same as
                             when applied in a python slice ([top:bottom, left:right]).
-                            Defines ROI for which spectrum is extracted.
                   frames:   Iterable (tuple, list, array, range object)
                             Frame numbers included in spectrum. If split_frames
                             is active and frames is not specified all frames
@@ -940,6 +943,11 @@ class JEOL_pts:
                 >>>> plt.plot(dc.ref_spectrum)
                 [<matplotlib.lines.Line2D at 0x7f3131a489d0>]
 
+                # Plot spectrum corresponding to a single pixel. ROI is specified
+                # as tuple (v, h) of pixel coordinatess.
+                >>>> plt.plot(dc.spectrum(ROI=(45, 13)))
+                <matplotlib.lines.Line2D at 0x7fd1423758d0>
+
                 # Plot spectrum corresponding to a (rectangular) ROI specified
                 # as tuple (top, bottom, left, right) of pixels.
                 >>>> plt.plot(dc.spectrum(ROI=(10, 20, 50, 100)))
@@ -957,6 +965,8 @@ class JEOL_pts:
         """
         if not ROI:
             ROI = (0, self.dcube.shape[1] - 1, 0, self.dcube.shape[1] - 1)
+        if len(ROI) == 2:   # point ROI
+            ROI = (ROI[0], ROI[0], ROI[1], ROI[1])
         if self.dcube.shape[0] == 1:   # only a single frame (0) present
             s = self.dcube[0, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
             return self.__correct_spectrum(s)
