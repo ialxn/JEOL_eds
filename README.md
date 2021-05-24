@@ -128,6 +128,22 @@ fig, (ax1, ax2) = plt.subplots(1, 2)
 >>>> plt.savefig('demo.pdf')
 
 
+# Calculate and plot line profiles.
+>>>> from JEOL_eds.utils import show_line, get_profile
+
+# Extract carbon map
+>>>> C_map = dc.map(interval=(0.22, 0.34), energy=True)
+
+# Define line. Verify definition.
+>>>> line = (80, 5, 110, 100)
+>>>> show_line(C_map, line, cmap='inferno')
+
+# Calculate profile along a given line (width equals 10 pixels) and
+# plot it.
+>>>> profile = get_profile(C_map, line, linewidth=10)
+>>>> plt.plot(profile)
+
+
 # Make movie of drift_images and total EDS intensity and store it
 # as 'test/128.mp4'.
 >>>> dc = JEOL_pts('test/128.pts', split_frames=True, read_drift=True)

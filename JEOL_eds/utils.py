@@ -7,6 +7,7 @@ Created on Fri Mar 19 15:11:53 2021
 """
 import os
 import numpy as np
+from skimage.measure import profile_line
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.ticker import AutoMinorLocator
@@ -350,3 +351,84 @@ def export_tseries(ts, outfile):
     header = '# Frame idx [-]        counts [-]'
     fmt = '%d\t%d'
     np.savetxt(outfile, data, header=header, fmt=fmt)
+
+def show_line(image, line, outfile=None, **kws):
+    """Plots a white (profile) line on image.
+
+        Parameters
+        ----------
+            image:  Ndarray
+                    Image onto which the line will be plotted.
+             line:  Tuple (int, int, int, int).
+                    Defines line (start_v, start_h, stop_v, stop_h).
+          outfile:  Str
+                    Filename, where plot is saved (or None).
+
+        Notes
+        -----
+                    **kws are only applied to the image plot and not to the line.
+
+        Examples
+        --------
+        >>>> from JEOL_eds.utils import show_line
+
+        # Define line. Verify definition.
+        >>>> line = (80, 5, 110, 100)
+        >>>> show_line(C_map, line, cmap='inferno')
+    """
+    if outfile:
+        ext = os.path.splitext(outfile)[1][1:].lower()
+        supported = plt.figure().canvas.get_supported_filetypes()
+        assert ext in supported
+
+    plt.imshow(image, **kws)
+    x = (line[1], line[3])
+    y = (line[0], line[2])
+    plt.plot(x,y, color='white')
+
+    if outfile:
+        plt.savefig(outfile)
+
+def get_profile(image, line, linewidth=1):
+    """Returns a profile along line on image.
+
+        Parameters
+        ----------
+            image:  Ndarray.
+                    Image onto which the line will be plotted.
+             line:  Tuple (int, int, int, int).
+                    Defines line (start_v, start_h, stop_v, stop_h).
+        linewidth:  Int.
+
+                    Width of profile line (to be integrated).
+        Returns
+        -------
+                    Ndarray
+                    Profile, length unit is pixels (as in image).
+        Examples
+        --------
+        >>>> from JEOL_eds import JEOL_pts
+        >>>> from JEOL_eds.utils import show_line
+        >>>> import matplotlib.pyplot as plt
+
+        # Load data.
+        >>>> dc = JEOL_pts('test/128.pts')
+
+        # Carbon map
+        >>>> C_map = dc.map(interval=(0.22, 0.34), energy=True)
+
+        # Define line. Verify definition.
+        >>>> line = (80, 5, 110, 100)
+        >>>> show_line(C_map, line, cmap='inferno')
+
+        # Calculate profile along the line (width equals 10 pixels) and
+        # plot it.
+        >>>> profile = get_profile(C_map, line, linewidth=10)
+        >>>> plt.plot(profile)
+    """
+    profile = profile_line(image,
+                           line[0:2], line[2:],
+                           linewidth=linewidth,
+                           reduce_func=np.sum,
+                           mode='nearest')
+    return profile
