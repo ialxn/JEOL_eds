@@ -116,10 +116,11 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
     # Add legends. Position and font size depends on image size
     if legends:
         isize = images[0].shape[0]
-        fontsize = isize // 12
-        x = isize + fontsize
+        fontsize = 12
+        delta = isize // fontsize
+        x = isize + delta
         for i in range(len(images)):
-            y = i * fontsize
+            y = i * delta
             ax.text(x, y, legends[i],
                     size=fontsize,
                     color=colors[i], backgroundcolor='white')
