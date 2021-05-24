@@ -902,21 +902,74 @@ class JEOL_pts:
         except KeyError:
             return s
 
+    def __spectrum_cROI(self, ROI, frames):
+        """Returns spectrum integrated over a circular ROI
+
+            Parameters
+            ----------
+                    ROI:    Tuple (center_x, center_y, radius)
+                 frames:    Iterable (tuple, list, array, range object)
+                            Frame numbers included in spectrum. If split_frames
+                            is active and frames is not specified all frames
+                            are included.
+
+            Returns
+            -------
+               spectrum:    Ndarray
+                            EDX spectrum.
+        """
+        # check validity of ROI
+        min_x = ROI[0] - ROI[2] / 2
+        max_x = ROI[0] + ROI[2] / 2
+        min_y = ROI[1] - ROI[2] / 2
+        max_y = ROI[1] + ROI[2] / 2
+        if not all(0 <= val < self.dcube.shape[1] for val in [min_x, max_x, min_y, max_y]):
+            raise ValueError(f"ROI {ROI} lies partially outside data cube")
+
+        # Masking array with ones within circular ROI and zeros outside
+        mask = np.zeros((self.dcube.shape[1], self.dcube.shape[2]))
+        x, y = np.ogrid[:self.dcube.shape[1], :self.dcube.shape[2]]
+        r = np.sqrt((x - ROI[0])**2 + (y - ROI[1])**2)
+        m = r <= ROI[2]
+        mask[m] = 1
+
+        # Assemble list of frames
+        if self.dcube.shape[0] == 1:    # Only a single frame present
+            frames = [0]
+        # Many frames are present
+        if frames is None:  # No frames are specified explicitly, use all
+            frames = range(self.dcube.shape[0])
+
+        spectrum = np.zeros(self.dcube.shape[3])
+        # iterate through all frames
+        for frame in frames:
+            # We have to mask the image at each energy
+            for i in range(self.dcube.shape[3]):
+                spectrum[i] += (mask * self.dcube[frame, :, :, i]).sum()
+
+        return spectrum
+
     def spectrum(self, ROI=None, frames=None):
         """Returns spectrum integrated over a ROI.
 
             Parameters
             ----------
-                     ROI:   Tuple (int, int, int, int) or None
-                            Defines ROI for which spectrum is extracted. None
-                            implies that the whole image is used. ROI is
-                            defined by its boundaries (top, bottom, left, right)
-                            which are all included in the ROI. Numbers are in
-                            pixel coordinates in the range 0 <= N < ScanSize.
+                     ROI:   Tuple (int, int)
+                            Tuple (int, int, int)
+                            Tuple (int, int, int, int)
+                            or None.
+                            Defines ROI for which spectrum is extracted.
+                            None implies that the whole data cube is used.
+                            A tuple (v, h) defines a single point ROI given by
+                            its vertical and horizontal pixel index.
+                            A tuple (center_v, center_h, radius) defines a
+                            circular ROI including its boundary.
+                            A tuple (top, bottom, left, right) defines a
+                            rectangular ROI with boundaries included.
+                            Numbers are pixel indices in the range 0 <= N < ScanSize.
                             Note, that this definition implies y-axis before
                             x-axis and the order of the numbers is the same as
                             when applied in a python slice ([top:bottom, left:right]).
-                            Defines ROI for which spectrum is extracted.
                   frames:   Iterable (tuple, list, array, range object)
                             Frame numbers included in spectrum. If split_frames
                             is active and frames is not specified all frames
@@ -940,6 +993,16 @@ class JEOL_pts:
                 >>>> plt.plot(dc.ref_spectrum)
                 [<matplotlib.lines.Line2D at 0x7f3131a489d0>]
 
+                # Plot spectrum corresponding to a single pixel. ROI is specified
+                # as tuple (v, h) of pixel coordinatess.
+                >>>> plt.plot(dc.spectrum(ROI=(45, 13)))
+                <matplotlib.lines.Line2D at 0x7fd1423758d0>
+
+                # Plot spectrum corresponding to a circular ROI specified
+                # as tuple (center_v, center_h, radius) of pixel coordinatess.
+                >>>> plt.plot(dc.spectrum(ROI=(80, 60, 15)))
+                <matplotlib.lines.Line2D at 0x7fd14208f4d0>
+
                 # Plot spectrum corresponding to a (rectangular) ROI specified
                 # as tuple (top, bottom, left, right) of pixels.
                 >>>> plt.plot(dc.spectrum(ROI=(10, 20, 50, 100)))
@@ -957,6 +1020,15 @@ class JEOL_pts:
         """
         if not ROI:
             ROI = (0, self.dcube.shape[1] - 1, 0, self.dcube.shape[1] - 1)
+        if len(ROI) == 2:   # point ROI
+            ROI = (ROI[0], ROI[0], ROI[1], ROI[1])
+        if len(ROI) == 3:   # circular ROI, special
+            return self.__correct_spectrum(self.__spectrum_cROI(ROI, frames))
+
+        # check that ROI lies fully within the data cube
+        if not all(0 <= val < self.dcube.shape[1] for val in ROI):
+            raise ValueError(f"ROI {ROI} lies partially outside data cube")
+
         if self.dcube.shape[0] == 1:   # only a single frame (0) present
             s = self.dcube[0, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
             return self.__correct_spectrum(s)

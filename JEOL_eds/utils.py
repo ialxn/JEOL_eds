@@ -262,6 +262,7 @@ def export_spectrum(s, outfile, E_range=None):
 
 def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
     """Plots a nice time series.
+
         Parameters
         ----------
                ts:  Ndarray.
@@ -319,6 +320,7 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
 
 def export_tseries(ts, outfile):
     """Export time series as tab delimited ASCII.
+
         Parameters
         ----------
                ts:  Ndarray.
@@ -467,3 +469,67 @@ def get_profile(image, line, linewidth=1):
                            reduce_func=np.sum,
                            mode='nearest')
     return profile
+
+def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
+    """Plots ROI on image.
+
+        Parameters
+        ----------
+            image:  Ndarray
+                    Image where ROI will be applied.
+              ROI:  Tuple
+                    If tuple is (int, int) ROI defines point at the
+                    intersection of the vertical and horizontal line.
+                    If tupe is (int, int, int) ROI defines circle.
+                    If tuple is (int, int, int, int) ROI defines rectangle.
+          outfile:  Str
+                    Filename, where plot is saved (or None)
+            alpha:  Float
+                    Transparency used to draw background image for ROI [0.4].
+
+        Examples
+        --------
+        >>>> from JEOL_eds import JEOL_pts
+        >>>> from JEOL_eds.utils import show_ROI
+
+        # Load data and create map of total x-ray intensity.
+        >>>> dc = JEOL_pts('test/complex_oxide.h5)
+        >>>> my_map = dc.map()
+
+        # We want to get the spectrum of the SrTiO3 substrate on the left
+        # of the image. Verify definition of rectangular mask. Make image
+        # more visible (less transparent). Then plot the spectrum corresponding
+        # to the ROI.
+        >>>> show_ROI(my_map, (50, 250, 10, 75), alpha=0.6)
+        >>>> plot_spectrum(dc.spectrum(ROI=[50, 250, 10, 75]),
+                           E_range=(4,17),
+                           M_ticks=(4,None))
+
+        # Extract spectrum of the FeCoOx region using a circular mask. Again
+        # check the definition of the mask first. Override the default colormap.
+        >>>> show_ROI(my_map, (270, 122, 10), cmap='inferno')
+        >>>> plot_spectrum(dc.spectrum(ROI=[270, 122, 10]),
+                           E_range=(4,17),
+                           M_ticks=(4,None))
+    """
+    if len(ROI) == 2:
+        im = image.copy().astype('float')
+        im[ROI[0], :] = np.nan
+        im[:, ROI[1]] = np.nan
+        plt.imshow(im, **kws)
+    elif len(ROI) == 3:
+        x, y = np.ogrid[:image.shape[0], :image.shape[1]]
+        r = np.sqrt((x - ROI[0])**2 + (y - ROI[1])**2)
+        mask = r <= ROI[2]
+        plt.imshow(image * mask, **kws)         # ROI
+        plt.imshow(image, alpha=alpha, **kws)     # transparent image
+    elif len(ROI) == 4:
+        mask = np.full_like(image, False, dtype='bool')
+        mask[ROI[0]:ROI[1], ROI[2]:ROI[3]] = True
+        plt.imshow(image * mask, **kws)         # ROI
+        plt.imshow(image, alpha=alpha, **kws)     # transparent image
+    else:
+        raise ValueError(f'Invalid ROI {ROI}.')
+
+    if outfile:
+        plt.savefig(outfile)

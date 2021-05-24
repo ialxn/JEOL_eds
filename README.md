@@ -70,7 +70,11 @@ Frame 5 used a reference
 
 # Plot sum spectrum corresponding to a (rectangular) ROI specified
 # as tuple (top, bottom, left, light) of pixels for selected frames.
->>>> plt.plot(dc.spectrum(ROI=(10, 20, 50, 100), frames=[0,1,2,10,11,12,30,31,32]))
+# Verify definition of ROI before you apply it using the total x-ray
+# intensity as image.
+>>>> ROI = (10, 20, 50, 100)
+>>>> show_ROI(dc.map(), ROI, alpha=0.6)
+>>>> plt.plot(dc.spectrum(ROI=ROI, frames=[0,1,2,10,11,12,30,31,32]))
 <matplotlib.lines.Line2D at 0x7f7192b58050>
 
 
