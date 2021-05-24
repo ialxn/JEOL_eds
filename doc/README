@@ -21,9 +21,5 @@ I used the repository mentioned in the conversation above as starting point (htt
 jeol_metadata.ods provides some info about the file format(s).
 
 Test data:
-512.pts:   jeol_eds_reader-master/Sample/00_View000/View000_0000017.pts (512x512)
-256.pts:   #49_20 5D8_EDS/region3/Sample/00_View000/View000_0000010.pts (256x256)
 128.pts:   #49_20 5D8_EDS/region2/Sample/00_View000/View000_0000010.pts (128x128)
-
-
-
+64.pts:    #22_21 6A3/EDS/1135/Sample/00_View000/View000_0000008.pts (64x64)
