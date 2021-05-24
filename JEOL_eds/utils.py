@@ -352,7 +352,36 @@ def export_tseries(ts, outfile):
     fmt = '%d\t%d'
     np.savetxt(outfile, data, header=header, fmt=fmt)
 
-def show_line(image, line, outfile=None, **kws):
+def __linewidth_from_data_units(linewidth, axis):
+    """Convert a linewidth in pixels to points.
+
+        Parameters
+        ----------
+        linewidth:  float
+                    Linewidth in pixels.
+             axis:  matplotlib axis
+                    The axis which is used to extract the relevant
+                    transformation data (data limits and size must
+                    not change afterwards).
+
+        Returns
+        -------
+        linewidth:  float
+                    Linewidth in points.
+
+        Notes
+        -----
+                    Adapted from https://stackoverflow.com/questions/19394505
+    """
+    fig = axis.get_figure()
+    length = fig.bbox_inches.width * axis.get_position().width
+    value_range = np.diff(axis.get_xlim())[0]
+    # Convert length to points
+    length *= 72    # 72 points per inch
+    # Scale linewidth to value range
+    return linewidth * (length / value_range)
+
+def show_line(image, line, linewidth=1, outfile=None, **kws):
     """Plots a white (profile) line on image.
 
         Parameters
@@ -361,6 +390,8 @@ def show_line(image, line, outfile=None, **kws):
                     Image onto which the line will be plotted.
              line:  Tuple (int, int, int, int).
                     Defines line (start_v, start_h, stop_v, stop_h).
+        linewidth:  Int
+                    Width (pixels) of line to be drawn.
           outfile:  Str
                     Filename, where plot is saved (or None).
 
@@ -372,19 +403,21 @@ def show_line(image, line, outfile=None, **kws):
         --------
         >>>> from JEOL_eds.utils import show_line
 
-        # Define line. Verify definition.
+        # Define line (10 pixels wide). Verify definition.
         >>>> line = (80, 5, 110, 100)
-        >>>> show_line(C_map, line, cmap='inferno')
+        >>>> width = 10
+        >>>> show_line(C_map, line, linewidth=width, cmap='inferno')
     """
     if outfile:
         ext = os.path.splitext(outfile)[1][1:].lower()
         supported = plt.figure().canvas.get_supported_filetypes()
         assert ext in supported
 
-    plt.imshow(image, **kws)
+    ax = plt.imshow(image, **kws)
     x = (line[1], line[3])
     y = (line[0], line[2])
-    plt.plot(x,y, color='white')
+    width = __linewidth_from_data_units(linewidth, ax.axes)
+    plt.plot(x,y, color='white', linewidth=width)
 
     if outfile:
         plt.savefig(outfile)
@@ -419,11 +452,12 @@ def get_profile(image, line, linewidth=1):
 
         # Define line. Verify definition.
         >>>> line = (80, 5, 110, 100)
-        >>>> show_line(C_map, line, cmap='inferno')
+        >>>> width = 10
+        >>>> show_line(C_map, line, linewidth=width, cmap='inferno')
 
         # Calculate profile along the line (width equals 10 pixels) and
         # plot it.
-        >>>> profile = get_profile(C_map, line, linewidth=10)
+        >>>> profile = get_profile(C_map, line, linewidth=width)
         >>>> plt.plot(profile)
     """
     profile = profile_line(image,

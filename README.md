@@ -136,11 +136,12 @@ fig, (ax1, ax2) = plt.subplots(1, 2)
 
 # Define line. Verify definition.
 >>>> line = (80, 5, 110, 100)
->>>> show_line(C_map, line, cmap='inferno')
+>>>> width = 10
+>>>> show_line(C_map, line, linewidth=width, cmap='inferno')
 
 # Calculate profile along a given line (width equals 10 pixels) and
 # plot it.
->>>> profile = get_profile(C_map, line, linewidth=10)
+>>>> profile = get_profile(C_map, line, linewidth=width)
 >>>> plt.plot(profile)
 
 
