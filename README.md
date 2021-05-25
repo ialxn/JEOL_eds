@@ -83,7 +83,7 @@ Frame 5 used a reference
 
 # Load data. Data does not contain drift images and all frames were
 # added, thus only a single frame is present.
->>>> dc = JEOL_pts('test/complex_oxide.h5')
+>>>> dc = JEOL_pts('data/complex_oxide.h5')
 
 # Extract some elemental maps. Where possible, dd contribution of
 # several lines.
@@ -95,8 +95,8 @@ Frame 5 used a reference
 >>>> O = dc.map(interval=(0.45, 0.6), energy=True)
 
 # Visualize the CoFeOx distribution using first of the `drift_images`
-# as background. Note that drift images were not stored in the test
-# data supplied and this will raise a TypeError.
+# as background. Note that drift images were not stored in the data
+# supplied and this will raise a TypeError.
 >>>> create_overlay([Fe, Co],
                     ['Maroon', 'Violet'],
                     legends=['Fe', 'Co'],
@@ -150,8 +150,8 @@ fig, (ax1, ax2) = plt.subplots(1, 2)
 
 
 # Make movie of drift_images and total EDS intensity and store it
-# as 'test/128.mp4'.
->>>> dc = JEOL_pts('test/128.pts', split_frames=True, read_drift=True)
+# as 'data/128.mp4'.
+>>>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift=True)
 >>>> dc.make_movie()
 
 
