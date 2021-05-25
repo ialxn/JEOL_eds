@@ -6,13 +6,16 @@ Created on Wed Mar  3 16:22:33 2021
 @author: alxneit
 """
 import unittest
+import warnings
 
 from JEOL_eds import JEOL_pts
 
 class Map(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        print('Loading data ... ', end='', flush=True)
         cls.dc = JEOL_pts('data/128.pts', split_frames=True)
+        print('done')
 
     def test_full_dcube(self):
         m = self.dc.map()
@@ -66,6 +69,7 @@ class Map(unittest.TestCase):
         self.assertEqual(m.sum(), m_even.sum() + m_odd.sum())
 
     def test_align_yes(self):
+        warnings.filterwarnings("ignore")
         m = self.dc.map(align='yes')
 
         self.assertEqual((128, 128), m.shape)
@@ -76,6 +80,7 @@ class Map(unittest.TestCase):
 
 
     def test_align_filter(self):
+        warnings.filterwarnings("ignore")
         m = self.dc.map(align='filter')
 
         self.assertEqual((128, 128), m.shape)
