@@ -7,6 +7,7 @@ Created on Fri Mar 19 15:11:53 2021
 """
 import os
 import numpy as np
+from skimage.measure import profile_line
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.ticker import AutoMinorLocator
@@ -45,31 +46,41 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
         >>>> from JEOL_eds import JEOL_pts
         >>>> from JEOL_eds.utils import create_overlay
 
-        # Load data.
-        >>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5, read_drift=True)
+        # Load data. Data does not contain drift images and all frames were
+        # added, thus only a single frame is present.
+        >>>> dc = JEOL_pts('data/complex_oxide.h5')
 
-        # Extract elemental maps. Add contribution of all available lines.
-        >>>> Fe = dc.map(interval=(6.2, 7.25), energy=True)  # Ka,b
-        >>>> Fe += dc.map(interval=(0.65, 0.8), energy=True)     # La,b
-        >>>> Si = dc.map(interval=(1.65, 1.825), energy=True)   # Ka,b
-        >>>> O = dc.map(interval=(0.45, 0.6), energy=True)  # Ka,b
+        # Extract some elemental maps. Where possible, dd contribution of
+        # several lines.
+        >>>> Ti = dc.map(interval=(4.4, 5.1), energy=True)      # Ka,b
+        >>>> Fe = dc.map(interval=(6.25, 6.6), energy=True)     # Ka
+        >>>> Sr = dc.map(interval=(13.9, 14.4), energy=True)    # Ka
+        >>>> Co = dc.map(interval=(6.75, 7.0), energy=True)     # Ka
+        >>>> Co += dc.map(interval=(7.5, 7.8), energy=True)     # Kb
+        >>>> O = dc.map(interval=(0.45, 0.6), energy=True)
 
-        # Create overlay. Oxygen is hardly visible as it covered by silicon and
-        # iron. Focus is on iron distribution. No legends plotted.
+        # Create overlays. Visualize the SrTiO3 base oxide. No legends plotted.
         # File is saved
-        >>>> create_overlay((O, Si, Fe), ('Red', 'Green', 'Blue'),
+        >>>> create_overlay((Sr, Ti, O), ('Red', 'Green', 'Blue'),
                             outfile='test.pdf')
 
-        # Focus on oxygen. Follows both, iron and silicon distributions.
-        >>>> create_overlay([Fe, Si, O],
+        # Focus on the metals as they are plotted last, include legends.
+        >>>> create_overlay([O, Sr, Ti],
                             ['Blue', 'Red', 'Green'],
-                            legends=['Fe', 'Si', 'O'])
+                            legends=['O', 'Sr', 'Ti'])
 
-        # FeOx distribution using first of the `drift_images` as background
-        >>>> create_overlay([Fe, O],
-                            ['Red', 'Blue'],
-                            legends=['Fe', 'O'],
+        # Visualize the CoFeOx distribution using first of the `drift_images`
+        # as background. Note that drift images were not stored in the data
+        # supplied and this will raise a TypeError.
+        >>>> create_overlay([Fe, Co],
+                            ['Maroon', 'Violet'],
+                            legends=['Fe', 'Co'],
                             BG_image=dc.drift_images[0])
+
+        # Switch plotting order to obtain a slightly better result.
+        >>>> create_overlay([Co, Fe],
+                            ['Violet', 'Maroon'])
+
     """
     assert isinstance(images, (list, tuple))
     assert isinstance(colors, (list, tuple))
@@ -106,10 +117,11 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
     # Add legends. Position and font size depends on image size
     if legends:
         isize = images[0].shape[0]
-        fontsize = isize // 12
-        x = isize + fontsize
+        fontsize = 12
+        delta = isize // fontsize
+        x = isize + delta
         for i in range(len(images)):
-            y = i * fontsize
+            y = i * delta
             ax.text(x, y, legends[i],
                     size=fontsize,
                     color=colors[i], backgroundcolor='white')
@@ -146,7 +158,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
         >>>> from JEOL_eds.utils import plot_spectrum
 
         # Load data.
-        >>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
+        >>>> dc = JEOL_pts('data/complex_oxide.h5')
 
         # Plot full reference spectrum with logaritmic y-axis.
         >>>> plot_spectrum(dc.ref_spectrum, log_y=True)
@@ -217,7 +229,7 @@ def export_spectrum(s, outfile, E_range=None):
         >>>> from JEOL_eds.utils import export_spectrum
 
         # Load data.
-        >>>> dc = JEOL_pts('test/SiFeO.pts', E_cutoff=8.5)
+        >>>> dc = JEOL_pts('data/complex_oxide.h5')
 
         # Export full reference spectrum as 'test_spectrum.dat'.
         >>>> export_spectrum(dc.ref_spectrum, 'test_spectrum.dat')
@@ -250,6 +262,7 @@ def export_spectrum(s, outfile, E_range=None):
 
 def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
     """Plots a nice time series.
+
         Parameters
         ----------
                ts:  Ndarray.
@@ -268,7 +281,7 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
         >>>> from JEOL_eds.utils import plot_tseries
 
         # Load data.
-        >>>> dc = JEOL_pts('test/128.pts', split_frames=True)
+        >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
         # Get integrated x-ray intensity for carbon Ka peak but exclude
         # frames 11 and 12)
@@ -307,6 +320,7 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
 
 def export_tseries(ts, outfile):
     """Export time series as tab delimited ASCII.
+
         Parameters
         ----------
                ts:  Ndarray.
@@ -320,7 +334,7 @@ def export_tseries(ts, outfile):
         >>>> from JEOL_eds.utils import export_tseries
 
         # Load data.
-        >>>> dc = JEOL_pts('test/128.pts', split_frames=True)
+        >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
         # Get integrated x-ray intensity for carbon Ka peak but exclude
         # frames 11 and 12)
@@ -340,3 +354,182 @@ def export_tseries(ts, outfile):
     header = '# Frame idx [-]        counts [-]'
     fmt = '%d\t%d'
     np.savetxt(outfile, data, header=header, fmt=fmt)
+
+def __linewidth_from_data_units(linewidth, axis):
+    """Convert a linewidth in pixels to points.
+
+        Parameters
+        ----------
+        linewidth:  float
+                    Linewidth in pixels.
+             axis:  matplotlib axis
+                    The axis which is used to extract the relevant
+                    transformation data (data limits and size must
+                    not change afterwards).
+
+        Returns
+        -------
+        linewidth:  float
+                    Linewidth in points.
+
+        Notes
+        -----
+                    Adapted from https://stackoverflow.com/questions/19394505
+    """
+    fig = axis.get_figure()
+    length = fig.bbox_inches.width * axis.get_position().width
+    value_range = np.diff(axis.get_xlim())[0]
+    # Convert length to points
+    length *= 72    # 72 points per inch
+    # Scale linewidth to value range
+    return linewidth * (length / value_range)
+
+def show_line(image, line, linewidth=1, outfile=None, **kws):
+    """Plots a white (profile) line on image.
+
+        Parameters
+        ----------
+            image:  Ndarray
+                    Image onto which the line will be plotted.
+             line:  Tuple (int, int, int, int).
+                    Defines line (start_v, start_h, stop_v, stop_h).
+        linewidth:  Int
+                    Width (pixels) of line to be drawn.
+          outfile:  Str
+                    Filename, where plot is saved (or None).
+
+        Notes
+        -----
+                    **kws are only applied to the image plot and not to the line.
+
+        Examples
+        --------
+        >>>> from JEOL_eds.utils import show_line
+
+        # Define line (10 pixels wide). Verify definition.
+        >>>> line = (80, 5, 110, 100)
+        >>>> width = 10
+        >>>> show_line(C_map, line, linewidth=width, cmap='inferno')
+    """
+    if outfile:
+        ext = os.path.splitext(outfile)[1][1:].lower()
+        supported = plt.figure().canvas.get_supported_filetypes()
+        assert ext in supported
+
+    ax = plt.imshow(image, **kws)
+    x = (line[1], line[3])
+    y = (line[0], line[2])
+    width = __linewidth_from_data_units(linewidth, ax.axes)
+    plt.plot(x,y, color='white', linewidth=width)
+
+    if outfile:
+        plt.savefig(outfile)
+
+def get_profile(image, line, linewidth=1):
+    """Returns a profile along line on image.
+
+        Parameters
+        ----------
+            image:  Ndarray.
+                    Image onto which the line will be plotted.
+             line:  Tuple (int, int, int, int).
+                    Defines line (start_v, start_h, stop_v, stop_h).
+        linewidth:  Int.
+
+                    Width of profile line (to be integrated).
+        Returns
+        -------
+                    Ndarray
+                    Profile, length unit is pixels (as in image).
+        Examples
+        --------
+        >>>> from JEOL_eds import JEOL_pts
+        >>>> from JEOL_eds.utils import show_line
+        >>>> import matplotlib.pyplot as plt
+
+        # Load data.
+        >>>> dc = JEOL_pts('data/128.pts')
+
+        # Carbon map
+        >>>> C_map = dc.map(interval=(0.22, 0.34), energy=True)
+
+        # Define line. Verify definition.
+        >>>> line = (80, 5, 110, 100)
+        >>>> width = 10
+        >>>> show_line(C_map, line, linewidth=width, cmap='inferno')
+
+        # Calculate profile along the line (width equals 10 pixels) and
+        # plot it.
+        >>>> profile = get_profile(C_map, line, linewidth=width)
+        >>>> plt.plot(profile)
+    """
+    profile = profile_line(image,
+                           line[0:2], line[2:],
+                           linewidth=linewidth,
+                           reduce_func=np.sum,
+                           mode='nearest')
+    return profile
+
+def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
+    """Plots ROI on image.
+
+        Parameters
+        ----------
+            image:  Ndarray
+                    Image where ROI will be applied.
+              ROI:  Tuple
+                    If tuple is (int, int) ROI defines point at the
+                    intersection of the vertical and horizontal line.
+                    If tupe is (int, int, int) ROI defines circle.
+                    If tuple is (int, int, int, int) ROI defines rectangle.
+          outfile:  Str
+                    Filename, where plot is saved (or None)
+            alpha:  Float
+                    Transparency used to draw background image for ROI [0.4].
+
+        Examples
+        --------
+        >>>> from JEOL_eds import JEOL_pts
+        >>>> from JEOL_eds.utils import show_ROI
+
+        # Load data and create map of total x-ray intensity.
+        >>>> dc = JEOL_pts('data/complex_oxide.h5)
+        >>>> my_map = dc.map()
+
+        # We want to get the spectrum of the SrTiO3 substrate on the left
+        # of the image. Verify definition of rectangular mask. Make image
+        # more visible (less transparent). Then plot the spectrum corresponding
+        # to the ROI.
+        >>>> show_ROI(my_map, (50, 250, 10, 75), alpha=0.6)
+        >>>> plot_spectrum(dc.spectrum(ROI=[50, 250, 10, 75]),
+                           E_range=(4,17),
+                           M_ticks=(4,None))
+
+        # Extract spectrum of the FeCoOx region using a circular mask. Again
+        # check the definition of the mask first. Override the default colormap.
+        >>>> show_ROI(my_map, (270, 122, 10), cmap='inferno')
+        >>>> plot_spectrum(dc.spectrum(ROI=[270, 122, 10]),
+                           E_range=(4,17),
+                           M_ticks=(4,None))
+    """
+    if len(ROI) == 2:
+        im = image.copy().astype('float')
+        im[ROI[0], :] = np.nan
+        im[:, ROI[1]] = np.nan
+        plt.imshow(im, **kws)
+    elif len(ROI) == 3:
+        x, y = np.ogrid[:image.shape[0], :image.shape[1]]
+        r = np.sqrt((x - ROI[0])**2 + (y - ROI[1])**2)
+        mask = r <= ROI[2]
+        plt.imshow(image * mask, **kws)         # ROI
+        plt.imshow(image, alpha=alpha, **kws)     # transparent image
+    elif len(ROI) == 4:
+        mask = np.full_like(image, False, dtype='bool')
+        mask[ROI[0]:ROI[1], ROI[2]:ROI[3]] = True
+        plt.imshow(image * mask, **kws)         # ROI
+        plt.imshow(image, alpha=alpha, **kws)     # transparent image
+    else:
+        raise ValueError(f'Invalid ROI {ROI}.')
+
+    if outfile:
+        plt.savefig(outfile)
