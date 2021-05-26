@@ -12,6 +12,7 @@ Python 3.6+
 numpy
 scipy
 matplotlib
+scikit-image
 asteval
 h5py
 (pip for installation)
