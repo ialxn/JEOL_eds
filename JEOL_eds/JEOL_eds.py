@@ -926,11 +926,14 @@ class JEOL_pts:
         if not all(0 <= val < self.dcube.shape[1] for val in [min_x, max_x, min_y, max_y]):
             raise ValueError(f"ROI {ROI} lies partially outside data cube")
 
-        # Masking array with ones within circular ROI and zeros outside
-        mask = np.zeros((self.dcube.shape[1], self.dcube.shape[2]))
-        x, y = np.ogrid[:self.dcube.shape[1], :self.dcube.shape[2]]
-        r = np.sqrt((x - ROI[0])**2 + (y - ROI[1])**2)
-        m = r <= ROI[2]
+        # Masking array with ones within circular ROI and zeros outside.
+        # Only use slice containing the circle.
+        N = 2 * ROI[2] + 1
+        mask = np.zeros((N, N))
+        x, y = np.ogrid[:N, :N]
+        # Compare squares to avoid sqrt()
+        r2 = (x + min_x - ROI[0])**2 + (y + min_y - ROI[1])**2
+        m = r2 <= ROI[2]**2
         mask[m] = 1
 
         # Assemble list of frames
@@ -945,7 +948,7 @@ class JEOL_pts:
         for frame in frames:
             # We have to mask the image at each energy
             for i in range(self.dcube.shape[3]):
-                spectrum[i] += (mask * self.dcube[frame, :, :, i]).sum()
+                spectrum[i] += (mask * self.dcube[frame, min_x:max_x + 1, min_y:max_y + 1, i]).sum()
 
         return spectrum
 
