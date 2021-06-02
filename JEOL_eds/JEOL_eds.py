@@ -919,10 +919,10 @@ class JEOL_pts:
                             EDX spectrum.
         """
         # check validity of ROI
-        min_x = ROI[0] - ROI[2] / 2
-        max_x = ROI[0] + ROI[2] / 2
-        min_y = ROI[1] - ROI[2] / 2
-        max_y = ROI[1] + ROI[2] / 2
+        min_x = ROI[0] - ROI[2]
+        max_x = ROI[0] + ROI[2]
+        min_y = ROI[1] - ROI[2]
+        max_y = ROI[1] + ROI[2]
         if not all(0 <= val < self.dcube.shape[1] for val in [min_x, max_x, min_y, max_y]):
             raise ValueError(f"ROI {ROI} lies partially outside data cube")
 
