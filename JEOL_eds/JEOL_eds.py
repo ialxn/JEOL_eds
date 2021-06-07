@@ -1023,6 +1023,9 @@ class JEOL_pts:
         """
         if not ROI:
             ROI = (0, self.dcube.shape[1] - 1, 0, self.dcube.shape[1] - 1)
+        # ROI elements need to be ints
+        if not all(isinstance(el, int) for el in ROI):
+            raise ValueError(f"ROI {ROI} contains non-integer elements")
         if len(ROI) == 2:   # point ROI
             ROI = (ROI[0], ROI[0], ROI[1], ROI[1])
         if len(ROI) == 3:   # circular ROI, special
