@@ -309,7 +309,10 @@ def plot_map(m, color,
         # Ensure that legend is visible black in white box on black BG or vice versa
         label_BGcolor = "black" if background.lower() == "white" else "white"
         label_color = "black" if label_BGcolor == "white" else "white"
-        ax.text(2, 2,
+        # Determine position to print label. 32 and 8 found by trial-and-error.
+        x = m.shape[0] // 32
+        y = m.shape[0] // 8
+        ax.text(x, y,
                 label,
                 size=24,
                 color=label_color,
