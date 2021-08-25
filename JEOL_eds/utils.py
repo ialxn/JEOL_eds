@@ -206,11 +206,12 @@ def plot_map(m, color,
         -----------
                         m:  Ndarray
                             Map to be plotted.
-                    color:  Str
-                            Color used to generate colormap. Colormap will
-                            span between ``background`` and ``color``. If
-                            the name of a matplotlib colormap is supplied
-                            it will be used and ``background`` is ignored.
+                    color:  Str or tuple
+                            Color (name or rgb-tuple) used to generate colormap.
+                            Colormap will span between ``background`` and
+                            ``color``. If the name of a matplotlib colormap is
+                            supplied it will be used and ``background`` is
+                            ignored.
                     label:  Str
                             Optional label to be plotted on map.
                     gamma:  Float
