@@ -257,6 +257,28 @@ def plot_map(m, color,
                       background="black",
                       gamma=0.9,
                       smooth=0.75)
+        # Specify ``color`` as rgb tuple (range 0 <= value <=255)
+        >>>> plot_map(m,
+                      (250, 136, 37),
+                      label="Itot",
+                      background="black",
+                      gamma=0.9,
+                      smooth=0.75)
+        # Same as before but rgb tuple (range 0 <= value <=1)
+        >>>> plot_map(m,
+                      (0.98, 0.53, 0.15),
+                      label="Itot",
+                      background="black",
+                      gamma=0.9,
+                      smooth=0.75)
+        # Use predefined colormap "Blues". ``background`` and ``gamma`` are
+        # ignored.
+        >>>> plot_map(m,
+                      "Blues",
+                      label="Itot",
+                      background="black",
+                      gamma=0.9,
+                      smooth=0.75)
     """
     if outfile:
         ext = os.path.splitext(outfile)[1][1:].lower()
