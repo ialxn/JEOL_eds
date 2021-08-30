@@ -269,6 +269,14 @@ def plot_map(m, color,
     if smooth:
         m = ndimage.gaussian_filter(m, smooth)
 
+    # If a rgb-tuple is specified as e.g. (250, 176, 37)
+    if (
+        isinstance(color, tuple)
+        and max(color) > 1.0
+        and all(0 <= val < 256 for val in color)
+    ):
+        color = tuple(val / 256 for val in color)
+
     cmap =  __make_cmap(color, gamma=gamma, background=background)
     plt.imshow(m, cmap=cmap)
     plt.colorbar(label="counts  [-]")
