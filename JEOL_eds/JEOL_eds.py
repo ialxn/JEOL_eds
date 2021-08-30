@@ -53,6 +53,9 @@ class JEOL_pts:
                         Read BF images (one BF image per frame stored in
                         the raw data, if the option "correct for sample
                         movement" was active while the data was collected).
+    only_metadata:      Bool
+                        Only meta data is read (True) but nothing else. All
+                        other keywords are ignored.
           verbose:      Bool
                         Turn on (various) output.
 
@@ -157,11 +160,14 @@ class JEOL_pts:
         .
         .
             'FocusMP': 16043213}}}}
+
+        # Fast way to read and plot reference spectrum.
+        >>>> plot_spectrum(JEOL_pts('64.pts', only_metadata=True).ref_spectrum)
     """
 
     def __init__(self, fname, dtype='uint16',
                  split_frames=False, E_cutoff=False, read_drift=False,
-                 verbose=False):
+                 only_metadata=False, verbose=False):
         """Reads data cube from JEOL '.pts' file or from previously saved data cube.
 
             Parameters
@@ -185,20 +191,27 @@ class JEOL_pts:
                             Read BF images (one BF image per frame stored in
                             the raw data, if the option "correct for sample
                             movement" was active while the data was collected).
+         only_matadata:     Bool
+                            Only metadata are read (True) but nothing else. All
+                            other keywords are ignored.
                verbose:     Bool
                             Turn on (various) output.
         """
         if os.path.splitext(fname)[1] == '.pts':
             self.file_name = fname
             self.parameters, data_offset = self.__parse_header(fname)
-            self.dcube = self.__get_data_cube(dtype, data_offset,
-                                              split_frames=split_frames,
-                                              E_cutoff=E_cutoff,
-                                              verbose=verbose)
-            if read_drift:
-                self.drift_images = self.__read_drift_images(fname)
-            else:
+            if only_metadata:
+                self.dcube = None
                 self.drift_images = None
+            else:
+                self.dcube = self.__get_data_cube(dtype, data_offset,
+                                                  split_frames=split_frames,
+                                                  E_cutoff=E_cutoff,
+                                                  verbose=verbose)
+                if read_drift:
+                    self.drift_images = self.__read_drift_images(fname)
+                else:
+                    self.drift_images = None
 
         elif os.path.splitext(fname)[1] == '.npz':
             self.parameters = None
@@ -211,9 +224,15 @@ class JEOL_pts:
             raise OSError(f"Unknown type of file '{fname}'")
 
         if self.parameters:
+            try:
+                N = self.dcube.shape[3]
+            except AttributeError:
+                N = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['NumCH']
+                # We use 1000, 2000, 4000 channels (no negative energies)
+                N = N // 1000 * 1000
             self.ref_spectrum = self.parameters['EDS Data'] \
                                                ['AnalyzableMap MeasData']['Data'] \
-                                               ['EDXRF'][0:self.dcube.shape[3]]
+                                               ['EDXRF'][0:N]
         else:
             self.ref_spectrum = None
 
@@ -558,7 +577,7 @@ class JEOL_pts:
               res *= (1 - noise / lVar)
             plt.imshow(m, extent=e)
         """
-        if self.dcube.shape[0] == 1:
+        if self.dcube is None or self.dcube.shape[0] == 1:
             return None, None
         sh = self.shifts(filtered=filtered, verbose=verbose)
         amax = np.abs(np.asarray(sh)).max()
@@ -654,7 +673,7 @@ class JEOL_pts:
                  (0, 0),
                  (-1, -1)]
         """
-        if self.dcube.shape[0] == 1:
+        if self.dcube is None or self.dcube.shape[0] == 1:
             # only a single frame present
             return []
         if frames is None:
@@ -779,6 +798,9 @@ class JEOL_pts:
         """
         # Check for valid keyword arguments
         assert align.lower() in ['yes', 'no', 'filter']
+
+        if self.dcube is None:  # Only metadata was read
+            return None
 
         if not interval:
             interval = (0, self.dcube.shape[3])
@@ -1021,6 +1043,9 @@ class JEOL_pts:
                 # Spectrum of all odd frames added.
                 >>>> spec = dc.spectrum(frames=range(1, dc.dcube.shape[0], 2))
         """
+        if self.dcube is None:  # Only metadata was read
+            return None
+
         if not ROI:
             ROI = (0, self.dcube.shape[1] - 1, 0, self.dcube.shape[1] - 1)
         # ROI elements need to be ints
@@ -1096,6 +1121,9 @@ class JEOL_pts:
                        1050., 1088., 1018., 1070., 1089.])
 
         """
+        if self.dcube is None:  # Only metadata was read
+            return None
+
         if not interval:
             interval = (0, self.dcube.shape[3])
         if energy:
@@ -1151,6 +1179,9 @@ class JEOL_pts:
             >>>> dc = JEOL_pts('data/128.pts')
             >>>> dc.make_movie(fname='dummy.mp4')
         """
+        if self.dcube is None:  # Only metadata was read
+            return
+
         if fname is None:
             fname = os.path.splitext(self.file_name)[0] + '.mp4'
 
@@ -1237,6 +1268,9 @@ class JEOL_pts:
                 >>>> dcube.shape
                 (50, 128, 128, 4000)
         """
+        if self.dcube is None:  # Only metadata was read
+            return
+
         if fname is None:
             fname = os.path.splitext(self.file_name)[0] + '.npz'
         np.savez_compressed(fname, self.dcube)
@@ -1306,6 +1340,9 @@ class JEOL_pts:
                 >>>> hf.attrs['file_name']
                 'data/128.pts'
         """
+        if self.dcube is None:  # Only metadata was read
+            return
+
         if fname is None:
             fname = os.path.splitext(self.file_name)[0] + '.h5'
 
