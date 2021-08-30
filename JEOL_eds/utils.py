@@ -7,9 +7,10 @@ Created on Fri Mar 19 15:11:53 2021
 """
 import os
 import numpy as np
+import scipy.ndimage as ndimage
 from skimage.measure import profile_line
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap, to_rgba
 from matplotlib.ticker import AutoMinorLocator
 
 def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
@@ -129,6 +130,162 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
     if outfile:
         plt.savefig(outfile)
 
+def __filter_isolated_cells(array, struct=np.ones((3,3))):
+    """ Return array with completely isolated single cells removed.
+
+        Parameters:
+        -----------
+            array:  Ndarray
+                    Array with completely isolated single cells
+           struct:  Structure array for generating unique regions,
+
+        Returns:
+        --------
+            Ndarray
+            Input array with isolated cells removed.
+
+        Notes:
+        ------
+            Copied almost verbatim from
+            https://stackoverflow.com/questions/28274091/removing-completely-isolated-cells-from-python-array
+
+    """
+    filtered_array = np.copy(array)
+    id_regions, num_ids = ndimage.label(filtered_array, structure=struct)
+    id_sizes = np.array(ndimage.sum(array, id_regions, range(num_ids + 1)))
+    area_mask = (id_sizes == 1)
+    filtered_array[area_mask[id_regions]] = 0
+    return filtered_array
+
+def __make_cmap(color, gamma=1.0, background="white"):
+    """Return colormap with uniform gradient from white to `color`.
+
+    Parameters:
+    -----------
+         color: Str
+                Named color (or matplotlib.colormap).
+                If a colormap is supplied it is returned unmodified.
+         gamma: Float
+                Default [1.0]: No transformation applied
+                ``gamma`` > 1.0: Reaches high saturation already at low
+                input values.
+                ``gamma`` < 1.0: Only reaches high saturation at high
+                input values.
+    background: Str ["white" | "black"].
+                Custom colomap is made spanning ``background`` to ``color``.
+
+
+    Returns:
+    --------
+        colormap
+    """
+    if background.lower() not in ["white", "black"]:
+        raise ValueError(f"Only 'white' and 'black' allowed as background, not '{background}'.")
+    start = 1 if background.lower() == "white" else 0
+
+    try:    # Is ``color`` a named color?
+        rgba = to_rgba(color)
+    except ValueError:
+        return color    # ``color`` is already a colormap
+    N = 256
+    t_color = np.ones((N, 4))   # alpha channel [:,3] is set to 1
+    for i in range(3):          # set rgb channels
+        t_color[:, i] = np.linspace(start, rgba[i], N) ** gamma
+    return ListedColormap(t_color)
+
+def plot_map(m, color,
+             label=None,
+             gamma=1.0,
+             outfile=None,
+             background="white",
+             remove_outliers=False,
+             smooth=None):
+    """Nicely plots map
+
+        Parameters:
+        -----------
+                        m:  Ndarray
+                            Map to be plotted.
+                    color:  Str
+                            Color used to generate colormap. Colormap will
+                            span between ``background`` and ``color``. If
+                            the name of a matplotlib colormap is supplied
+                            it will be used and ``background`` is ignored.
+                    label:  Str
+                            Optional label to be plotted on map.
+                    gamma:  Float
+                            Optional value to make a non-linear colormap. Only
+                            used for custom colormaps i.e. if ``color`` does
+                            not represent a matplotlib colormap.
+                            ``gamma`` > 1.0: Reaches high saturation already
+                            at low values of ``m``.
+                            ``gamma`` < 1.0: Only reaches high saturation at high
+                            values of ``m``.
+                  outfile:  Str
+                            Optional name of an output file. Any format supported
+                            by matplotlib can be used. If none is supplied, output
+                            goes to screen.
+               background:  Str
+                            Optional background color ("white" or "black") only
+                            used for custom colormaps i.e. if ``color`` does
+                            not represent a matplotlib colormap.
+          remove_outliers:  Bool
+                            Isolated (no neighbors) pixels in map will be removed
+                            if set to ``True``.
+                   smooth:  Float
+                            If supplied, map will be smoothed by 2D gaussian
+                            with sigma=``smooth``. FWHH of gaussian corresponds
+                            to 2.355*``sigma``.
+
+        Examples:
+        ---------
+        >>>> from JEOL_eds import JEOL_pts
+        >>>> from JEOL_eds.utils import plot_spectrum
+
+        # Load data.
+        >>>> dc = JEOL_pts('data/64.pts')
+
+        # Map of total X-ray intensity
+        >>>> m = dc.map()
+
+        # Plot nice map using custom colormap black to purple. ``gamma=0.9``
+        # enhances details. Little smoothing (FWHH=1.75 pixels) is applied.
+        >>>> plot_map(m,
+                      "purple",
+                      label="Itot",
+                      background="black",
+                      gamma=0.9,
+                      smooth=0.75)
+    """
+    if outfile:
+        ext = os.path.splitext(outfile)[1][1:].lower()
+        supported = plt.figure().canvas.get_supported_filetypes()
+        assert ext in supported
+
+    if remove_outliers:     # remove stray (single isolated) pixels
+        m = __filter_isolated_cells(m)
+
+    if smooth:
+        m = ndimage.gaussian_filter(m, smooth)
+
+    cmap =  __make_cmap(color, gamma=gamma, background=background)
+    plt.imshow(m, cmap=cmap)
+    plt.colorbar(label="counts  [-]")
+    ax = plt.gca()
+    ax.set_xticks([])
+    ax.set_yticks([])
+    if label:
+        # Ensure that legend is visible black in white box on black BG or vice versa
+        label_BGcolor = "black" if background.lower() == "white" else "white"
+        label_color = "black" if label_BGcolor == "white" else "white"
+        ax.text(2, 2,
+                label,
+                size=24,
+                color=label_color,
+                backgroundcolor=label_BGcolor)
+
+    if outfile:
+        plt.savefig(outfile)
 
 def plot_spectrum(s, E_range=None, M_ticks=None,
                   log_y=False, outfile=None, **kws):
