@@ -32,9 +32,21 @@ to upgrade an existing installation.
 ```python
 >>>> from JEOL_eds import JEOL_pts
 
-# read EDS data
+# Read EDS data
 >>>> dc = JEOL_pts('128.pts', split_frames=True, E_cutoff=11.0)
 
+# If 'split_frames=True' is used and the data cube becomes
+# too big to be kept in memory a subset of frames can be read
+# by using the keyword parameter 'list_frames'.
+>>>> small_dc = JEOL_pts('128.pts',
+                         split_frames=True, list_frames=[1,2,4,8,16],
+                         E_cutoff=11.0)
+>>>> small_dc.frame_list
+[1, 2, 4, 8, 16]
+
+>>>> small_dc.dcube.shape
+(5, 128, 128, 1100)
+# The frames in the data cube correspond to the original frames 1, 2, 4, 8, and 16.
 
 # Cu Kalpha map of all even frames.
 >>>> m = dc.map(interval=(7.9, 8.1),
