@@ -1045,7 +1045,7 @@ class JEOL_pts:
             return self.__correct_spectrum(s)
 
         # only sum specified frames
-        s = np.zeros(self.dcube.shape[3])
+        s = np.zeros(self.dcube.shape[3], dtype=self.dcube.dtype)
         for frame in frames:
             s += self.dcube[frame, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
         return self.__correct_spectrum(s)
