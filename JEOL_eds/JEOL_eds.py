@@ -46,6 +46,10 @@ class JEOL_pts:
                         Store individual frames in the data cube (if
                         True), otherwise add all frames and store in
                         a single frame (default).
+       frame_list:      List (or None)
+                        List of frams to be read if split_frames was specified.
+                        Default (None) implies all frames present in data are
+                        read.
          E_cutoff:      Float
                         Energy cutoff in spectra. Only data below E_cutoff
                         are read.
@@ -53,6 +57,8 @@ class JEOL_pts:
                         Read BF images (one BF image per frame stored in
                         the raw data, if the option "correct for sample
                         movement" was active while the data was collected).
+                        All images are read even if only a subset of frames
+                        is read (frame_lsit is specified).
     only_metadata:      Bool
                         Only meta data is read (True) but nothing else. All
                         other keywords are ignored.
@@ -88,6 +94,16 @@ class JEOL_pts:
         >>>> dc.dcube.shape
         (50, 128, 128, 4000)
 
+        # For large data sets, read only a subset of frames.
+        >>>> small_dc = JEOL_pts('128.pts',
+                                 split_frames=True, list_frames=[1,2,4,8,16])
+        +>>>> small_dc.frame_list
+        [1, 2, 4, 8, 16]
+        >>>> small_dc.dcube.shape
+        (5, 128, 128, 1100)
+        # The frames in the data cube correspond to the original frames 1, 2,
+        # 4, 8, and 16.
+
         # Only import spectrum up to cutoff energy [keV]
         >>>> dc = JEOL_pts('128.pts', E_cutoff=10.0)
         >>>> dc.dcube.shape
@@ -101,6 +117,16 @@ class JEOL_pts:
         False
         >>> dc.drift_images.shape
         (50, 128, 128)
+        # If only a subset of frames was read select the corresponding
+        # BF images as follows:
+        >>>> [dc.drift_images[i] for i in dc.frame_list]
+        [array([[67, 70, 57, ..., 37, 39, 41],
+                [68, 70, 63, ..., 43, 44, 39],
+                [68, 67, 58, ..., 48, 47, 47],
+                ...,
+                [64, 63, 61, ..., 58, 66, 68],
+                [59, 53, 57, ..., 60, 58, 58],
+                [56, 67, 68, ..., 62, 56, 58]], dtype=uint16)]
 
         # Useful attributes.
         >>>> dc.file_name
@@ -166,7 +192,8 @@ class JEOL_pts:
     """
 
     def __init__(self, fname, dtype='uint16',
-                 split_frames=False, E_cutoff=False, read_drift=False,
+                 split_frames=False, frame_list=None,
+                 E_cutoff=False, read_drift=False,
                  only_metadata=False, verbose=False):
         """Reads data cube from JEOL '.pts' file or from previously saved data cube.
 
@@ -184,6 +211,10 @@ class JEOL_pts:
                             Store individual frames in the data cube (if
                             True), otherwise add all frames and store in
                             a single frame (default).
+            frame_list:     List
+                            List of frams to be read if split_frames was
+                            specified. Default (None) implies all frames
+                            present in data are read.
               E_cutoff:     Float
                             Energy cutoff in spectra. Only data below E_cutoff
                             are read.
@@ -191,6 +222,8 @@ class JEOL_pts:
                             Read BF images (one BF image per frame stored in
                             the raw data, if the option "correct for sample
                             movement" was active while the data was collected).
+                            All images are read even if only a subset of frames
+                            is read (frame_lsit is specified).
          only_matadata:     Bool
                             Only metadata are read (True) but nothing else. All
                             other keywords are ignored.
@@ -203,15 +236,21 @@ class JEOL_pts:
             if only_metadata:
                 self.dcube = None
                 self.drift_images = None
+                self.frame_list = None
+                self.__set_ref_spectrum()
+                return
+            if split_frames and frame_list:
+                self.frame_list = sorted(list(frame_list))
             else:
-                self.dcube = self.__get_data_cube(dtype, data_offset,
-                                                  split_frames=split_frames,
-                                                  E_cutoff=E_cutoff,
-                                                  verbose=verbose)
-                if read_drift:
-                    self.drift_images = self.__read_drift_images(fname)
-                else:
-                    self.drift_images = None
+                self.frame_list = None
+            self.dcube = self.__get_data_cube(dtype, data_offset,
+                                              split_frames=split_frames,
+                                              E_cutoff=E_cutoff,
+                                              verbose=verbose)
+            if read_drift:
+                self.drift_images = self.__read_drift_images(fname)
+            else:
+                self.drift_images = None
 
         elif os.path.splitext(fname)[1] == '.npz':
             self.parameters = None
@@ -223,7 +262,14 @@ class JEOL_pts:
         else:
             raise OSError(f"Unknown type of file '{fname}'")
 
+        self.__set_ref_spectrum()
+
+
+    def __set_ref_spectrum(self):
+        """Sets attribute ref_spectrum from parameters dict.
+        """
         if self.parameters:
+            # Determine length of ref_spectrum.
             try:
                 N = self.dcube.shape[3]
             except AttributeError:
@@ -440,6 +486,16 @@ class JEOL_pts:
             Sweep = self.parameters['PTTD Data'] \
                                    ['AnalyzableMap MeasData']['Doc'] \
                                    ['Sweep']
+            if self.frame_list:
+                # Check that only frames present in data are requested.
+                if not all(x < Sweep for x in self.frame_list):
+                    # Make list with frames request that ARE present.
+                    present = [x for x in self.frame_list if x < Sweep]
+                    # Update self.frame_list.
+                    self.frame_list = present
+                # Fewer frames requested than present, update Sweep
+                # to allocate smaller dcube.
+                Sweep = len(self.frame_list)
             dcube = np.zeros([Sweep, ScanLine, ScanLine, N_spec],
                              dtype=dtype)
         else:
@@ -468,12 +524,28 @@ class JEOL_pts:
                     # does not necessary happen at x=zero, if we have very few
                     # counts and nothing registers on first scan line.
                     frame += 1
+                    try:
+                        if frame > max(self.frame_list):
+                            # Further frames present are not required, so stop
+                            # (slow) reading and return data read (dcube).
+                            return dcube
+                    except TypeError:
+                        pass
                 x = d
             elif 45056 <= d < END:
                 z = int(d - 45056)
                 z -= CH_offset
                 if N_spec > z >= 0:
-                    dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
+                    try:    # self.frame_list might be None
+                        if frame in self.frame_list:
+                            # Current frame is specified in self.frame_list.
+                            # Store data in self.dcube in correct position
+                            # i.e. position within list.
+                            idx = self.frame_list.index(frame)
+                            dcube[idx, x, y, z] = dcube[idx, x, y, z] + 1
+                    except TypeError:
+                        # self.frame_list is None, just store data in this frame
+                        dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
             else:
                 if verbose:
                     if 40960 <= d < 45056:
@@ -610,6 +682,11 @@ class JEOL_pts:
                frames:     Iterable
                            Frame numbers for which shifts are calculated. First
                            frame given is used a reference.
+                           Note, that the frame number denotes the index within
+                           the data cube loaded. This is different from the
+                           real frame number (stored in the `frame_list`
+                           attribute) if only a subset of frames was loaded.
+
              filtered:     Bool
                            If True, use Wiener filtered data.
               verbose:     Bool
@@ -731,6 +808,11 @@ class JEOL_pts:
                             Frame numbers included in map. If split_frames is
                             active and frames is not specified all frames are
                             included.
+                            Note, that the frame number denotes the index within
+                            the data cube loaded. This is different from the
+                            real frame number (stored in the `frame_list`
+                            attribute) if only a subset of frames was loaded.
+
                    align:   Str
                             'no': Do not align individual frames.
                             'yes': Align frames (use unfiltered frames in
@@ -999,6 +1081,10 @@ class JEOL_pts:
                             Frame numbers included in spectrum. If split_frames
                             is active and frames is not specified all frames
                             are included.
+                            Note, that the frame number denotes the index within
+                            the data cube loaded. This is different from the
+                            real frame number (stored in the `frame_list`
+                            attribute) if only a subset of frames was loaded.
 
             Returns
             -------
@@ -1092,6 +1178,11 @@ class JEOL_pts:
                             Frame numbers included in time series (or None if
                             all frames are used). The integrated number of
                             counts is set to 'NaN' for all other frames.
+                            Note, that the frame number denotes the index within
+                            the data cube loaded. This is different from the
+                            real frame number (stored in the `frame_list`
+                            attribute) if only a subset of frames was loaded.
+
 
             Returns
             -------
@@ -1191,9 +1282,14 @@ class JEOL_pts:
         except KeyError:
             pass
 
-        # maxima of the two type of images used to normalize images of both series
+        # We might have read only a sublist of frames thus determine frames
+        # loaded.
+        frame_list = self.frame_list if self.frame_list else range(self.dcube.shape[0])
+
+        # Maxima of the two type of images used to normalize images of both
+        # series.
         try:
-            STEM_max = self.drift_images.max()
+            STEM_max = max([self.drift_images[i].max() for i in frame_list])
         except TypeError:   # no drift_image available
             STEM_max = 1.0
         EDS_max = max([self.map(frames=[i]).max() for i in range(self.dcube.shape[0])])
@@ -1217,17 +1313,21 @@ class JEOL_pts:
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
+        # Note, more STEM images are present if only a subset of frames was
+        # read.
         frames = []
-        for i in range(self.dcube.shape[0]):
+        for i, STEM_i in enumerate(frame_list):
             EDS_map = self.map(frames=[i], **kws).astype(EDS_dtype)
             try:
-                STEM_image = self.drift_images[i].astype(STEM_dtype)
+                STEM_image = self.drift_images[STEM_i].astype(STEM_dtype)
             except TypeError:   # no drift_image available, dummy image
                 STEM_image = np.full_like(EDS_map, np.nan).astype('uint8')
             image = np.concatenate((STEM_image / STEM_max, EDS_map / EDS_max),
                                    axis=1)
             frame = plt.imshow(image, animated=True)
-            text = ax.annotate(i, (1, -5), annotation_clip=False) # add frame number
+            # Add frame number. Use index of STEM image in case only a subset
+            # of frames was read.
+            text = ax.annotate(STEM_i, (1, -5), annotation_clip=False)
             frames.append([frame, text])
 
         ani = animation.ArtistAnimation(fig, frames, interval=50, blit=True,
@@ -1285,6 +1385,7 @@ class JEOL_pts:
         """
         self.file_name = fname
         self.file_date = None
+        self.frame_list = None
         self.drift_images = None
         npzfile = np.load(fname)
         self.dcube = npzfile['arr_0']
@@ -1353,6 +1454,8 @@ class JEOL_pts:
 
             hf.attrs['file_name'] = self.file_name
             hf.attrs['file_date'] = self.file_date
+            if self.frame_list is not None:
+                hf.attrs['frame_list'] = self.frame_list
             # avoid printing of ellipsis in arrays / lists
             np.set_printoptions(threshold=sys.maxsize)
             hf.attrs['parameters'] = str(self.parameters)
@@ -1367,6 +1470,7 @@ class JEOL_pts:
         """
         with h5py.File(fname, 'r') as hf:
             self.dcube = hf['dcube'][()]
+
             if 'drift_images' in hf.keys():
                 self.drift_images = hf['drift_images'][()]
             else:
@@ -1374,5 +1478,11 @@ class JEOL_pts:
 
             self.file_date = hf.attrs['file_date']
             self.file_name = hf.attrs['file_name']
+
+            if 'frame_list' in hf.keys():
+                self.frame_list = hf['drift_images'][()]
+            else:
+                self.frame_list = None
+
             aeval = asteval.Interpreter()
             self.parameters = aeval(hf.attrs['parameters'])
