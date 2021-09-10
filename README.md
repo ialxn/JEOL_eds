@@ -32,8 +32,35 @@ to upgrade an existing installation.
 ```python
 >>>> from JEOL_eds import JEOL_pts
 
-# read EDS data
+# Read EDS data
 >>>> dc = JEOL_pts('128.pts', split_frames=True, E_cutoff=11.0)
+
+# If 'split_frames=True' is used and the data cube becomes
+# too big to be kept in memory a subset of frames can be read
+# by using the keyword parameter 'list_frames'.
+>>>> small_dc = JEOL_pts('128.pts',
+                         split_frames=True, list_frames=[1,2,4,8,16],
+                         E_cutoff=11.0)
+>>>> small_dc.frame_list
+[1, 2, 4, 8, 16]
+
+>>>> small_dc.dcube.shape
+(5, 128, 128, 1100)
+# The frames in the data cube correspond to the original frames 1, 2, 4, 8, and 16.
+
+
+# To read (and process) large data sets you might use the following code fragment.
+# Get number of frames (read only meta data to speed up this step).
+>>>> large_fn = "data/128.pts"
+>>>> large = JEOL_pts(large_fn, only_metadata=True)
+>>>> N = large.parameters['EDS Data']['AnalyzableMap MeasData']['Doc']['Sweep']
+>>>> per_batch = 10
+>>>> N_batches = N // per_batch
+>>>> for i in range(N_batches):
+         flist = [i*per_batch + j for j in range(per_batch)]
+         subset = JEOL_pts(large_fn, split_frames=True, frame_list=flist)
+         # Do the processing of the subset. Here print total X-ray intensity.
+         print(subset.map().sum())
 
 
 # Cu Kalpha map of all even frames.

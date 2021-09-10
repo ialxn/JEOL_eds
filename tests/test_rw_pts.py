@@ -19,6 +19,7 @@ class testIO_pts(unittest.TestCase):
 
         self.assertEqual('data/128.pts', dc.file_name)
         self.assertEqual('2020-10-23 11:18:40', dc.file_date)
+        self.assertIsNone(dc.frame_list)
 
         self.assertIsInstance(dc.parameters, dict)
         self.assertIsInstance(dc.ref_spectrum, np.ndarray)
@@ -32,6 +33,22 @@ class testIO_pts(unittest.TestCase):
 
         self.assertEqual('data/128.pts', dc.file_name)
         self.assertEqual('2020-10-23 11:18:40', dc.file_date)
+        self.assertIsNone(dc.frame_list)
+
+        self.assertIsInstance(dc.parameters, dict)
+        self.assertIsInstance(dc.ref_spectrum, np.ndarray)
+
+        self.assertIsNone(dc.drift_images)
+
+    def test_read_subset_frames(self):
+        flist = [1, 2, 4, 8, 16]
+        dc = JEOL_pts('data/128.pts', split_frames=True, frame_list=flist)
+
+        self.assertEqual((len(flist), 128, 128, 4000), dc.dcube.shape)
+
+        self.assertEqual('data/128.pts', dc.file_name)
+        self.assertEqual('2020-10-23 11:18:40', dc.file_date)
+        self.assertEqual(dc.frame_list, flist)
 
         self.assertIsInstance(dc.parameters, dict)
         self.assertIsInstance(dc.ref_spectrum, np.ndarray)
@@ -45,6 +62,7 @@ class testIO_pts(unittest.TestCase):
 
         self.assertEqual('data/128.pts', dc.file_name)
         self.assertEqual('2020-10-23 11:18:40', dc.file_date)
+        self.assertIsNone(dc.frame_list)
 
         self.assertIsInstance(dc.parameters, dict)
         self.assertIsInstance(dc.ref_spectrum, np.ndarray)
