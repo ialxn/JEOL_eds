@@ -1070,7 +1070,7 @@ class JEOL_pts:
             return self.__correct_spectrum(s)
 
         # only sum specified frames
-        s = np.zeros(self.dcube.shape[3])
+        s = np.zeros(self.dcube.shape[3], dtype=self.dcube.dtype)
         for frame in frames:
             s += self.dcube[frame, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
         return self.__correct_spectrum(s)
@@ -1107,7 +1107,7 @@ class JEOL_pts:
                        1685., 1785., 1731., 1752., 1729., 1757., 1678., 1752., 1721.,
                        1740., 1696., 1718., 1737., 1740., 1719., 1670., 1692., 1649.,
                        1718., 1660., 1700., 1702., 1693., 1722., 1675., 1716., 1664.,
-                       1761., 1691., 1731., 1663., 1669.])array([1696, 1781, 1721, 1795, 1744, 1721, 1777, 1711, 1692, 1752, 1651,
+                       1761., 1691., 1731., 1663., 1669.])
 
                 # Integrate oxygen Ka peak (interval specified as energy [keV])
                 # and remove a few bad frames (11,12) from time series.
