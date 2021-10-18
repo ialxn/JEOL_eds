@@ -239,18 +239,13 @@ class JEOL_pts:
                 self.frame_list = None
                 self.__set_ref_spectrum()
                 return
-            if split_frames and frame_list:
-                self.frame_list = sorted(list(frame_list))
-            else:
-                self.frame_list = None
+
+            self.frame_list = sorted(list(frame_list)) if split_frames and frame_list else None
+            self.drift_images = self.__read_drift_images(fname) if read_drift else None
             self.dcube = self.__get_data_cube(dtype, data_offset,
                                               split_frames=split_frames,
                                               E_cutoff=E_cutoff,
                                               verbose=verbose)
-            if read_drift:
-                self.drift_images = self.__read_drift_images(fname)
-            else:
-                self.drift_images = None
 
         elif os.path.splitext(fname)[1] == '.npz':
             self.parameters = None
@@ -671,10 +666,7 @@ class JEOL_pts:
             mx, my = np.where(h==np.amax(h))
             mx = int(bins[int(mx)] + 0.5)
             my = int(bins[int(my)] + 0.5)
-            if filtered:
-                print('Shifts (filtered):')
-            else:
-                print('Shifts (unfiltered):')
+            print('Shifts (filtered):') if filtered else print('Shifts (unfiltered):')
             print(f'   Range: {int(np.asarray(sh).min())} - {int(np.asarray(sh).max())}')
             print(f'   Maximum {peak_val} at ({max}, {my})')
         return h, extent
@@ -761,18 +753,12 @@ class JEOL_pts:
         if frames is None:
             frames = range(self.dcube.shape[0])
         # Always use first frame given as reference
-        if filtered:
-            ref = wiener(self.map(frames=[frames[0]]))
-        else:
-            ref = self.map(frames=[frames[0]])
+        ref = wiener(self.map(frames=[frames[0]])) if filtered else self.map(frames=[frames[0]])
         shifts = [(0, 0)] * self.dcube.shape[0]
         if verbose:
             print(f'Frame {frames[0]} used a reference')
         for f in frames[1:]:    # skip reference frame
-            if filtered:
-                c = correlate(ref, wiener(self.map(frames=[f])))
-            else:
-                c = correlate(ref, self.map(frames=[f]))
+            c = correlate(ref, wiener(self.map(frames=[f]))) if filtered else correlate(ref, self.map(frames=[f]))
             # image size s=self.dcube.shape[1]
             # c has shape (2 * s - 1, 2 * s - 1)
             # Autocorrelation peaks at [s - 1, s - 1]
@@ -1311,10 +1297,7 @@ class JEOL_pts:
             EDS_dtype = 'float64'
 
         # `self.drift_images.dtype` is 'uint16'. Select 'uint8' if possible.
-        if STEM_max < 2**8:
-            STEM_dtype = 'uint8'
-        else:
-            STEM_dtype = 'uint16'
+        STEM_dtype = 'uint8'if STEM_max < 2**8 else 'uint16'
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -1476,18 +1459,11 @@ class JEOL_pts:
         with h5py.File(fname, 'r') as hf:
             self.dcube = hf['dcube'][()]
 
-            if 'drift_images' in hf.keys():
-                self.drift_images = hf['drift_images'][()]
-            else:
-                self.drift_images = None
+            self.drift_images = hf['drift_images'][()] if 'drift_images' in hf.keys() else None
+            self.frame_list = hf['drift_images'][()] if 'frame_list' in hf.keys() else None
 
             self.file_date = hf.attrs['file_date']
             self.file_name = hf.attrs['file_name']
-
-            if 'frame_list' in hf.keys():
-                self.frame_list = hf['drift_images'][()]
-            else:
-                self.frame_list = None
 
             aeval = asteval.Interpreter()
             self.parameters = aeval(hf.attrs['parameters'])
