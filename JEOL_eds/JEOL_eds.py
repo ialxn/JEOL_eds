@@ -492,9 +492,7 @@ class JEOL_pts:
                 # Check that only frames present in data are requested.
                 if not all(x < Sweep for x in self.frame_list):
                     # Make list with frames request that ARE present.
-                    present = [x for x in self.frame_list if x < Sweep]
-                    # Update self.frame_list.
-                    self.frame_list = present
+                    self.frame_list = [x for x in self.frame_list if x < Sweep]
                 # Fewer frames requested than present, update Sweep
                 # to allocate smaller dcube.
                 Sweep = len(self.frame_list)
