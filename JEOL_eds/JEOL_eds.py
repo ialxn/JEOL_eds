@@ -1502,8 +1502,88 @@ class JEOL_pts:
 
 
 class JEOL_image():
+    """Read JEOL image data ('.img' and '.map' files).
 
+        Parameters
+        ----------
+            fname:      Str
+                        Filename.
+
+        Examples
+        --------
+        >>>> from JEOL_eds import JEOL_image
+
+        >>>> demo = JEOL_image('data/demo.img')
+        >>>> demo.file_name
+        'data/demo.img'
+
+        >>>> demo.file_date
+        '2021-08-13 16:09:06'
+
+        # Meta data stored in file.
+        >>>> demo.parameters
+        {'Instrument': {'Type': 0,
+          'ScanSize': 198.0,
+          'Name': 'JEM-ARM200F(HRP)',
+          'AccV': 200.0,
+          'Currnnt': 7.475,
+          'Mag': 200000,
+          'WorkD': 3.2,
+          'ScanR': 0.0},
+         'FileType': 'JED-2200:IMG',
+         'Image': {'Created': 44421.67298611111,
+          'GroupName': '',
+          'Memo': '',
+          'DataType': 1,
+          'Size': array([512, 512], dtype=int32),
+          'Bits': array([[255, 255, 255, ..., 255, 255, 255],
+                 [255, 255, 255, ..., 255, 255, 255],
+                 [255, 255, 255, ..., 255, 255, 255],
+                 ...,
+                 [255, 255, 255, ..., 255, 255, 255],
+                 [255, 255, 255, ..., 255, 255, 255],
+                 [255, 255, 255, ..., 255, 255, 255]], dtype=uint8),
+          'Title': 'IMG1'},
+         'Palette': {'RGBQUAD': array([       0,    65793,   131586,   197379,   263172,   328965,
+                   394758,   460551,   526344,   592137,   657930,   723723,
+                   789516,   855309,   921102,   986895,  1052688,  1118481,
+                  ...,
+                 16185078, 16250871, 16316664, 16382457, 16448250, 16514043,
+                 16579836, 16645629, 16711422, 16777215], dtype=int32),
+          '4': {'0': {'Pos': 0, 'Color': 0}, '1': {'Pos': 255, 'Color': 16777215}},
+          'Active': 1,
+          'Min': 0.0,
+          'Max': 255.0,
+          'Contrast': 1.0,
+          'Brightness': -0.0,
+          'Scheme': 1}}
+
+        # Plot image.
+        >>>> import matplotlib.pyplot as plt
+        >>>> plt.imshow(demo.image)
+        <matplotlib.image.AxesImage at 0x7fa08425d350>
+
+        # Read a map file.
+        >>>> demo = JEOL_image('data/demo.map')
+
+        # Print calibration data (pixel size in nm).
+        # This is only available for '*.map' files.
+        >>>> demo.pixel_size
+        0.99
+    """
     def __init__(self, fname):
+        """Initializes object (reads image data).
+
+            Parameters
+            ----------
+                fname:      Str
+                            Filename.
+
+            Notes
+            -----
+                Based on a code fragment by @sempicor at
+                https://github.com/hyperspy/hyperspy/pull/2488
+        """
         assert os.path.splitext(fname)[1] in ['.img', '.map']
         with open(fname, "br") as fd:
             file_magic = np.fromfile(fd, "<I", 1)[0]
