@@ -466,9 +466,11 @@ class JEOL_pts:
         NumCH = self.parameters['PTTD Param'] \
                                ['Params']['PARAMPAGE1_EDXRF'] \
                                ['NumCH']
-        ScanLine = self.parameters['PTTD Data'] \
-                                  ['AnalyzableMap MeasData']['Doc'] \
-                                  ['ScanLine']
+        area = self. parameters['EDS Data'] \
+                               ['AnalyzableMap MeasData']['Meas Cond'] \
+                               ['Pixels'].split('x')
+        h = int(area[0])
+        v = int(area[1])
         if E_cutoff:
             CoefA = self.parameters['PTTD Data'] \
                                    ['AnalyzableMap MeasData']['Doc'] \
@@ -496,10 +498,10 @@ class JEOL_pts:
                 # Fewer frames requested than present, update Sweep
                 # to allocate smaller dcube.
                 Sweep = len(self.frame_list)
-            dcube = np.zeros([Sweep, ScanLine, ScanLine, N_spec],
+            dcube = np.zeros([Sweep, v, h, N_spec],
                              dtype=dtype)
         else:
-            dcube = np.zeros([1, ScanLine, ScanLine, N_spec],
+            dcube = np.zeros([1, v, h, N_spec],
                              dtype=dtype)
         N = 0
         N_err = 0
@@ -511,7 +513,7 @@ class JEOL_pts:
         #   36864 <= datum < 40960                  -> x-coordinate
         #   45056 <= datum < END (=45056 + NumCH)    -> count registered at energy
         END = 45056 + NumCH
-        scale = 4096 / ScanLine
+        scale = 4096 / h
         # map the size x size image into 4096x4096
         for d in data:
             N += 1
@@ -583,9 +585,15 @@ class JEOL_pts:
             Based on a code fragment by @sempicor at
             https://github.com/hyperspy/hyperspy/pull/2488
         """
-        ScanLine = self.parameters['PTTD Data'] \
+        N_images = self.parameters['PTTD Data'] \
                                   ['AnalyzableMap MeasData']['Doc'] \
-                                  ['ScanLine']
+                                  ['Sweep']
+        area = self. parameters['EDS Data'] \
+                               ['AnalyzableMap MeasData']['Meas Cond'] \
+                               ['Aim Area']
+        h = area[2] - area[0] + 1
+        v = area[3] - area[1] + 1
+        image_shape = (N_images, v, h)
         with open(fname) as f:
             f.seek(28)  # see self.__parse_header()
             data_pos = np.fromfile(f, '<I', 1)[0]
@@ -594,15 +602,14 @@ class JEOL_pts:
             ipos = np.where(np.logical_and(rawdata >= 40960, rawdata < 45056))[0]
             if len(ipos) == 0:  # No data available
                 return None
-            I = np.array(rawdata[ipos]-40960, dtype='uint16')
-            N_images = int(np.ceil(ipos.shape[0] / ScanLine**2))
+            I = np.array(rawdata[ipos] - 40960, dtype='uint16')
             try:
-                return I.reshape((N_images, ScanLine, ScanLine))
+                return I.reshape(image_shape)
             except ValueError:  # incomplete image
                 # Add `N_addl` NaNs before reshape()
-                N_addl = N_images * ScanLine**2 - I.shape[0]
+                N_addl = N_images * v * h - I.shape[0]
                 I = np.append(I, np.full((N_addl), np.nan, dtype='uint16'))
-                return I.reshape((N_images, ScanLine, ScanLine))
+                return I.reshape(image_shape)
 
 
     def drift_statistics(self, filtered=False, verbose=False):
@@ -1073,7 +1080,7 @@ class JEOL_pts:
                             circular ROI including its boundary.
                             A tuple (top, bottom, left, right) defines a
                             rectangular ROI with boundaries included.
-                            Numbers are pixel indices in the range 0 <= N < ScanSize.
+                            Numbers are pixel indices in the range 0 <= N < ImageSize.
                             Note, that this definition implies y-axis before
                             x-axis and the order of the numbers is the same as
                             when applied in a python slice ([top:bottom, left:right]).
