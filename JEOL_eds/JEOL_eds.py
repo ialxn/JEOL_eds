@@ -31,6 +31,15 @@ import matplotlib.animation as animation
 
 
 
+def decode(bytes_string):
+    try:
+        string = bytes_string.decode("utf-8")
+    except:
+        # See https://github.com/hyperspy/hyperspy/issues/2812
+        string = bytes_string.decode("shift_jis")
+
+    return string
+
 def parsejeol(fd):
     """Parse meta data.
 
@@ -1489,3 +1498,33 @@ class JEOL_pts:
 
             aeval = asteval.Interpreter()
             self.parameters = aeval(hf.attrs['parameters'])
+
+
+
+class JEOL_image():
+
+    def __init__(self, fname):
+        assert os.path.splitext(fname)[1] in ['.img', '.map']
+        with open(fname, "br") as fd:
+            file_magic = np.fromfile(fd, "<I", 1)[0]
+            assert file_magic == 52
+            self.file_name = fname
+            self.fileformat = decode(fd.read(32).rstrip(b"\x00"))
+            head_pos, head_len, data_pos = np.fromfile(fd, "<I", 3)
+            fd.seek(data_pos + 12)
+            self.parameters = parsejeol(fd)
+            self.file_date = str(datetime(1899, 12, 30) + timedelta(days=self.parameters["Image"]["Created"]))
+
+            # Make image data easier accessible
+            sh = self.parameters["Image"]["Size"]
+            self.image = self.parameters["Image"]["Bits"]
+            self.image.resize(tuple(sh))
+
+            # Nominal pixel size in nm
+            #
+            # In '.img' files this is only correct if its dimensions coincide with the '.map' files
+            # that are recorded simultaneously to the edx data. These are typically the first two
+            # '.map' files in the list of the project.
+            #
+            if os.path.splitext(fname)[1] == '.map':
+                self.pixel_size = self.parameters["Instrument"]["ScanSize"] / self.parameters["Instrument"]["Mag"] * 1000.0
