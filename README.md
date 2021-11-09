@@ -1,8 +1,10 @@
 # JEOL_eds
 
-A python module to read binary data files ('.pts') by JEOL's Analysis Station software. The function to parse the header of the binary file was copied from HyperSpy (hyperspy/io_plugins/jeol.py scheduled for inclusion into HyperSpy 1.7).
+A python module to read binary data files ('.pts') or image file ('.img') by JEOL's Analysis Station software. The function to parse the header of the binary file was copied from HyperSpy (hyperspy/io_plugins/jeol.py scheduled for inclusion into HyperSpy 1.7).
 
 This module does not aim to replace HyperSpy which is much more feature-rich. Instead it provides an easy interface to extract spectra or elemental maps from the binary file much like the *Play Back* feature in **Analysis Station**.
+
+
 
 ## Installation
 
@@ -47,6 +49,60 @@ to upgrade an existing installation.
 >>>> small_dc.dcube.shape
 (5, 128, 128, 1100)
 # The frames in the data cube correspond to the original frames 1, 2, 4, 8, and 16.
+
+
+# Read and plot image data
+>>>> from JEOL_eds import JEOL_image
+>>>> import matplotlib.pyplot as plt
+>>>> demo = JEOL_image('data/demo.img')
+>>>> plt.imshow(demo.image)
+<matplotlib.image.AxesImage at 0x7fa08425d350>
+
+# Report meta data of image file
+>>>> demo.parameters
+{'Instrument': {'Type': 0,
+  'ScanSize': 198.0,
+  'Name': 'JEM-ARM200F(HRP)',
+  'AccV': 200.0,
+  'Currnnt': 7.475,
+  'Mag': 200000,
+  'WorkD': 3.2,
+  'ScanR': 0.0},
+ 'FileType': 'JED-2200:IMG',
+ 'Image': {'Created': 44421.67298611111,
+  'GroupName': '',
+  'Memo': '',
+  'DataType': 1,
+  'Size': array([512, 512], dtype=int32),
+  'Bits': array([[255, 255, 255, ..., 255, 255, 255],
+         [255, 255, 255, ..., 255, 255, 255],
+         [255, 255, 255, ..., 255, 255, 255],
+         ...,
+         [255, 255, 255, ..., 255, 255, 255],
+         [255, 255, 255, ..., 255, 255, 255],
+         [255, 255, 255, ..., 255, 255, 255]], dtype=uint8),
+  'Title': 'IMG1'},
+ 'Palette': {'RGBQUAD': array([       0,    65793,   131586,   197379,   263172,   328965,
+           394758,   460551,   526344,   592137,   657930,   723723,
+           789516,   855309,   921102,   986895,  1052688,  1118481,
+          ...,
+         16185078, 16250871, 16316664, 16382457, 16448250, 16514043,
+         16579836, 16645629, 16711422, 16777215], dtype=int32),
+  '4': {'0': {'Pos': 0, 'Color': 0}, '1': {'Pos': 255, 'Color': 16777215}},
+  'Active': 1,
+  'Min': 0.0,
+  'Max': 255.0,
+  'Contrast': 1.0,
+  'Brightness': -0.0,
+  'Scheme': 1}}
+
+# Read a map file.
+>>>> demo = JEOL_image('data/demo.map')
+
+# Print calibration data (pixel size in nm).
+# This is only available for '*.map' files.
+>>>> demo.pixel_size
+0.99
 
 
 # To read (and process) large data sets you might use the following code fragment.
