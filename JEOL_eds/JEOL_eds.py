@@ -259,6 +259,8 @@ class JEOL_pts:
         '128.pts'               # File name loaded from.
         >>>> dc.file_date
         '2020-10-23 11:18:40'   # File creation date
+        >>>> dc.nm_per_pixel
+        1.93359375              # Mag calibration [nm / pixel]
 
         # More info is stored in attribute `JEOL_pts.parameters`.
         >>>> dc.parameters      # Full dict
@@ -363,6 +365,7 @@ class JEOL_pts:
                 self.dcube = None
                 self.drift_images = None
                 self.frame_list = None
+                self.nm_per_pixel = None
                 self.__set_ref_spectrum()
                 return
 
@@ -372,6 +375,11 @@ class JEOL_pts:
                                               split_frames=split_frames,
                                               E_cutoff=E_cutoff,
                                               verbose=verbose)
+
+            # Nominal pixel size [nm]
+            ScanSize = self.parameters['PTTD Param']['Params']['PARAMPAGE0_SEM']['ScanSize']
+            Mag = self.parameters['PTTD Data']['AnalyzableMap MeasData']['MeasCond']['Mag']
+            self.nm_per_pixel = ScanSize / Mag * 1000000 / self.dcube.shape[2]
 
         elif os.path.splitext(fname)[1] == '.npz':
             self.parameters = None
@@ -1454,6 +1462,7 @@ class JEOL_pts:
 
             hf.attrs['file_name'] = self.file_name
             hf.attrs['file_date'] = self.file_date
+            hf.attrs['nm_per_pixel'] = self.nm_per_pixel
             if self.frame_list is not None:
                 hf.attrs['frame_list'] = self.frame_list
             # avoid printing of ellipsis in arrays / lists
@@ -1476,6 +1485,7 @@ class JEOL_pts:
 
             self.file_date = hf.attrs['file_date']
             self.file_name = hf.attrs['file_name']
+            self.nm_per_pixel = hf.attrs['nm_per_pixel']
 
             aeval = asteval.Interpreter()
             self.parameters = aeval(hf.attrs['parameters'])
@@ -1549,7 +1559,7 @@ class JEOL_image():
 
         # Print calibration data (pixel size in nm).
         # This is only available for '*.map' files.
-        >>>> demo.pixel_size
+        >>>> demo.nm_per_pixel
         0.99
     """
     def __init__(self, fname):
@@ -1581,11 +1591,7 @@ class JEOL_image():
             self.image = self.parameters["Image"]["Bits"]
             self.image.resize(tuple(sh))
 
-            # Nominal pixel size in nm
-            #
-            # In '.img' files this is only correct if its dimensions coincide with the '.map' files
-            # that are recorded simultaneously to the edx data. These are typically the first two
-            # '.map' files in the list of the project.
-            #
-            if os.path.splitext(fname)[1] == '.map':
-                self.pixel_size = self.parameters["Instrument"]["ScanSize"] / self.parameters["Instrument"]["Mag"] * 1000.0
+            # Nominal pixel size [nm]
+            ScanSize = self.parameters["Instrument"]["ScanSize"]
+            Mag = self.parameters["Instrument"]["Mag"]
+            self.nm_per_pixel = ScanSize / Mag * 1000000 / sh[0]
