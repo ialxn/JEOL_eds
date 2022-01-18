@@ -84,7 +84,8 @@ def __scalebar_length(label):
         length = None
     return length
 
-def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
+def create_overlay(images, colors,
+                   legends=None, BG_image=None, outfile=None, scale_bar=None):
     """Plots overlay of `images` with `colors`.
 
         Parameters
@@ -105,6 +106,22 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
                     Plot is saved as `outfile`. Graphics file type is inferred
                     from extension. Available formats might depend on your
                     installation.
+        scale_bar:  Dict
+                    Optional dict that defines scale bar to be inserted
+                    into map. Allows for the following keys
+                    label: Str
+                           Label (NNN U) for scale bar (required) with
+                           NNN number and U units ('nm', 'μm', or 'Å').
+                    f_calib: Float
+                             Calibration (pixel size in nm) (required).
+                    position: Str
+                              Position of scale bar ['lower left'].
+                              Valid positions are ('upper left',
+                              'upper center', 'upper right', 'center left',
+                              'center', 'center right', 'lower left',
+                              'lower center, 'lower right').
+                    color: Str
+                           Color of scale bar and label ['black'].
 
         Notes
         -----
@@ -149,9 +166,13 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
                             legends=['Fe', 'Co'],
                             BG_image=dc.drift_images[0])
 
-        # Switch plotting order to obtain a slightly better result.
+        # Switch plotting order to obtain a slightly better result. Add
+        # scale bar at default position (lower right) and default color (black).
+        >>>> scale_bar={'label': '100 nm',
+                        'f_calib': dc.nm_per_pixel
         >>>> create_overlay([Co, Fe],
-                            ['Violet', 'Maroon'])
+                            ['Violet', 'Maroon'],
+                            scale_bar=scale_bar)
 
     """
     assert isinstance(images, (list, tuple))
@@ -168,9 +189,24 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
         supported = plt.figure().canvas.get_supported_filetypes()
         assert ext in supported
 
+    # Obtain size (w x h) of image in data coordinates. Used only if
+    # scale bar is drawn later
+    if (
+        isinstance(scale_bar, dict)
+        and 'f_calib' in scale_bar
+        and 'label' in scale_bar
+    ):
+        width = scale_bar['f_calib'] * images[0].shape[0]
+        height = scale_bar['f_calib'] * images[0].shape[1]
+    else:
+        width = images[0].shape[0]
+        height = images[0].shape[1]
+    extent = [0, width, 0, height]
+
     # Show background image
     if BG_image is not None:
-        plt.imshow(BG_image, cmap='gist_gray')
+        plt.imshow(BG_image, cmap='gist_gray', extent=extent)
+
     # Create overlays. Use fake image `base` with fully saturated color and
     # use real image as alpha channel (transparency)
     base = np.ones_like(images[0])
@@ -179,7 +215,7 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
         cmap = LinearSegmentedColormap.from_list("cmap", (color, color))
         alpha = image / image.max()
         plt.imshow(base, cmap=cmap, alpha=alpha,
-                   vmin=0, vmax=1)
+                   vmin=0, vmax=1, extent=extent)
 
     # Fine tune plot
     ax = plt.gca()
@@ -188,15 +224,32 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
 
     # Add legends. Position and font size depends on image size
     if legends:
-        isize = images[0].shape[0]
         fontsize = 12
-        delta = isize // fontsize
-        x = isize + delta
+        delta = height // fontsize  # Found by trial-and-error
         for i in range(len(images)):
-            y = i * delta
-            ax.text(x, y, legends[i],
+            ax.text(width, height - i*delta, legends[i],
                     size=fontsize,
                     color=colors[i], backgroundcolor='white')
+
+    if (
+        isinstance(scale_bar, dict)
+        and 'f_calib' in scale_bar
+        and 'label' in scale_bar
+    ):
+        pos = scale_bar['position'] if 'position' in scale_bar else 'lower right'
+        color = scale_bar['color'] if 'color' in scale_bar else 'black'
+        fontprops = fm.FontProperties(size=16)
+        length = __scalebar_length(scale_bar['label'])
+        scalebar = AnchoredSizeBar(ax.transData,
+                                    length,
+                                    scale_bar['label'],
+                                    pos,
+                                    pad=0.5,
+                                    color=color,
+                                    frameon=False,
+                                    size_vertical=height*0.01,
+                                    fontproperties=fontprops)
+        ax.add_artist(scalebar)
 
     if outfile:
         plt.savefig(outfile)
