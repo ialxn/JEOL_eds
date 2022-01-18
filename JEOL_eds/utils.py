@@ -12,6 +12,8 @@ from skimage.measure import profile_line
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap, to_rgba
 from matplotlib.ticker import AutoMinorLocator
+from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+import matplotlib.font_manager as fm
 
 
 def filter_isolated_pixels(array, struct=np.ones((3,3))):
@@ -241,7 +243,8 @@ def plot_map(m, color,
              outfile=None,
              background="white",
              remove_outliers=False,
-             smooth=None):
+             smooth=None,
+             scale_bar=None):
     """Nicely plots map
 
         Parameters:
@@ -279,6 +282,22 @@ def plot_map(m, color,
                             If supplied, map will be smoothed by 2D gaussian
                             with sigma=``smooth``. FWHH of gaussian corresponds
                             to 2.355*``sigma``.
+                scale_bar:  Dict
+                            Optional dict that defines scale bar to be inserted
+                            into map. Allows for the following keys
+                            label: Str
+                                   Label (NNN U) for scale bar (required) with
+                                   NNN number and U units ('nm', 'μm', or 'Å').
+                            f_calib: Float
+                                     Calibration (pixel size in nm) (required).
+                            position: Str
+                                      Position of scale bar ['lower left'].
+                                      Valid positions are ('upper left',
+                                      'upper center', 'upper right', 'center left',
+                                      'center', 'center right', 'lower left',
+                                      'lower center, 'lower right').
+                            color: Str
+                                   Color of scale bar and label ['black'].
 
         Examples:
         ---------
@@ -321,6 +340,16 @@ def plot_map(m, color,
                       background="black",
                       gamma=0.9,
                       smooth=0.75)
+
+        # Insert scale bar
+        >>>> scale_bar={'label': '10 nm',
+                        'f_calib': dc.nm_per_pixel,
+                        'position': 'lower left',
+                        'color': 'white'}
+        >>>> plot_map(m,
+                      'inferno',
+                      scale_bar=scale_bar,
+                      label="a)")
     """
     if outfile:
         ext = os.path.splitext(outfile)[1][1:].lower()
@@ -341,24 +370,56 @@ def plot_map(m, color,
     ):
         color = tuple(val / 256 for val in color)
 
+    # Obtain size (w x h) of image in data coordinates if scale bar is
+    # to be drawn. Otherwise size is in (image) pixels.
+    if (
+        isinstance(scale_bar, dict)
+        and 'f_calib' in scale_bar
+        and 'label' in scale_bar
+    ):
+        width = scale_bar['f_calib'] * m.shape[0]
+        height = scale_bar['f_calib'] * m.shape[1]
+    else:
+        width = m.shape[0]
+        height = m.shape[1]
+
     cmap =  __make_cmap(color, gamma=gamma, background=background)
-    plt.imshow(m, cmap=cmap)
+    plt.imshow(m, cmap=cmap, extent=[0, width, 0, height])
     plt.colorbar(label="counts  [-]")
     ax = plt.gca()
     ax.set_xticks([])
     ax.set_yticks([])
+
     if label:
         # Ensure that legend is visible black in white box on black BG or vice versa
         label_BGcolor = "black" if background.lower() == "white" else "white"
         label_color = "black" if label_BGcolor == "white" else "white"
-        # Determine position to print label. 32 and 8 found by trial-and-error.
-        x = m.shape[0] // 32
-        y = m.shape[0] // 8
-        ax.text(x, y,
+        # Position to print label in data coordinates found by trial-and-error.
+        ax.text(width*0.05, height*0.85,
                 label,
                 size=24,
                 color=label_color,
                 backgroundcolor=label_BGcolor)
+
+    if (
+        isinstance(scale_bar, dict)
+        and 'f_calib' in scale_bar
+        and 'label' in scale_bar
+    ):
+        pos = scale_bar['position'] if 'position' in scale_bar else 'lower right'
+        color = scale_bar['color'] if 'color' in scale_bar else 'black'
+        fontprops = fm.FontProperties(size=16)
+        length = __scalebar_length(scale_bar['label'])
+        scalebar = AnchoredSizeBar(ax.transData,
+                                   length,
+                                   scale_bar['label'],
+                                   pos,
+                                   pad=0.5,
+                                   color=color,
+                                   frameon=False,
+                                   size_vertical=height*0.01,
+                                   fontproperties=fontprops)
+        ax.add_artist(scalebar)
 
     if outfile:
         plt.savefig(outfile)
