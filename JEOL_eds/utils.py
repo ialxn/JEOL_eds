@@ -57,6 +57,31 @@ def filter_isolated_pixels(array, struct=np.ones((3,3))):
     filtered_array[area_mask[id_regions]] = 0
     return filtered_array
 
+def __scalebar_length(label):
+    """Returns length [nm] extracted from label string
+
+        Parameters:
+        -----------
+                    label:  Str
+                            Label string (for scale bar) as 'NNN U' with or
+                            without space between number (NNN) and unit (U).
+                            Allowed units are 'nm', 'μm', or 'Å'.
+
+        Returns:
+        --------
+                   length:  Float
+                            Length (of scalebar) [nm].
+    """
+    if label.endswith('nm'):
+        length = float(label[:-2])
+    elif label.endswith('μm'):
+        length = float(label[:-2]) * 1000.0     # convert no nm
+    elif label.endswith('Å'):
+        length = float(label[:-1]) / 10.0       # convert to nm
+    else:
+        length = None
+    return length
+
 def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
     """Plots overlay of `images` with `colors`.
 
