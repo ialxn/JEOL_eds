@@ -1,6 +1,6 @@
 # JEOL_eds
 
-A python module to read binary data files ('.pts') or image file ('.img') by JEOL's Analysis Station software. The function to parse the header of the binary file was copied from HyperSpy (hyperspy/io_plugins/jeol.py scheduled for inclusion into HyperSpy 1.7).
+A python module to read binary data files ('.pts') or image file ('.img', '.map') by JEOL's Analysis Station software. The function to parse the header of the binary file was copied from HyperSpy (hyperspy/io_plugins/jeol.py scheduled for inclusion into HyperSpy 1.7).
 
 This module does not aim to replace HyperSpy which is much more feature-rich. Instead it provides an easy interface to extract spectra or elemental maps from the binary file much like the *Play Back* feature in **Analysis Station**.
 
