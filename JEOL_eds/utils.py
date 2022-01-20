@@ -84,6 +84,36 @@ def __scalebar_length(label):
         length = None
     return length
 
+def __add_scalebar(ax, scale_bar, extent):
+    """Adds scale bar to plot at axes ``ax``.
+
+        Parameters:
+        -----------
+            ax:         Axes instance
+            scale_bar:  Dict
+            extent:     Tuple [0, width, 0, height]
+
+    """
+    if (
+        isinstance(scale_bar, dict)
+        and 'f_calib' in scale_bar
+        and 'label' in scale_bar
+    ):
+        pos = scale_bar['position'] if 'position' in scale_bar else 'lower right'
+        color = scale_bar['color'] if 'color' in scale_bar else 'black'
+        fontprops = fm.FontProperties(size=16)
+        length = __scalebar_length(scale_bar['label'])
+        scalebar = AnchoredSizeBar(ax.transData,
+                                   length,
+                                   scale_bar['label'],
+                                   pos,
+                                   pad=0.5,
+                                   color=color,
+                                   frameon=False,
+                                   size_vertical=extent[3]*0.01,
+                                   fontproperties=fontprops)
+        ax.add_artist(scalebar)
+
 def __get_extent(m, scale_bar):
     """Returns extent in data coordinates or image pixels (scale bar not defined)
 
@@ -246,25 +276,7 @@ def create_overlay(images, colors,
                     size=fontsize,
                     color=colors[i], backgroundcolor='white')
 
-    if (
-        isinstance(scale_bar, dict)
-        and 'f_calib' in scale_bar
-        and 'label' in scale_bar
-    ):
-        pos = scale_bar['position'] if 'position' in scale_bar else 'lower right'
-        color = scale_bar['color'] if 'color' in scale_bar else 'black'
-        fontprops = fm.FontProperties(size=16)
-        length = __scalebar_length(scale_bar['label'])
-        scalebar = AnchoredSizeBar(ax.transData,
-                                    length,
-                                    scale_bar['label'],
-                                    pos,
-                                    pad=0.5,
-                                    color=color,
-                                    frameon=False,
-                                    size_vertical=extent[1]*0.01,
-                                    fontproperties=fontprops)
-        ax.add_artist(scalebar)
+    __add_scalebar(ax, scale_bar, extent)
 
     if outfile:
         plt.savefig(outfile)
@@ -459,25 +471,7 @@ def plot_map(m, color,
                 color=label_color,
                 backgroundcolor=label_BGcolor)
 
-    if (
-        isinstance(scale_bar, dict)
-        and 'f_calib' in scale_bar
-        and 'label' in scale_bar
-    ):
-        pos = scale_bar['position'] if 'position' in scale_bar else 'lower right'
-        color = scale_bar['color'] if 'color' in scale_bar else 'black'
-        fontprops = fm.FontProperties(size=16)
-        length = __scalebar_length(scale_bar['label'])
-        scalebar = AnchoredSizeBar(ax.transData,
-                                   length,
-                                   scale_bar['label'],
-                                   pos,
-                                   pad=0.5,
-                                   color=color,
-                                   frameon=False,
-                                   size_vertical=extent[3]*0.01,
-                                   fontproperties=fontprops)
-        ax.add_artist(scalebar)
+    __add_scalebar(ax, scale_bar, extent)
 
     if outfile:
         plt.savefig(outfile)
