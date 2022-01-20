@@ -84,6 +84,32 @@ def __scalebar_length(label):
         length = None
     return length
 
+def __get_extent(m, scale_bar):
+    """Returns extent in data coordinates or image pixels (scale bar not defined)
+
+        Parameters:
+        -----------
+                    m:  Ndarray
+                        Image or map.
+            scale_bar:  Dict
+                        Scale bar information (calibration factor [nm/pixel]).
+
+        Returns:
+        --------
+               extent:  Tuple [0, width, 0, height]
+    """
+    if (
+        isinstance(scale_bar, dict)
+        and 'f_calib' in scale_bar
+        and 'label' in scale_bar
+    ):
+        width = scale_bar['f_calib'] * m.shape[0]
+        height = scale_bar['f_calib'] * m.shape[1]
+    else:
+        width = m.shape[0]
+        height = m.shape[1]
+    return [0, width, 0, height]
+
 def create_overlay(images, colors,
                    legends=None, BG_image=None, outfile=None, scale_bar=None):
     """Plots overlay of `images` with `colors`.
@@ -189,19 +215,8 @@ def create_overlay(images, colors,
         supported = plt.figure().canvas.get_supported_filetypes()
         assert ext in supported
 
-    # Obtain size (w x h) of image in data coordinates. Used only if
-    # scale bar is drawn later
-    if (
-        isinstance(scale_bar, dict)
-        and 'f_calib' in scale_bar
-        and 'label' in scale_bar
-    ):
-        width = scale_bar['f_calib'] * images[0].shape[0]
-        height = scale_bar['f_calib'] * images[0].shape[1]
-    else:
-        width = images[0].shape[0]
-        height = images[0].shape[1]
-    extent = [0, width, 0, height]
+    # Obtain size (w x h) of image
+    extent = __get_extent(images[0], scale_bar)
 
     # Show background image
     if BG_image is not None:
@@ -225,9 +240,9 @@ def create_overlay(images, colors,
     # Add legends. Position and font size depends on image size
     if legends:
         fontsize = 12
-        delta = height // fontsize  # Found by trial-and-error
+        delta = extent[3] // fontsize  # Found by trial-and-error
         for i in range(len(images)):
-            ax.text(width, height - i*delta, legends[i],
+            ax.text(extent[1], extent[3] - i*delta, legends[i],
                     size=fontsize,
                     color=colors[i], backgroundcolor='white')
 
@@ -247,7 +262,7 @@ def create_overlay(images, colors,
                                     pad=0.5,
                                     color=color,
                                     frameon=False,
-                                    size_vertical=height*0.01,
+                                    size_vertical=extent[1]*0.01,
                                     fontproperties=fontprops)
         ax.add_artist(scalebar)
 
@@ -423,21 +438,11 @@ def plot_map(m, color,
     ):
         color = tuple(val / 256 for val in color)
 
-    # Obtain size (w x h) of image in data coordinates if scale bar is
-    # to be drawn. Otherwise size is in (image) pixels.
-    if (
-        isinstance(scale_bar, dict)
-        and 'f_calib' in scale_bar
-        and 'label' in scale_bar
-    ):
-        width = scale_bar['f_calib'] * m.shape[0]
-        height = scale_bar['f_calib'] * m.shape[1]
-    else:
-        width = m.shape[0]
-        height = m.shape[1]
+    # Obtain size (w x h) of image
+    extent = __get_extent(m, scale_bar)
 
     cmap =  __make_cmap(color, gamma=gamma, background=background)
-    plt.imshow(m, cmap=cmap, extent=[0, width, 0, height])
+    plt.imshow(m, cmap=cmap, extent=extent)
     plt.colorbar(label="counts  [-]")
     ax = plt.gca()
     ax.set_xticks([])
@@ -448,7 +453,7 @@ def plot_map(m, color,
         label_BGcolor = "black" if background.lower() == "white" else "white"
         label_color = "black" if label_BGcolor == "white" else "white"
         # Position to print label in data coordinates found by trial-and-error.
-        ax.text(width*0.05, height*0.85,
+        ax.text(extent[0]*0.05, extent[3]*0.85,
                 label,
                 size=24,
                 color=label_color,
@@ -470,7 +475,7 @@ def plot_map(m, color,
                                    pad=0.5,
                                    color=color,
                                    frameon=False,
-                                   size_vertical=height*0.01,
+                                   size_vertical=extent[3]*0.01,
                                    fontproperties=fontprops)
         ax.add_artist(scalebar)
 
