@@ -58,6 +58,14 @@ to upgrade an existing installation.
 >>>> plt.imshow(demo.image)
 <matplotlib.image.AxesImage at 0x7fa08425d350>
 
+# Use ``plot_map()`` for more features.
+# 'data/demo.img' is a BF image. Thus use inverted color map.
+>>>> scale_bar = {'label': '200nm',
+                  'f_calib': demo.nm_per_pixel,
+                  'color': 'white'}
+>>>> plot_map(demo.image, 'inferno_r', scale_bar=scale_bar)
+
+
 # Report meta data of image file
 >>>> demo.parameters
 {'Instrument': {'Type': 0,

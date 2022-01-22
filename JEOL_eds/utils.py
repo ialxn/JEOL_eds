@@ -13,6 +13,8 @@ from skimage.measure import profile_line
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap, to_rgba
 from matplotlib.ticker import AutoMinorLocator
+from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+import matplotlib.font_manager as fm
 
 
 def filter_isolated_pixels(array, struct=np.ones((3,3))):
@@ -58,7 +60,89 @@ def filter_isolated_pixels(array, struct=np.ones((3,3))):
     filtered_array[area_mask[id_regions]] = 0
     return filtered_array
 
-def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
+def __scalebar_length(label):
+    """Returns length [nm] extracted from label string
+
+        Parameters:
+        -----------
+                    label:  Str
+                            Label string (for scale bar) as 'NNN U' with or
+                            without space between number (NNN) and unit (U).
+                            Allowed units are 'nm', 'μm', or 'Å'.
+
+        Returns:
+        --------
+                   length:  Float
+                            Length (of scalebar) [nm].
+    """
+    if label.endswith('nm'):
+        length = float(label[:-2])
+    elif label.endswith('μm'):
+        length = float(label[:-2]) * 1000.0     # convert no nm
+    elif label.endswith('Å'):
+        length = float(label[:-1]) / 10.0       # convert to nm
+    else:
+        length = None
+    return length
+
+def __add_scalebar(ax, scale_bar, extent):
+    """Adds scale bar to plot at axes ``ax``.
+
+        Parameters:
+        -----------
+            ax:         Axes instance
+            scale_bar:  Dict
+            extent:     Tuple [0, width, 0, height]
+
+    """
+    if (
+        isinstance(scale_bar, dict)
+        and 'f_calib' in scale_bar
+        and 'label' in scale_bar
+    ):
+        pos = scale_bar['position'] if 'position' in scale_bar else 'lower right'
+        color = scale_bar['color'] if 'color' in scale_bar else 'black'
+        fontprops = fm.FontProperties(size=16)
+        length = __scalebar_length(scale_bar['label'])
+        scalebar = AnchoredSizeBar(ax.transData,
+                                   length,
+                                   scale_bar['label'],
+                                   pos,
+                                   pad=0.5,
+                                   color=color,
+                                   frameon=False,
+                                   size_vertical=extent[3]*0.01,
+                                   fontproperties=fontprops)
+        ax.add_artist(scalebar)
+
+def __get_extent(m, scale_bar):
+    """Returns extent in data coordinates or image pixels (scale bar not defined)
+
+        Parameters:
+        -----------
+                    m:  Ndarray
+                        Image or map.
+            scale_bar:  Dict
+                        Scale bar information (calibration factor [nm/pixel]).
+
+        Returns:
+        --------
+               extent:  Tuple [0, width, 0, height]
+    """
+    if (
+        isinstance(scale_bar, dict)
+        and 'f_calib' in scale_bar
+        and 'label' in scale_bar
+    ):
+        width = scale_bar['f_calib'] * m.shape[0]
+        height = scale_bar['f_calib'] * m.shape[1]
+    else:
+        width = m.shape[0]
+        height = m.shape[1]
+    return [0, width, 0, height]
+
+def create_overlay(images, colors,
+                   legends=None, BG_image=None, outfile=None, scale_bar=None):
     """Plots overlay of `images` with `colors`.
 
         Parameters
@@ -79,6 +163,22 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
                     Plot is saved as `outfile`. Graphics file type is inferred
                     from extension. Available formats might depend on your
                     installation.
+        scale_bar:  Dict
+                    Optional dict that defines scale bar to be inserted
+                    into map. Allows for the following keys
+                    label: Str
+                           Label (NNN U) for scale bar (required) with
+                           NNN number and U units ('nm', 'μm', or 'Å').
+                    f_calib: Float
+                             Calibration (pixel size in nm) (required).
+                    position: Str
+                              Position of scale bar ['lower left'].
+                              Valid positions are ('upper left',
+                              'upper center', 'upper right', 'center left',
+                              'center', 'center right', 'lower left',
+                              'lower center, 'lower right').
+                    color: Str
+                           Color of scale bar and label ['black'].
 
         Notes
         -----
@@ -123,9 +223,13 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
                             legends=['Fe', 'Co'],
                             BG_image=dc.drift_images[0])
 
-        # Switch plotting order to obtain a slightly better result.
+        # Switch plotting order to obtain a slightly better result. Add
+        # scale bar at default position (lower right) and default color (black).
+        >>>> scale_bar={'label': '100 nm',
+                        'f_calib': dc.nm_per_pixel
         >>>> create_overlay([Co, Fe],
-                            ['Violet', 'Maroon'])
+                            ['Violet', 'Maroon'],
+                            scale_bar=scale_bar)
 
     """
     assert isinstance(images, (list, tuple))
@@ -142,9 +246,13 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
         supported = plt.figure().canvas.get_supported_filetypes()
         assert ext in supported
 
+    # Obtain size (w x h) of image
+    extent = __get_extent(images[0], scale_bar)
+
     # Show background image
     if BG_image is not None:
-        plt.imshow(BG_image, cmap='gist_gray')
+        plt.imshow(BG_image, cmap='gist_gray', extent=extent)
+
     # Create overlays. Use fake image `base` with fully saturated color and
     # use real image as alpha channel (transparency)
     base = np.ones_like(images[0])
@@ -153,7 +261,7 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
         cmap = LinearSegmentedColormap.from_list("cmap", (color, color))
         alpha = image / image.max()
         plt.imshow(base, cmap=cmap, alpha=alpha,
-                   vmin=0, vmax=1)
+                   vmin=0, vmax=1, extent=extent)
 
     # Fine tune plot
     ax = plt.gca()
@@ -162,15 +270,14 @@ def create_overlay(images, colors, legends=None, BG_image=None, outfile=None):
 
     # Add legends. Position and font size depends on image size
     if legends:
-        isize = images[0].shape[0]
         fontsize = 12
-        delta = isize // fontsize
-        x = isize + delta
+        delta = extent[3] // fontsize  # Found by trial-and-error
         for i in range(len(images)):
-            y = i * delta
-            ax.text(x, y, legends[i],
+            ax.text(extent[1], extent[3] - i*delta, legends[i],
                     size=fontsize,
                     color=colors[i], backgroundcolor='white')
+
+    __add_scalebar(ax, scale_bar, extent)
 
     if outfile:
         plt.savefig(outfile)
@@ -217,7 +324,8 @@ def plot_map(m, color,
              outfile=None,
              background="white",
              remove_outliers=False,
-             smooth=None):
+             smooth=None,
+             scale_bar=None):
     """Nicely plots map
 
         Parameters:
@@ -255,6 +363,22 @@ def plot_map(m, color,
                             If supplied, map will be smoothed by 2D gaussian
                             with sigma=``smooth``. FWHH of gaussian corresponds
                             to 2.355*``sigma``.
+                scale_bar:  Dict
+                            Optional dict that defines scale bar to be inserted
+                            into map. Allows for the following keys
+                            label: Str
+                                   Label (NNN U) for scale bar (required) with
+                                   NNN number and U units ('nm', 'μm', or 'Å').
+                            f_calib: Float
+                                     Calibration (pixel size in nm) (required).
+                            position: Str
+                                      Position of scale bar ['lower left'].
+                                      Valid positions are ('upper left',
+                                      'upper center', 'upper right', 'center left',
+                                      'center', 'center right', 'lower left',
+                                      'lower center, 'lower right').
+                            color: Str
+                                   Color of scale bar and label ['black'].
 
         Examples:
         ---------
@@ -297,6 +421,16 @@ def plot_map(m, color,
                       background="black",
                       gamma=0.9,
                       smooth=0.75)
+
+        # Insert scale bar
+        >>>> scale_bar={'label': '10 nm',
+                        'f_calib': dc.nm_per_pixel,
+                        'position': 'lower left',
+                        'color': 'white'}
+        >>>> plot_map(m,
+                      'inferno',
+                      scale_bar=scale_bar,
+                      label="a)")
     """
     if outfile:
         ext = os.path.splitext(outfile)[1][1:].lower()
@@ -317,24 +451,28 @@ def plot_map(m, color,
     ):
         color = tuple(val / 256 for val in color)
 
+    # Obtain size (w x h) of image
+    extent = __get_extent(m, scale_bar)
+
     cmap =  __make_cmap(color, gamma=gamma, background=background)
-    plt.imshow(m, cmap=cmap)
+    plt.imshow(m, cmap=cmap, extent=extent)
     plt.colorbar(label="counts  [-]")
     ax = plt.gca()
     ax.set_xticks([])
     ax.set_yticks([])
+
     if label:
         # Ensure that legend is visible black in white box on black BG or vice versa
         label_BGcolor = "black" if background.lower() == "white" else "white"
         label_color = "black" if label_BGcolor == "white" else "white"
-        # Determine position to print label. 32 and 8 found by trial-and-error.
-        x = m.shape[0] // 32
-        y = m.shape[0] // 8
-        ax.text(x, y,
+        # Position to print label in data coordinates found by trial-and-error.
+        ax.text(extent[0]*0.05, extent[3]*0.85,
                 label,
                 size=24,
                 color=label_color,
                 backgroundcolor=label_BGcolor)
+
+    __add_scalebar(ax, scale_bar, extent)
 
     if outfile:
         plt.savefig(outfile)

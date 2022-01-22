@@ -1506,15 +1506,15 @@ class JEOL_image():
         --------
         >>>> from JEOL_eds import JEOL_image
 
-        >>>> demo = JEOL_image('data/demo.img')
-        >>>> demo.file_name
+        >>>> demo_im = JEOL_image('data/demo.img')
+        >>>> demo_im.file_name
         'data/demo.img'
 
-        >>>> demo.file_date
+        >>>> demo_im.file_date
         '2021-08-13 16:09:06'
 
         # Meta data stored in file.
-        >>>> demo.parameters
+        >>>> demo_im.parameters
         {'Instrument': {'Type': 0,
           'ScanSize': 198.0,
           'Name': 'JEM-ARM200F(HRP)',
@@ -1553,16 +1553,27 @@ class JEOL_image():
 
         # Plot image.
         >>>> import matplotlib.pyplot as plt
-        >>>> plt.imshow(demo.image)
+        >>>> plt.imshow(demo_im.image)
         <matplotlib.image.AxesImage at 0x7fa08425d350>
 
         # Read a map file.
-        >>>> demo = JEOL_image('data/demo.map')
+        >>>> demo_map = JEOL_image('data/demo.map')
 
         # Print calibration data (pixel size in nm).
         # This is only available for '*.map' files.
-        >>>> demo.nm_per_pixel
+        >>>> demo_map.nm_per_pixel
         0.99
+
+        # Use ``plot_map()`` for more features
+        # ``demo_im``is a BF image. Thus use inverted color map.
+        >>>> scale_bar = {'label': '200nm',
+                          'f_calib': demo_im.nm_per_pixel,
+                          'color': 'white'}
+        >>>> plot_map(demo_im.image, 'inferno_r', scale_bar=scale_bar)
+
+        # Nicely plot map file.
+        >>>> plot_map(demo_map.image, 'inferno', scale_bar=scale_bar)
+
     """
     def __init__(self, fname):
         """Initializes object (reads image data).
