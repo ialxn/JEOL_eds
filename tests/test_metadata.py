@@ -15,6 +15,7 @@ class Metadata_pts(unittest.TestCase):
     def setUpClass(cls):
         print('Loading data ... ', end='', flush=True)
         cls.dc = JEOL_pts('data/128.pts', only_metadata=True)
+        print('done')
 
     def test_read(self):
         self.assertEqual('data/128.pts', self.dc.file_name)
