@@ -20,6 +20,7 @@ class test_img(unittest.TestCase):
         self.assertEqual('data/demo.img', self.demo.file_name)
         self.assertEqual('2021-08-13 16:09:06', self.demo.file_date)
         self.assertEqual('JED-2200:LibJxImageForm', self.demo.fileformat)
+        self.assertEqual(1.93359375, self.demo.nm_per_pixel)
 
     def test_imagedata(self):
         self.assertEqual((512, 512), self.demo.image.shape)
@@ -37,7 +38,7 @@ class test_map(unittest.TestCase):
         self.assertEqual('data/demo.map', self.demo.file_name)
         self.assertEqual('2021-08-13 16:09:36', self.demo.file_date)
         self.assertEqual('JED-2200:LibJxImageForm', self.demo.fileformat)
-        self.assertEqual(0.99, self.demo.pixel_size)
+        self.assertEqual(3.8671875, self.demo.nm_per_pixel)
 
     def test_imagedata(self):
         self.assertEqual((256, 256), self.demo.image.shape)

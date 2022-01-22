@@ -432,8 +432,10 @@ class JEOL_pts:
             file_magic = np.fromfile(fd, '<I', 1)[0]
             assert file_magic == 304
             fd.read(16)
-            head_pos, head_len, data_pos, data_len = np.fromfile(fd, '<I', 4)
-            fd.read(260)
+            head_pos = np.fromfile(fd, '<I', 1)[0]
+            fd.read(4)  # Skip header length
+            data_pos = np.fromfile(fd, '<I', 1)[0]
+            fd.read(264)
             self.file_date = (str(datetime(1899, 12, 30) +
                                   timedelta(days=np.fromfile(fd, 'd', 1)[0])))
             fd.seek(head_pos + 12)
@@ -1581,7 +1583,8 @@ class JEOL_image():
             assert file_magic == 52
             self.file_name = fname
             self.fileformat = decode(fd.read(32).rstrip(b"\x00"))
-            head_pos, head_len, data_pos = np.fromfile(fd, "<I", 3)
+            fd.read(8)  # Skip header position and length
+            data_pos = np.fromfile(fd, "<I", 1)[0]
             fd.seek(data_pos + 12)
             self.parameters = parsejeol(fd)
             self.file_date = str(datetime(1899, 12, 30) + timedelta(days=self.parameters["Image"]["Created"]))
