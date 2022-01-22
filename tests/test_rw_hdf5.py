@@ -23,6 +23,7 @@ class testIO_hdf5(unittest.TestCase):
 
         self.assertEqual(dc.file_name, saved.file_name)
         self.assertEqual(dc.file_date, saved.file_date)
+        self.assertEqual(dc.nm_per_pixel, saved.nm_per_pixel)
 
         self.assertEqual(dc.dcube.shape, saved.dcube.shape)
         self.assertEqual(dc.dcube.sum(), saved.dcube.sum())

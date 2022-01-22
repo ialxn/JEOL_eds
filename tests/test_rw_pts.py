@@ -19,6 +19,7 @@ class testIO_pts(unittest.TestCase):
 
         self.assertEqual('data/128.pts', dc.file_name)
         self.assertEqual('2020-10-23 11:18:40', dc.file_date)
+        self.assertEqual(1.93359375, dc.nm_per_pixel)
         self.assertIsNone(dc.frame_list)
 
         self.assertIsInstance(dc.parameters, dict)
@@ -33,6 +34,7 @@ class testIO_pts(unittest.TestCase):
 
         self.assertEqual('data/128.pts', dc.file_name)
         self.assertEqual('2020-10-23 11:18:40', dc.file_date)
+        self.assertEqual(1.93359375, dc.nm_per_pixel)
         self.assertIsNone(dc.frame_list)
 
         self.assertIsInstance(dc.parameters, dict)
@@ -48,6 +50,8 @@ class testIO_pts(unittest.TestCase):
 
         self.assertEqual('data/128.pts', dc.file_name)
         self.assertEqual('2020-10-23 11:18:40', dc.file_date)
+        self.assertEqual(1.93359375, dc.nm_per_pixel)
+
         self.assertEqual(dc.frame_list, flist)
 
         self.assertIsInstance(dc.parameters, dict)
@@ -62,6 +66,7 @@ class testIO_pts(unittest.TestCase):
 
         self.assertEqual('data/128.pts', dc.file_name)
         self.assertEqual('2020-10-23 11:18:40', dc.file_date)
+        self.assertEqual(1.93359375, dc.nm_per_pixel)
         self.assertIsNone(dc.frame_list)
 
         self.assertIsInstance(dc.parameters, dict)

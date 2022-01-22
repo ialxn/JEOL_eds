@@ -20,6 +20,7 @@ class Metadata_pts(unittest.TestCase):
     def test_read(self):
         self.assertEqual('data/128.pts', self.dc.file_name)
         self.assertEqual('2020-10-23 11:18:40', self.dc.file_date)
+        self.assertIsNone(self.dc.nm_per_pixel)
 
         self.assertIsInstance(self.dc.parameters, dict)
         self.assertIsInstance(self.dc.ref_spectrum, np.ndarray)
