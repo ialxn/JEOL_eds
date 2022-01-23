@@ -77,7 +77,7 @@ def __scalebar_length(label):
         Returns:
         --------
                    length:  Float
-                            Length (of scalebar) [nm].
+                            Length (of scale bar) [nm].
     """
     if label.endswith('nm') or label.endswith('px'):
         length = float(label[:-2])
@@ -170,7 +170,7 @@ def create_overlay(images, colors,
                     List of legends used to annotate individual maps in
                     overlay.
          BG_image:  Ndarray.
-                    Background image (grey scale). Must be of same shape as
+                    Background image (gray scale). Must be of same shape as
                     `images`.
           outfile:  Str.
                     Plot is saved as `outfile`. Graphics file type is inferred
@@ -302,13 +302,13 @@ def create_overlay(images, colors,
         plt.savefig(outfile)
 
 def __make_cmap(color, gamma=1.0, background="white"):
-    """Return colormap with uniform gradient from white to `color`.
+    """Return color map with uniform gradient from white to `color`.
 
     Parameters:
     -----------
          color: Str
                 Named color (or matplotlib.colormap).
-                If a colormap is supplied it is returned unmodified.
+                If a color map is supplied it is returned unmodified.
          gamma: Float
                 Default [1.0]: No transformation applied
                 ``gamma`` > 1.0: Reaches high saturation already at low
@@ -316,12 +316,12 @@ def __make_cmap(color, gamma=1.0, background="white"):
                 ``gamma`` < 1.0: Only reaches high saturation at high
                 input values.
     background: Str ["white" | "black"].
-                Custom colomap is made spanning ``background`` to ``color``.
+                Custom color map is made spanning ``background`` to ``color``.
 
 
     Returns:
     --------
-        colormap
+        color map
     """
     if background.lower() not in ["white", "black"]:
         raise ValueError(f"Only 'white' and 'black' allowed as background, not '{background}'.")
@@ -330,7 +330,7 @@ def __make_cmap(color, gamma=1.0, background="white"):
     try:    # Is ``color`` a named color?
         rgba = to_rgba(color)
     except ValueError:
-        return color    # ``color`` is already a colormap
+        return color    # ``color`` is already a color map
     N = 256
     t_color = np.ones((N, 4))   # alpha channel [:,3] is set to 1
     for i in range(3):          # set rgb channels
@@ -352,17 +352,17 @@ def plot_map(m, color,
                         m:  Ndarray
                             Map to be plotted.
                     color:  Str or tuple
-                            Color (name or rgb-tuple) used to generate colormap.
-                            Colormap will span between ``background`` and
-                            ``color``. If the name of a matplotlib colormap is
+                            Color (name or rgb-tuple) used to generate color map.
+                            Color map will span between ``background`` and
+                            ``color``. If the name of a matplotlib color map is
                             supplied it will be used and ``background`` is
                             ignored.
                     label:  Str
                             Optional label to be plotted on map.
                     gamma:  Float
-                            Optional value to make a non-linear colormap. Only
-                            used for custom colormaps i.e. if ``color`` does
-                            not represent a matplotlib colormap.
+                            Optional value to make a non-linear color map. Only
+                            used for custom color maps i.e. if ``color`` does
+                            not represent a matplotlib color map.
                             ``gamma`` > 1.0: Reaches high saturation already
                             at low values of ``m``.
                             ``gamma`` < 1.0: Only reaches high saturation at high
@@ -373,14 +373,14 @@ def plot_map(m, color,
                             goes to screen.
                background:  Str
                             Optional background color ("white" or "black") only
-                            used for custom colormaps i.e. if ``color`` does
-                            not represent a matplotlib colormap.
+                            used for custom color maps i.e. if ``color`` does
+                            not represent a matplotlib color map.
           remove_outliers:  Bool
                             Isolated (no neighbors) pixels in map will be removed
                             if set to ``True``.
                    smooth:  Float
-                            If supplied, map will be smoothed by 2D gaussian
-                            with sigma=``smooth``. FWHH of gaussian corresponds
+                            If supplied, map will be smoothed by 2D Gaussian
+                            with sigma=``smooth``. FWHH of Gaussian corresponds
                             to 2.355*``sigma``.
                 scale_bar:  Dict
                             Optional dict that defines scale bar to be inserted
@@ -410,7 +410,7 @@ def plot_map(m, color,
         # Map of total X-ray intensity
         >>>> m = dc.map()
 
-        # Plot nice map using custom colormap black to purple. ``gamma=0.9``
+        # Plot nice map using custom color map black to purple. ``gamma=0.9``
         # enhances details. Little smoothing (FWHH=1.75 pixels) is applied.
         >>>> JU.plot_map(m,
                          "purple",
@@ -435,7 +435,7 @@ def plot_map(m, color,
                          gamma=0.9,
                          smooth=0.75)
 
-        # Use predefined colormap "Blues". ``background`` and ``gamma`` are
+        # Use predefined color map "Blues". ``background`` and ``gamma`` are
         # ignored.
         >>>> JU.plot_map(m,
                          "Blues",
@@ -527,9 +527,12 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
         >>>> import JEOL_eds.utils as JU
 
         # Load data.
+        # NOTE: This specific file saved with an old version of JEOL_eds and
+        #       will raise
+        #       KeyError: "Can't open attribute (can't locate attribute: 'nm_per_pixel')"
         >>>> dc = JEOL_pts('data/complex_oxide.h5')
 
-        # Plot full reference spectrum with logaritmic y-axis.
+        # Plot full reference spectrum with logarithmic y-axis.
         >>>> JU.plot_spectrum(dc.ref_spectrum, log_y=True)
 
         # Plot and save reference spectrum between 1.0 and 2.5 keV.
@@ -598,6 +601,9 @@ def export_spectrum(s, outfile, E_range=None):
         >>>> import JEOL_eds.utils as JU
 
         # Load data.
+        # NOTE: This specific file saved with an old version of JEOL_eds and
+        #       will raise
+        #       KeyError: "Can't open attribute (can't locate attribute: 'nm_per_pixel')"
         >>>> dc = JEOL_pts('data/complex_oxide.h5')
 
         # Export full reference spectrum as 'test_spectrum.dat'.
@@ -729,7 +735,7 @@ def __linewidth_from_data_units(linewidth, axis):
         Parameters
         ----------
         linewidth:  float
-                    Linewidth in pixels.
+                    Line width in pixels.
              axis:  matplotlib axis
                     The axis which is used to extract the relevant
                     transformation data (data limits and size must
@@ -738,7 +744,7 @@ def __linewidth_from_data_units(linewidth, axis):
         Returns
         -------
         linewidth:  float
-                    Linewidth in points.
+                    Line width in points.
 
         Notes
         -----
@@ -820,7 +826,6 @@ def get_profile(image, line, linewidth=1):
         --------
         >>>> from JEOL_eds import JEOL_pts
         >>>> import JEOL_eds.utils as JU
-        >>>> import matplotlib.pyplot as plt
 
         # Load data.
         >>>> dc = JEOL_pts('data/128.pts')
@@ -836,6 +841,7 @@ def get_profile(image, line, linewidth=1):
         # Calculate profile along the line (width equals 10 pixels) and
         # plot it.
         >>>> profile = JU.get_profile(C_map, line, linewidth=width)
+        >>>> import matplotlib.pyplot as plt
         >>>> plt.plot(profile)
     """
     profile = profile_line(image,
@@ -855,7 +861,7 @@ def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
               ROI:  Tuple
                     If tuple is (int, int) ROI defines point at the
                     intersection of the vertical and horizontal line.
-                    If tupe is (int, int, int) ROI defines circle.
+                    If tuple is (int, int, int) ROI defines circle.
                     If tuple is (int, int, int, int) ROI defines rectangle.
           outfile:  Str
                     Filename, where plot is saved (or None)
@@ -881,7 +887,7 @@ def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
                               M_ticks=(4,None))
 
         # Extract spectrum of the FeCoOx region using a circular mask. Again
-        # check the definition of the mask first. Override the default colormap.
+        # check the definition of the mask first. Override the default color map.
         >>>> JU.show_ROI(my_map, (270, 122, 10), cmap='inferno')
         >>>> JU.plot_spectrum(dc.spectrum(ROI=[270, 122, 10]),
                               E_range=(4,17),
