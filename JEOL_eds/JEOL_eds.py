@@ -690,7 +690,7 @@ class JEOL_pts:
             my = int(bins[int(my)] + 0.5)
             print('Shifts (filtered):') if filtered else print('Shifts (unfiltered):')
             print(f'   Range: {int(np.asarray(sh).min())} - {int(np.asarray(sh).max())}')
-            print(f'   Maximum {peak_val} at ({max}, {my})')
+            print(f'   Maximum {peak_val} at ({mx}, {my})')
         return h, extent
 
     def shifts(self, frames=None, filtered=False, verbose=False):
