@@ -699,7 +699,7 @@ def export_tseries(ts, outfile):
     data[:, 1] = ts
 
     header = '# Frame idx [-]        counts [-]'
-    fmt = '%d\t%d'
+    fmt = '%d\t%f'
     np.savetxt(outfile, data, header=header, fmt=fmt)
 
 def __linewidth_from_data_units(linewidth, axis):
