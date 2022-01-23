@@ -68,14 +68,15 @@ def __scalebar_length(label):
                     label:  Str
                             Label string (for scale bar) as 'NNN U' with or
                             without space between number (NNN) and unit (U).
-                            Allowed units are 'nm', 'μm', or 'Å'.
+                            Allowed units are 'nm', 'μm', 'Å' or 'px' for
+                            uncalibrated images.
 
         Returns:
         --------
                    length:  Float
                             Length (of scalebar) [nm].
     """
-    if label.endswith('nm'):
+    if label.endswith('nm') or label.endswith('px'):
         length = float(label[:-2])
     elif label.endswith('μm'):
         length = float(label[:-2]) * 1000.0     # convert no nm
@@ -104,9 +105,17 @@ def __add_scalebar(ax, scale_bar, extent):
         color = scale_bar['color'] if 'color' in scale_bar else 'black'
         fontprops = fm.FontProperties(size=16)
         length = __scalebar_length(scale_bar['label'])
+
+        if scale_bar['f_calib'] is None:    # Uncalibrated, use 'px'.
+            if scale_bar['label'].endswith('Å'):
+                label = scale_bar['label'][:-1] + 'px'
+            else:
+                label = scale_bar['label'][:-2] + 'px'
+        else:
+            label =scale_bar['label']
         scalebar = AnchoredSizeBar(ax.transData,
                                    length,
-                                   scale_bar['label'],
+                                   label,
                                    pos,
                                    pad=0.5,
                                    color=color,
@@ -133,6 +142,7 @@ def __get_extent(m, scale_bar):
         isinstance(scale_bar, dict)
         and 'f_calib' in scale_bar
         and 'label' in scale_bar
+        and scale_bar['f_calib']
     ):
         width = scale_bar['f_calib'] * m.shape[0]
         height = scale_bar['f_calib'] * m.shape[1]
