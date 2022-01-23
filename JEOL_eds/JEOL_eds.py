@@ -1397,6 +1397,7 @@ class JEOL_pts:
         self.file_date = None
         self.frame_list = None
         self.drift_images = None
+        self.nm_per_pixel = None
         npzfile = np.load(fname)
         self.dcube = npzfile['arr_0']
 
@@ -1487,7 +1488,10 @@ class JEOL_pts:
 
             self.file_date = hf.attrs['file_date']
             self.file_name = hf.attrs['file_name']
-            self.nm_per_pixel = hf.attrs['nm_per_pixel']
+            try:
+                self.nm_per_pixel = hf.attrs['nm_per_pixel']
+            except KeyError:
+                self.nm_per_pixel = None
 
             aeval = asteval.Interpreter()
             self.parameters = aeval(hf.attrs['parameters'])
