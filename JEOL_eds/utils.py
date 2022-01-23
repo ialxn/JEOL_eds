@@ -42,6 +42,9 @@ def filter_isolated_pixels(array, struct=np.ones((3,3))):
         Examples:
         ---------
 
+        >>>> from JEOL_eds import JEOL_pts
+        >>>> import JEOL_eds.utils as JU
+
         # Load data
         >>>> dc = JEOL_pts('data/64.pts', split_frames=True)
 
@@ -50,7 +53,7 @@ def filter_isolated_pixels(array, struct=np.ones((3,3))):
 
         # How many pixels with no direct neighbors (most probably noise)
         # are present?
-        >>>> (m - filter_isolated_pixels(m)).sum()
+        >>>> (m - JU.filter_isolated_pixels(m)).sum()
         93.0
     """
     filtered_array = np.copy(array)
@@ -200,10 +203,12 @@ def create_overlay(images, colors,
         Examples
         --------
         >>>> from JEOL_eds import JEOL_pts
-        >>>> from JEOL_eds.utils import create_overlay
+        >>>> import JEOL_eds.utils as JU
 
         # Load data. Data does not contain drift images and all frames were
         # added, thus only a single frame is present.
+        # NOTE: This specific file was saved with an old version of JEOL_eds
+        #       and contains no calibration data (scale).
         >>>> dc = JEOL_pts('data/complex_oxide.h5')
 
         # Extract some elemental maps. Where possible, dd contribution of
@@ -215,31 +220,35 @@ def create_overlay(images, colors,
         >>>> Co += dc.map(interval=(7.5, 7.8), energy=True)     # Kb
         >>>> O = dc.map(interval=(0.45, 0.6), energy=True)
 
-        # Create overlays. Visualize the SrTiO3 base oxide. No legends plotted.
-        # File is saved
-        >>>> create_overlay((Sr, Ti, O), ('Red', 'Green', 'Blue'),
-                            outfile='test.pdf')
+        # Create overlays. Visualize the SrTiO3 base oxide. No legends plotted
+        # and file is saved.
+        >>>> JU.create_overlay((Sr, Ti, O), ('Red', 'Green', 'Blue'),
+                               outfile='test.pdf')
 
         # Focus on the metals as they are plotted last, include legends.
-        >>>> create_overlay([O, Sr, Ti],
-                            ['Blue', 'Red', 'Green'],
-                            legends=['O', 'Sr', 'Ti'])
+        >>>> JU.create_overlay([O, Sr, Ti],
+                               ['Blue', 'Red', 'Green'],
+                               legends=['O', 'Sr', 'Ti'])
 
         # Visualize the CoFeOx distribution using first of the `drift_images`
-        # as background. Note that drift images were not stored in the data
-        # supplied and this will raise a TypeError.
-        >>>> create_overlay([Fe, Co],
-                            ['Maroon', 'Violet'],
-                            legends=['Fe', 'Co'],
-                            BG_image=dc.drift_images[0])
+        # as background.
+        # NOTE: Drift images were not stored in the data supplied and this will
+        #       raise
+        #       TypeError: 'NoneType' object is not subscriptable
+        >>>> JU.create_overlay([Fe, Co],
+                               ['Maroon', 'Violet'],
+                               legends=['Fe', 'Co'],
+                               BG_image=dc.drift_images[0])
 
         # Switch plotting order to obtain a slightly better result. Add
         # scale bar at default position (lower right) and default color (black).
-        >>>> scale_bar={'label': '100 nm',
-                        'f_calib': dc.nm_per_pixel
-        >>>> create_overlay([Co, Fe],
-                            ['Violet', 'Maroon'],
-                            scale_bar=scale_bar)
+        # NOTE: No calibration is present (`dc.nm_per_pixel is None`) so length
+        #       of scale bar is given as pixels.
+        >>>> scale_bar={'label': '100 px',
+                        'f_calib': dc.nm_per_pixel}
+        >>>> JU.create_overlay([Co, Fe],
+                               ['Violet', 'Maroon'],
+                               scale_bar=scale_bar)
 
     """
     assert isinstance(images, (list, tuple))
@@ -393,7 +402,7 @@ def plot_map(m, color,
         Examples:
         ---------
         >>>> from JEOL_eds import JEOL_pts
-        >>>> from JEOL_eds.utils import plot_spectrum
+        >>>> import JEOL_eds.utils as JU
 
         # Load data.
         >>>> dc = JEOL_pts('data/64.pts')
@@ -403,44 +412,47 @@ def plot_map(m, color,
 
         # Plot nice map using custom colormap black to purple. ``gamma=0.9``
         # enhances details. Little smoothing (FWHH=1.75 pixels) is applied.
-        >>>> plot_map(m,
-                      "purple",
-                      label="Itot",
-                      background="black",
-                      gamma=0.9,
-                      smooth=0.75)
+        >>>> JU.plot_map(m,
+                         "purple",
+                         label="Itot",
+                         background="black",
+                         gamma=0.9,
+                         smooth=0.75)
+
         # Specify ``color`` as rgb tuple (range 0 <= value <=255)
-        >>>> plot_map(m,
-                      (250, 136, 37),
-                      label="Itot",
-                      background="black",
-                      gamma=0.9,
-                      smooth=0.75)
+        >>>> JU.plot_map(m,
+                         (250, 136, 37),
+                         label="Itot",
+                         background="black",
+                         gamma=0.9,
+                         smooth=0.75)
+
         # Same as before but rgb tuple (range 0 <= value <=1)
-        >>>> plot_map(m,
-                      (0.98, 0.53, 0.15),
-                      label="Itot",
-                      background="black",
-                      gamma=0.9,
-                      smooth=0.75)
+        >>>> JU.plot_map(m,
+                         (0.98, 0.53, 0.15),
+                         label="Itot",
+                         background="black",
+                         gamma=0.9,
+                         smooth=0.75)
+
         # Use predefined colormap "Blues". ``background`` and ``gamma`` are
         # ignored.
-        >>>> plot_map(m,
-                      "Blues",
-                      label="Itot",
-                      background="black",
-                      gamma=0.9,
-                      smooth=0.75)
+        >>>> JU.plot_map(m,
+                         "Blues",
+                         label="Itot",
+                         background="black",
+                         gamma=0.9,
+                         smooth=0.75)
 
         # Insert scale bar
-        >>>> scale_bar={'label': '10 nm',
+        >>>> scale_bar={'label': '50 nm',
                         'f_calib': dc.nm_per_pixel,
                         'position': 'lower left',
                         'color': 'white'}
-        >>>> plot_map(m,
-                      'inferno',
-                      scale_bar=scale_bar,
-                      label="a)")
+        >>>> JU.plot_map(m,
+                         'inferno',
+                         scale_bar=scale_bar,
+                         label="a)")
     """
     if outfile:
         ext = os.path.splitext(outfile)[1][1:].lower()
@@ -512,22 +524,22 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
         Examples
         --------
         >>>> from JEOL_eds import JEOL_pts
-        >>>> from JEOL_eds.utils import plot_spectrum
+        >>>> import JEOL_eds.utils as JU
 
         # Load data.
         >>>> dc = JEOL_pts('data/complex_oxide.h5')
 
         # Plot full reference spectrum with logaritmic y-axis.
-        >>>> plot_spectrum(dc.ref_spectrum, log_y=True)
+        >>>> JU.plot_spectrum(dc.ref_spectrum, log_y=True)
 
         # Plot and save reference spectrum between 1.0 and 2.5 keV.
         # Plot one minor tick on x-axis and four on y-axis. Pass
         # some keywords to `matplotlib.pyplot.plot()`.
-        >>>> plot_spectrum(dc.ref_spectrum,
-                           E_range=(1, 2.5),
-                           M_ticks=(1,4),
-                           outfile='ref_spectrum.pdf',
-                           color='Red', linestyle='-.', linewidth=1.0)
+        >>>> JU.plot_spectrum(dc.ref_spectrum,
+                              E_range=(1, 2.5),
+                              M_ticks=(1,4),
+                              outfile='ref_spectrum.pdf',
+                              color='Red', linestyle='-.', linewidth=1.0)
     """
     F = 1/100     # Calibration factor (Energy per channel)
     if outfile:
@@ -583,17 +595,17 @@ def export_spectrum(s, outfile, E_range=None):
         Examples
         --------
         >>>> from JEOL_eds import JEOL_pts
-        >>>> from JEOL_eds.utils import export_spectrum
+        >>>> import JEOL_eds.utils as JU
 
         # Load data.
         >>>> dc = JEOL_pts('data/complex_oxide.h5')
 
         # Export full reference spectrum as 'test_spectrum.dat'.
-        >>>> export_spectrum(dc.ref_spectrum, 'test_spectrum.dat')
+        >>>> JU.export_spectrum(dc.ref_spectrum, 'test_spectrum.dat')
 
         # Only export data between 1.0 and 2.5 keV.
-        >>>> export_spectrum(dc.ref_spectrum, 'test_spectrum.dat',
-                             E_range=(1, 2.5))
+        >>>> JU.export_spectrum(dc.ref_spectrum, 'test_spectrum.dat',
+                                E_range=(1, 2.5))
     """
     F = 1/100     # Calibration factor (Energy per channel)
 
@@ -635,8 +647,7 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
         Examples
         --------
         >>>> from JEOL_eds import JEOL_pts
-        >>>> from JEOL_eds.utils import plot_tseries
-
+        >>>> import JEOL_eds.utils as JU
         # Load data.
         >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
@@ -649,10 +660,10 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
 
         # Plot and save time series
         # some keywords to `matplotlib.pyplot.plot()`.
-        >>>> plot_tseries(ts,
-                          M_ticks=(9,4),
-                          outfile='carbon_Ka.pdf',
-                          color='Red', linestyle='-.', linewidth=1.0)
+        >>>> JU.plot_tseries(ts,
+                             M_ticks=(9,4),
+                             outfile='carbon_Ka.pdf',
+                             color='Red', linestyle='-.', linewidth=1.0)
     """
     if outfile:
         ext = os.path.splitext(outfile)[1][1:].lower()
@@ -688,7 +699,7 @@ def export_tseries(ts, outfile):
         Examples
         --------
         >>>> from JEOL_eds import JEOL_pts
-        >>>> from JEOL_eds.utils import export_tseries
+        >>>> import JEOL_eds.utils as JU
 
         # Load data.
         >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
@@ -701,7 +712,7 @@ def export_tseries(ts, outfile):
         >>>> ts = dc.time_series(interval=(0.22, 0.34), energy=True, frames=frames)
 
         # Export time series
-        >>>> export_tseries(ts, 'test_tseries.dat')
+        >>>> JU.export_tseries(ts, 'test_tseries.dat')
     """
     N = ts.shape[0]
     data = np.zeros((N, 2))
@@ -761,12 +772,19 @@ def show_line(image, line, linewidth=1, outfile=None, **kws):
 
         Examples
         --------
-        >>>> from JEOL_eds.utils import show_line
+        >>>> from JEOL_eds import JEOL_pts
+        >>>> import JEOL_eds.utils as JU
+
+        # Load data
+        >>>> dc = JEOL_pts('data/128.pts')
+
+        # Carbon map
+        >>>> C_map = dc.map(interval=(0.22, 0.34), energy=True)
 
         # Define line (10 pixels wide). Verify definition.
         >>>> line = (80, 5, 110, 100)
         >>>> width = 10
-        >>>> show_line(C_map, line, linewidth=width, cmap='inferno')
+        >>>> JU.show_line(C_map, line, linewidth=width, cmap='inferno')
     """
     if outfile:
         ext = os.path.splitext(outfile)[1][1:].lower()
@@ -801,7 +819,7 @@ def get_profile(image, line, linewidth=1):
         Examples
         --------
         >>>> from JEOL_eds import JEOL_pts
-        >>>> from JEOL_eds.utils import show_line
+        >>>> import JEOL_eds.utils as JU
         >>>> import matplotlib.pyplot as plt
 
         # Load data.
@@ -813,11 +831,11 @@ def get_profile(image, line, linewidth=1):
         # Define line. Verify definition.
         >>>> line = (80, 5, 110, 100)
         >>>> width = 10
-        >>>> show_line(C_map, line, linewidth=width, cmap='inferno')
+        >>>> JU.show_line(C_map, line, linewidth=width, cmap='inferno')
 
         # Calculate profile along the line (width equals 10 pixels) and
         # plot it.
-        >>>> profile = get_profile(C_map, line, linewidth=width)
+        >>>> profile = JU.get_profile(C_map, line, linewidth=width)
         >>>> plt.plot(profile)
     """
     profile = profile_line(image,
@@ -847,27 +865,27 @@ def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
         Examples
         --------
         >>>> from JEOL_eds import JEOL_pts
-        >>>> from JEOL_eds.utils import show_ROI
+        >>>> import JEOL_eds.utils as JU
 
         # Load data and create map of total x-ray intensity.
-        >>>> dc = JEOL_pts('data/complex_oxide.h5)
+        >>>> dc = JEOL_pts('data/complex_oxide.h5')
         >>>> my_map = dc.map()
 
         # We want to get the spectrum of the SrTiO3 substrate on the left
         # of the image. Verify definition of rectangular mask. Make image
         # more visible (less transparent). Then plot the spectrum corresponding
         # to the ROI.
-        >>>> show_ROI(my_map, (50, 250, 10, 75), alpha=0.6)
-        >>>> plot_spectrum(dc.spectrum(ROI=[50, 250, 10, 75]),
-                           E_range=(4,17),
-                           M_ticks=(4,None))
+        >>>> JU.show_ROI(my_map, (50, 250, 10, 75), alpha=0.6)
+        >>>> JU.plot_spectrum(dc.spectrum(ROI=[50, 250, 10, 75]),
+                              E_range=(4,17),
+                              M_ticks=(4,None))
 
         # Extract spectrum of the FeCoOx region using a circular mask. Again
         # check the definition of the mask first. Override the default colormap.
-        >>>> show_ROI(my_map, (270, 122, 10), cmap='inferno')
-        >>>> plot_spectrum(dc.spectrum(ROI=[270, 122, 10]),
-                           E_range=(4,17),
-                           M_ticks=(4,None))
+        >>>> JU.show_ROI(my_map, (270, 122, 10), cmap='inferno')
+        >>>> JU.plot_spectrum(dc.spectrum(ROI=[270, 122, 10]),
+                              E_range=(4,17),
+                              M_ticks=(4,None))
     """
     if len(ROI) == 2:
         im = image.copy().astype('float')
