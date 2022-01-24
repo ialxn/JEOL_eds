@@ -122,10 +122,10 @@ def parsejeol(fd):
                         # see https://github.com/hyperspy/hyperspy/pull/2488
                         # first 16 bytes are encode in float32 and looks like
                         # limit values ([20. , 1., 2000, 1.] or [1., 0., 1000., 0.001])
-                        # next 4 bytes are ascii character and looks like
+                        # next 4 bytes are ASCII character and looks like
                         # number format (%.0f or %.3f)
                         # next 12 bytes are unclear
-                        # next 4 bytes are ascii character and are units (kV or nA)
+                        # next 4 bytes are ASCII character and are units (kV or nA)
                         # last 12 byes are unclear
                 elif val_type == 14:
                     tmp_dict[kwrd] = {}
@@ -137,10 +137,10 @@ def parsejeol(fd):
                     # see https://github.com/hyperspy/hyperspy/pull/2488
                     # first 16 bytes are encode in int32 and looks like
                     # limit values (10, 1, 100000000, 1)
-                    # next 4 bytes are ascii character and looks like number
+                    # next 4 bytes are ASCII character and looks like number
                     # format (%d)
                     # next 12 bytes are unclear
-                    # next 4 bytes are ascii character and are units (mag)
+                    # next 4 bytes are ASCII character and are units (mag)
                     # last 12 byes are again unclear
             else:
                 tmp_dict = tmp_dict[kwrd]
@@ -173,7 +173,7 @@ class JEOL_pts:
                         True), otherwise add all frames and store in
                         a single frame (default).
        frame_list:      List (or None)
-                        List of frams to be read if split_frames was specified.
+                        List of frames to be read if split_frames was specified.
                         Default (None) implies all frames present in data are
                         read.
          E_cutoff:      Float
@@ -184,7 +184,7 @@ class JEOL_pts:
                         the raw data, if the option "correct for sample
                         movement" was active while the data was collected).
                         All images are read even if only a subset of frames
-                        is read (frame_lsit is specified).
+                        is read (frame_list is specified).
     only_metadata:      Bool
                         Only meta data is read (True) but nothing else. All
                         other keywords are ignored.
@@ -195,33 +195,34 @@ class JEOL_pts:
         --------
 
         >>>> from JEOL_eds import JEOL_pts
+        >>>> import JEOL_eds.utils as JU
 
         # Initialize JEOL_pts object (read data from '.pts' file).
         # Data cube has dtype = 'uint16' (default).
-        >>>> dc = JEOL_pts('128.pts')
+        >>>> dc = JEOL_pts('data/128.pts')
         >>>> dc.dcube.shape     # Shape of data cube
         (1, 128, 128, 4000)
         >>>> dc.dcube.dtype
         dtype('uint16')
 
         # Same, but specify dtype to be used for data cube.
-        >>>> dc = JEOL_pts('128.pts', dtype='int')
+        >>>> dc = JEOL_pts('data/128.pts', dtype='int')
         >>>> dc.dcube.dtype
         dtype('int64')
 
         # Provide additional (debug) output when loading.
-        >>>> dc = JEOL_pts('128.pts', dtype='uint16', verbose=True)
+        >>>> dc = JEOL_pts('data/128.pts', dtype='uint16', verbose=True)
         Unidentified data items (2081741 out of 82810, 3.98%) found:
 	        24576: found 41858 times
 	        28672: found 40952 times
 
         # Store individual frames.
-        >>>> dc=JEOL_pts('128.pts', split_frames=True)
+        >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
         >>>> dc.dcube.shape
         (50, 128, 128, 4000)
 
         # For large data sets, read only a subset of frames.
-        >>>> small_dc = JEOL_pts('128.pts',
+        >>>> small_dc = JEOL_pts('data/128.pts',
                                  split_frames=True, list_frames=[1,2,4,8,16])
         +>>>> small_dc.frame_list
         [1, 2, 4, 8, 16]
@@ -231,14 +232,14 @@ class JEOL_pts:
         # 4, 8, and 16.
 
         # Only import spectrum up to cutoff energy [keV]
-        >>>> dc = JEOL_pts('128.pts', E_cutoff=10.0)
+        >>>> dc = JEOL_pts('data/128.pts', E_cutoff=10.0)
         >>>> dc.dcube.shape
         (1, 128, 128, 1000)
 
         # Also read and store BF images (one per frame) present.
         # Attribute will be set to 'None' if no data was not read
         # or found!
-        >>> dc = JEOL_pts('128.pts', read_drift=True)
+        >>> dc = JEOL_pts('data/128.pts', read_drift=True)
         dc.drift_images is None
         False
         >>> dc.drift_images.shape
@@ -256,7 +257,7 @@ class JEOL_pts:
 
         # Useful attributes.
         >>>> dc.file_name
-        '128.pts'               # File name loaded from.
+        'data/128.pts'               # File name loaded from.
         >>>> dc.file_date
         '2020-10-23 11:18:40'   # File creation date
         >>>> dc.nm_per_pixel
@@ -291,9 +292,9 @@ class JEOL_pts:
         # data and a possible 'dtype=' keyword is ignored.
         # This only initializes the data cube. Most attributes are not loaded
         # and are set to 'None'
-        >>>> dc2 = JEOL_pts('128.npz')
+        >>>> dc2 = JEOL_pts('data/128.npz')
         >>>> dc2.file_name
-        '128.npz'
+        'data/128.npz'
         >>>> dc2.parameters is None
         True
 
@@ -316,7 +317,7 @@ class JEOL_pts:
             'FocusMP': 16043213}}}}
 
         # Fast way to read and plot reference spectrum.
-        >>>> plot_spectrum(JEOL_pts('64.pts', only_metadata=True).ref_spectrum)
+        >>>> JU.plot_spectrum(JEOL_pts('data/64.pts', only_metadata=True).ref_spectrum)
     """
 
     def __init__(self, fname, dtype='uint16',
@@ -340,7 +341,7 @@ class JEOL_pts:
                             True), otherwise add all frames and store in
                             a single frame (default).
             frame_list:     List
-                            List of frams to be read if split_frames was
+                            List of frames to be read if split_frames was
                             specified. Default (None) implies all frames
                             present in data are read.
               E_cutoff:     Float
@@ -351,8 +352,8 @@ class JEOL_pts:
                             the raw data, if the option "correct for sample
                             movement" was active while the data was collected).
                             All images are read even if only a subset of frames
-                            is read (frame_lsit is specified).
-         only_matadata:     Bool
+                            is read (frame_list is specified).
+         only_metadata:     Bool
                             Only metadata are read (True) but nothing else. All
                             other keywords are ignored.
                verbose:     Bool
@@ -647,6 +648,9 @@ class JEOL_pts:
             Examples
             --------
 
+            >>>> from JEOL_eds import JEOL_pts
+            >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
+
             # Calculate the 2D frequency distribution of the frames shifts
             # using unfiltered frames (verbose output).
             >>>> dc.drift_statistics(verbose=True)
@@ -669,7 +673,9 @@ class JEOL_pts:
               res *= (1 - noise / lVar)
             /.../scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
               res *= (1 - noise / lVar)
-            plt.imshow(m, extent=e)
+
+            >>>> import matplotlib.pyplot as plt
+            >>>> plt.imshow(m, extent=e)
         """
         if self.dcube is None or self.dcube.shape[0] == 1:
             return None, None
@@ -690,7 +696,7 @@ class JEOL_pts:
             my = int(bins[int(my)] + 0.5)
             print('Shifts (filtered):') if filtered else print('Shifts (unfiltered):')
             print(f'   Range: {int(np.asarray(sh).min())} - {int(np.asarray(sh).max())}')
-            print(f'   Maximum {peak_val} at ({max}, {my})')
+            print(f'   Maximum {peak_val} at ({mx}, {my})')
         return h, extent
 
     def shifts(self, frames=None, filtered=False, verbose=False):
@@ -722,6 +728,10 @@ class JEOL_pts:
 
             Examples
             --------
+
+                >>>> from JEOL_eds import JEOL_pts
+                >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
+
                 # Get list of (possible) shifts [(dx0, dy0), (dx1, dx2), ...]
                 # in pixels of individual frames using frame 0 as reference.
                 # The shifts are calculated from the cross correlation of the
@@ -842,23 +852,25 @@ class JEOL_pts:
 
             Examples
             --------
+
+                >>>> from JEOL_eds import JEOL_pts
+                >>>> import JEOL_eds.utils as JU
+
+                >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
+
                 # Plot x-ray intensity integrated over all frames.
-                >>>> plt.imshow(dc.map())
-                <matplotlib.image.AxesImage at 0x7f7192ee6dd0>
+                >>>> JU.plot_map(dc.map(), 'Greys_r')
 
                 # Only use given interval of energy channels to calculate
                 # map.
-                >>>> plt.imshow(dc.map(interval=(115, 130)))
-                <matplotlib.image.AxesImage at 0x7f7191eefd10>
+                >>>> JU.plot_map(dc.map(interval=(115, 130)), 'Greys_r')
 
                 # Specify interval by energy [keV] instead of channel numbers.
-                >>>>plt.imshow(dc.map(interval=(8,10), energy=True))
-                <matplotlib.image.AxesImage at 0x7f4fd0616950>
+                >>>> JU.plot_map(dc.map(interval=(8,10), energy=True), 'Greys_r')
 
                 # If option 'split_frames' was used to read the data you can
                 # plot the map of a single frame.
-                >>>> plt.imshow(dc.map(frames=[3]))
-                <matplotlib.image.AxesImage at 0x7f06c05ef750>
+                >>>> JU.plot_map(dc.map(frames=[3]), 'inferno')
 
                 # Map corresponding to the sum of a few selected frames.
                 >>>> m = dc.map(frames=[3,5,11,12,13])
@@ -870,7 +882,7 @@ class JEOL_pts:
 
                 # Correct for frame shifts (calculated from unfiltered frames)
                 # with verbose output.
-                >>>> dc.map(align='yes', verbose=True)
+                >>>> m = dc.map(align='yes', verbose=True)
                 Using channels 0 - 4000
                 Frame 0 used a reference
                 Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
@@ -879,11 +891,11 @@ class JEOL_pts:
                 # frame 5 as reference. Wiener filtered frames are used to
                 # calculate the shifts.
                 # Verbose output
-                >>>>m = dc.map(interval=(7.9, 8.1),
-                               energy=True,
-                               frames=[5,0,1,2,3,4,6,7,8,9,10],
-                               align='filter',
-                               verbose=True)
+                >>>> m = dc.map(interval=(7.9, 8.1),
+                                energy=True,
+                                frames=[5,0,1,2,3,4,6,7,8,9,10],
+                                align='filter',
+                                verbose=True)
                 Using channels 790 - 810
                 Frame 5 used a reference
                 /home/alxneit/share/miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: divide by zero encountered in true_divide
@@ -1106,35 +1118,35 @@ class JEOL_pts:
 
             Examples
             --------
+                >>>> from JEOL_eds import JEOL_pts
+                >>>> import JEOL_eds.utils as JU
+
+                >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
+
                 # Plot spectrum integrated over full image.
                 # If option 'split_frames' was used to read the data the
                 # following plots spectra of all frames added together.
-                >>>> plt.plot(dc.spectrum())
+                >>>> JU.plot_spectrum(dc.spectrum())
                 [<matplotlib.lines.Line2D at 0x7f7192feec10>]
 
                 # The integrated spectrum is also stored in the raw data and
                 # can be accessed much quicker.
-                >>>> plt.plot(dc.ref_spectrum)
-                [<matplotlib.lines.Line2D at 0x7f3131a489d0>]
+                >>>> JU.plot_spectrum(dc.ref_spectrum)
 
                 # Plot spectrum corresponding to a single pixel. ROI is specified
                 # as tuple (v, h) of pixel coordinatess.
-                >>>> plt.plot(dc.spectrum(ROI=(45, 13)))
-                <matplotlib.lines.Line2D at 0x7fd1423758d0>
+                >>>> JU.plot_spectrum(dc.spectrum(ROI=(45, 13)))
 
                 # Plot spectrum corresponding to a circular ROI specified
                 # as tuple (center_v, center_h, radius) of pixel coordinatess.
-                >>>> plt.plot(dc.spectrum(ROI=(80, 60, 15)))
-                <matplotlib.lines.Line2D at 0x7fd14208f4d0>
+                >>>> JU.plot_spectrum(dc.spectrum(ROI=(80, 60, 15)))
 
                 # Plot spectrum corresponding to a (rectangular) ROI specified
                 # as tuple (top, bottom, left, right) of pixels.
-                >>>> plt.plot(dc.spectrum(ROI=(10, 20, 50, 100)))
-                <matplotlib.lines.Line2D at 0x7f7192b58050>
+                >>>> JU.plot_spectrum(dc.spectrum(ROI=(10, 20, 50, 100)))
 
                 # Plot spectrum for a single frame ('split_frames' used).
-                >>>> plt.plot(dc.spectrum(frames=[23]))
-                <matplotlib.lines.Line2D at 0x7f06b3db32d0>
+                >>>> JU.plot_spectrum(dc.spectrum(frames=[23]))
 
                 # Extract spectrum corresponding to a few frames added.
                 >>>> spec = dc.spectrum(frames=[0,2,5,6])
@@ -1204,6 +1216,11 @@ class JEOL_pts:
 
             Examples
             --------
+
+                >>>> from JEOL_eds import JEOL_pts
+
+                >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
+
                 # Intgrate carbon Ka peak (interval specified as channels)
                 >>>> dc.time_series(interval=(20,40))
                 array([1696., 1781., 1721., 1795., 1744., 1721., 1777., 1711., 1692.,
@@ -1271,17 +1288,18 @@ class JEOL_pts:
 
             Examples
             --------
-            >>>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift=True)
+                >>>> from JEOL_eds import JEOL_pts
 
-            # Make movie and store is as 'data/128.mp4'.
-            >>>> dc.make_movie()
-            # Only use Cu K_alpha line.
-            >>>> dc.make_movie(interval=(7.9, 8.1), energy=True)
+                >>>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift=True)
 
-            # Make movie (one frame only, drift_image will be blank) and
-            # save is as 'dummy.mp4'.
-            >>>> dc = JEOL_pts('data/128.pts')
-            >>>> dc.make_movie(fname='dummy.mp4')
+                # Make movie and store is as 'data/128.mp4'.
+                >>>> dc.make_movie()
+                # Only use Cu K_alpha line.
+                >>>> dc.make_movie(interval=(7.9, 8.1), energy=True)
+
+                # Make movie (one frame only, drift_image will be blank) and
+                # save is as 'dummy.mp4'.
+                >>>> dc.make_movie(fname='dummy.mp4')
         """
         if self.dcube is None:  # Only metadata was read
             return
@@ -1355,6 +1373,10 @@ class JEOL_pts:
 
             Examples
             --------
+                >>>> from JEOL_eds import JEOL_pts
+
+                >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
+
                 # Save extracted data cube. File name is the same as the '.pts'
                 # file but extension is changed to 'npz'.
                 # This makes only sense if option 'split_frames' was NOT used
@@ -1367,15 +1389,13 @@ class JEOL_pts:
                 >>>> dc.save_dcube(fname='my_new_filename.npz')
 
                 # If you want to read the data cube into your own program.
-                >>>> npzfile = np.load('128.npz')
+                >>>> npzfile = np.load('data/128.npz')
                 >>>> dcube = npzfile['arr_0']
 
-                # split_frames was not active when data was saved.
                 >>>> dcube.shape
-                (1, 128, 128, 4000)
+                (50, 128, 128, 4000)
 
-                # Split_frames was active when data was saved.
-                >>>> dcube.shape
+                >>>> dc.dcube.shape
                 (50, 128, 128, 4000)
         """
         if self.dcube is None:  # Only metadata was read
@@ -1397,6 +1417,7 @@ class JEOL_pts:
         self.file_date = None
         self.frame_list = None
         self.drift_images = None
+        self.nm_per_pixel = None
         npzfile = np.load(fname)
         self.dcube = npzfile['arr_0']
 
@@ -1412,6 +1433,10 @@ class JEOL_pts:
 
             Examples
             --------
+                >>>> from JEOL_eds import JEOL_pts
+
+                >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
+
                 # Save data with file name based on the '.pts' file but
                 # extension is changed to 'h5'.
                 >>>> dc.save_hdf5()
@@ -1487,7 +1512,10 @@ class JEOL_pts:
 
             self.file_date = hf.attrs['file_date']
             self.file_name = hf.attrs['file_name']
-            self.nm_per_pixel = hf.attrs['nm_per_pixel']
+            try:
+                self.nm_per_pixel = hf.attrs['nm_per_pixel']
+            except KeyError:
+                self.nm_per_pixel = None
 
             aeval = asteval.Interpreter()
             self.parameters = aeval(hf.attrs['parameters'])
@@ -1505,6 +1533,7 @@ class JEOL_image():
         Examples
         --------
         >>>> from JEOL_eds import JEOL_image
+        >>>> import JEOL_eds.utils as JU
 
         >>>> demo_im = JEOL_image('data/demo.img')
         >>>> demo_im.file_name
@@ -1553,14 +1582,12 @@ class JEOL_image():
 
         # Plot image.
         >>>> import matplotlib.pyplot as plt
-        >>>> plt.imshow(demo_im.image)
-        <matplotlib.image.AxesImage at 0x7fa08425d350>
+        >>>> JU.plot_map(demo_im.image, 'Greys_r')
 
         # Read a map file.
         >>>> demo_map = JEOL_image('data/demo.map')
 
         # Print calibration data (pixel size in nm).
-        # This is only available for '*.map' files.
         >>>> demo_map.nm_per_pixel
         0.99
 
@@ -1569,11 +1596,7 @@ class JEOL_image():
         >>>> scale_bar = {'label': '200nm',
                           'f_calib': demo_im.nm_per_pixel,
                           'color': 'white'}
-        >>>> plot_map(demo_im.image, 'inferno_r', scale_bar=scale_bar)
-
-        # Nicely plot map file.
-        >>>> plot_map(demo_map.image, 'inferno', scale_bar=scale_bar)
-
+        >>>> JU.plot_map(demo_im.image, 'inferno_r', scale_bar=scale_bar)
     """
     def __init__(self, fname):
         """Initializes object (reads image data).
