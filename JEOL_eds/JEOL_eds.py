@@ -1632,3 +1632,155 @@ class JEOL_image():
             ScanSize = self.parameters["Instrument"]["ScanSize"]
             Mag = self.parameters["Instrument"]["Mag"]
             self.nm_per_pixel = ScanSize / Mag * 1000000 / sh[0]
+
+
+
+class JEOL_PointLine():
+    """Work with JEOL PointLine data (sequence of individual point spectra)
+
+        Parameters
+        ----------
+            fname:      Str
+                        Filename.
+
+        Examples
+        --------
+
+        >>>> from JEOL_eds import JEOL_PointLine
+        >>>> pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
+
+        # Report some info.
+        # '.pln' file contains list of spectra and image.
+        >>>> pl.file_name
+        'View000_0000001.pln'
+
+        >>>> pl.Image_name
+        'View000_0000000.img'
+
+        # ``JEOL_PointLine.eds_dict`` is a dict with marker as key and a list
+        # [FileName, xPos, yPos] as content.
+        >>>> pl.eds_dict
+        {0: ['View000_0000006.eds', 1365, 1543],
+         1: ['View000_0000005.eds', 1303, 1483],
+         2: ['View000_0000004.eds', 1241, 1423],
+         3: ['View000_0000003.eds', 1179, 1363],
+         4: ['View000_0000002.eds', 1117, 1303]}
+    """
+    def __init__(self, fname):
+        """Initializes object
+
+            Parameters
+            ----------
+                fname:      Str
+                            Filename.
+        """
+        def read_string(fp):
+            """Reads string
+
+                Parameter:
+                ----------
+                    fp:     File pointer
+            """
+            assert fp.read(1) == b'\xff'
+            fp.read(1)
+            str_len = np.fromfile(fp, "<I", 1)[0]
+            return decode(fp.read(str_len).rstrip(b'\x00'))
+
+        def skip_zeros(fp):
+            """Skips over a series of b'\x00' bytes
+
+                Parameter:
+                ----------
+                    fp:     File pointer
+            """
+            tmp = fp.read(1)
+            while tmp == b'\x00':
+                tmp = fp.read(1)
+
+        def find_next_tag(fp, char):
+            """Advances File pointer until ``char`` is found (byte)
+
+                Parameter:
+                ----------
+                    fp:     File pointer
+                    char:   Byte
+            """
+
+            tmp = fp.read(1)
+            while tmp != char:
+                tmp = fp.read(1)
+
+        def read_eds_meta(fp):
+            """Reads meta data bloch for each ".eds" file
+
+                Parameter:
+                ----------
+                    fp:     File pointer
+
+                Returns:
+                --------
+                            Tuple (Point_nr, FileName)
+            """
+            assert fp.read(1) == b'\xff'
+            fp.read(1)
+            bytes_len = np.fromfile(fp, "<I", 1)[0]
+            Point_nr = int(decode(fp.read(bytes_len).rstrip(b'\x00')))
+            skip_zeros(fp)
+            fp.read(4)
+            Pos_MM = decode(fp.read(12).rstrip(b'\x00'))
+            find_next_tag(fp, b'\xff')
+            fp.read(5)
+            Pos_PXL = decode(fp.read(12).rstrip(b'\x00'))
+            fp.read(8)  # skip 2x b'\x08'
+            xPos = np.fromfile(fp, "<i", 1)[0]
+            yPos = np.fromfile(fp, "<i", 1)[0]
+            find_next_tag(fp, b'\xff')
+            fp.read(1)
+            str_len = np.fromfile(fp, "<I", 1)[0]
+            FileName = decode(fp.read(str_len).rstrip(b'\x00'))
+            fp.read(4)
+            str_len = np.fromfile(fp, "<I", 1)[0]
+            fname = decode(fp.read(str_len).rstrip(b'\x00'))
+            return Point_nr, [fname.rsplit('\\', 1)[1], xPos, yPos]
+
+        # Basic sanity checks
+        assert fname.endswith('.pln')
+        path, self.file_name = os.path.split(fname)
+
+        # Parse ".pln" file
+        with open(fname, 'rb') as fp:
+            file_magic = np.fromfile(fp, "<I", 1)[0]    # 10
+            assert file_magic == 10
+            PointLine = fp.read(9)     # 'PointLine'
+            assert PointLine == b'PointLine'
+            fp.read(9)  # skip
+            fp.read(1)  # 1
+            str_len = np.fromfile(fp, "<I", 1)[0]
+            ID = decode(fp.read(str_len).rstrip(b'\x00'))
+            fp.read(12)
+            Memo = read_string(fp)  # 'Memo'
+            fp.read(12)     # skip
+            Num = read_string(fp)   # 'Num'
+            fp.read(12) # skip
+            Image = read_string(fp)     # 'Image'
+            fp.read(4)
+            str_len = np.fromfile(fp, "<I", 1)[0]
+            fn = decode(fp.read(str_len).rstrip(b'\x00'))
+            self.Image_name = fn.rsplit('\\', 1)[1]
+            Marker = read_string(fp)    # 'Marker'
+            fp.read(10)
+
+            end = False
+            self.eds_dict = {}
+            while not end:
+                try:
+                    key, val = read_eds_meta(fp)
+                    self.eds_dict[key] = val
+                    fp.read(1)
+                except:
+                    end = True
+
+        # TODO
+        # read image (and store minimum meta data
+        # read the list of spectra and store the in a data cube (N_files x NumCH)
+        # store minimum metadata common to all spectra
