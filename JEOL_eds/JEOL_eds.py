@@ -1647,6 +1647,8 @@ class JEOL_PointLine():
         --------
 
         >>>> from JEOL_eds import JEOL_PointLine
+        >>>> import JEOL_eds.utils as JU
+
         >>>> pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
 
         # Report some info.
@@ -1665,6 +1667,27 @@ class JEOL_PointLine():
          2: ['View000_0000004.eds', 1241, 1423],
          3: ['View000_0000003.eds', 1179, 1363],
          4: ['View000_0000002.eds', 1117, 1303]}
+
+        # Image object (``JEOL_image``) is stored as ``JEOL_PointLine.ref_image``.
+        >>>> pl.ref_image
+        <JEOL_eds.JEOL_eds.JEOL_image at 0x7fd6963d53d0>
+
+        >>>> pl.ref_image.file_name
+        'data/PointLine/View000_0000000.img'
+
+        >>>> pl.ref_image.file_date
+        '2022-02-17 15:21:48'
+
+        # Image parameters can be accessed such as MAG calibration and image size.
+        >>>> pl.ref_image.nm_per_pixel
+        1.93359375
+
+        >>>> pl.ref_image.parameters['Image']['Size']
+        array([256, 256], dtype=int32)
+
+        # The image itself is available too.
+        >>>> JU.plot_map(pl.ref_image.image, 'inferno_r')
+
     """
     def __init__(self, fname):
         """Initializes object
@@ -1780,7 +1803,9 @@ class JEOL_PointLine():
                 except:
                     end = True
 
+        # Read and insert reference image
+        self.ref_image = JEOL_image(os.path.join(path, self.Image_name))
+
         # TODO
-        # read image (and store minimum meta data
         # read the list of spectra and store the in a data cube (N_files x NumCH)
         # store minimum metadata common to all spectra
