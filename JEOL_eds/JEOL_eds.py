@@ -22,6 +22,7 @@ import os
 import sys
 from datetime import datetime, timedelta
 from warnings import warn
+import copy
 import h5py
 import asteval
 import numpy as np
@@ -2003,6 +2004,40 @@ class JEOL_PointLine():
         # The image itself is available too.
         >>>> JU.plot_map(pl.ref_image.image, 'inferno_r')
 
+        # Meta data of the first file in ``JEOL_PointList.eds_list``. Most
+        # important values should be ``CoefA``, ``CoefB`` (calibration of
+        # energy axis).
+        >>>> pl.eds_header
+        {'sp_name': 'LG10004 ; 41.676 nm',
+         'username': 'JEM Administrator',
+         'arr': array([0.e+00, 1.e+01, 1.e+00, 0.e+00, 1.e+03, 1.e+02, 1.e+00, 1.e+05,
+                       0.e+00, 0.e+00]),
+         'Esc': 1.75,
+         'Fnano F': 0.12,
+         'E Noise': 45.0,
+         'CH Res': 0.01,
+         'live time': 30.0,
+         'real time': 30.28,
+         'DeadTime': 1.0,
+         'CountRate': 234.0,
+         'CountRate n': 56,
+         'CountRate sum': array([  13930., 3479674.]),
+         'CountRate value': 248.75,
+         'DeadTime n': 56,
+         'DeadTime sum': array([55., 81.]),
+         'DeadTime value': 0.9821428571428571,
+         'CoefA': 0.0100006,
+         'CoefB': -0.00122558,
+         'State': 'Live Time',
+         'Tpl': 'T4',
+         'NumCH': 4096}
+
+        # Spectral data is availabe
+        >>>> pl.eds_data.shape
+        (5, 4096)
+
+        # Plot the spectrum corresponding to marker '1'.
+        >>>> JU.plot_spectrum(pl.eds_data[1])
     """
     def __init__(self, fname):
         """Initializes object
@@ -2126,6 +2161,13 @@ class JEOL_PointLine():
             self.eds_dict[key][1] *= (self.ref_image.image.shape[0] / 4096)
             self.eds_dict[key][2] *= (self.ref_image.image.shape[1] / 4096)
 
-        # TODO
-        # read the list of spectra and store the in a data cube (N_files x NumCH)
-        # store minimum metadata common to all spectra
+        # Read and insert spectral data
+        first = True
+        for key in self.eds_dict:
+            name = self.eds_dict[key][0]
+            s = JEOL_spectrum(os.path.join(path, name))
+            if first:  # First spectrum read. Perform some initializations
+                self.eds_header = copy.deepcopy(s.header)
+                self.eds_data = np.zeros((len(self.eds_dict), self.eds_header['NumCH']))
+                first = False
+            self.eds_data[key] = s.data
