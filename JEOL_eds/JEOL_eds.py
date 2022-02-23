@@ -1662,11 +1662,11 @@ class JEOL_PointLine():
         # ``JEOL_PointLine.eds_dict`` is a dict with marker as key and a list
         # [FileName, xPos, yPos] as content.
         >>>> pl.eds_dict
-        {0: ['View000_0000006.eds', 1365, 1543],
-         1: ['View000_0000005.eds', 1303, 1483],
-         2: ['View000_0000004.eds', 1241, 1423],
-         3: ['View000_0000003.eds', 1179, 1363],
-         4: ['View000_0000002.eds', 1117, 1303]}
+        {0: ['View000_0000006.eds', 85.3125, 96.4375],
+         1: ['View000_0000005.eds', 81.4375, 92.6875],
+         2: ['View000_0000004.eds', 77.5625, 88.9375],
+         3: ['View000_0000003.eds', 73.6875, 85.1875],
+         4: ['View000_0000002.eds', 69.8125, 81.4375]}
 
         # Image object (``JEOL_image``) is stored as ``JEOL_PointLine.ref_image``.
         >>>> pl.ref_image
@@ -1805,6 +1805,11 @@ class JEOL_PointLine():
 
         # Read and insert reference image
         self.ref_image = JEOL_image(os.path.join(path, self.Image_name))
+
+        # xPos and yPos are in range 0..4096. Rescale to image size.
+        for key in self.eds_dict:
+            self.eds_dict[key][1] *= (self.ref_image.image.shape[0] / 4096)
+            self.eds_dict[key][2] *= (self.ref_image.image.shape[1] / 4096)
 
         # TODO
         # read the list of spectra and store the in a data cube (N_files x NumCH)
