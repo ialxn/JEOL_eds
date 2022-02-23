@@ -2092,7 +2092,7 @@ class JEOL_PointLine():
 
                 Returns:
                 --------
-                            Tuple (Point_nr, FileName)
+                            Int (marker), list [FileName, xPos, yPos]
             """
             assert fp.read(1) == b'\xff'
             fp.read(1)
