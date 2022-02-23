@@ -2171,3 +2171,66 @@ class JEOL_PointLine():
                 self.eds_data = np.zeros((len(self.eds_dict), self.eds_header['NumCH']))
                 first = False
             self.eds_data[key] = s.data
+
+    def profile(self, interval=None, energy=False, markers=None):
+        """Returns profile of x-ray intensity integrated in `interval`.
+
+            Parameters
+            ----------
+                interval:   Tuple (number, number).
+                            Defines interval (channels, or energy [keV]) to be
+                            used for profile. None implies that all channels are
+                            integrated.
+                  energy:   Bool.
+                            If false (default) interval is specified as channel
+                            numbers otherwise (True) interval is specified as
+                            'keV'.
+                  markers:  Iterable (tuple, list, array, range object).
+                            Spectra (defined by their markers) included in the
+                            profile (or None if all spectra are used). The
+                            integrated number of counts is set to 'NaN' for
+                            spectra omitted.
+
+            Returns
+            -------
+                            Ndarray
+                            Profile of intergrated intensity in interval.
+
+            Examples
+            --------
+                >>>> from JEOL_eds import JEOL_PointLine
+                >>>> import JEOL_eds.utils as JU
+
+                >>>> pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
+
+                # Profile of total x-ray intensity
+                >>>> p_tot = pl.profile()
+
+                # Profile of Ti Ka line with one spectrum (marker '2') omitted.
+                >>>> p_Ti = pl.profile(interval=(4.4, 4.65),
+                                       energy=True,
+                                       markers=[0, 1, 3, 4])
+
+        """
+        if not interval:
+            interval = (0, self.eds_data.shape[1])
+
+        if energy:
+            # Convert to channel numbers
+            CoefA = self.eds_header['CoefA']
+            CoefB = self.eds_header['CoefB']
+            interval = (int(round((interval[0] - CoefB) / CoefA)),
+                        int(round((interval[1] - CoefB) / CoefA)))
+
+        if interval[0] > interval[1]:   # ensure interval is (low, high)
+            interval = (interval[1], interval[0])
+
+        if markers is None:
+            # For consistency, explicitly set dtype to 'float'. We need to
+            # allow for NaN in unspecified spectra in the else-clause below.
+            profile = self.eds_data[:, interval[0]:interval[1]].sum(axis=1).astype('float')
+        else:
+            profile = np.full((self.eds_data.shape[0],), np.nan)
+            for m in markers:
+                profile[m] =self.eds_data[m, interval[0]:interval[1]].sum()
+        return profile
