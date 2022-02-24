@@ -103,6 +103,14 @@ def __add_scalebar(ax, scale_bar, extent):
         isinstance(scale_bar, dict)
         and 'f_calib' in scale_bar
         and 'label' in scale_bar
+        and (
+            scale_bar['label'].endswith('px')
+            or scale_bar['label'].endswith('nm')
+            or scale_bar['label'].endswith('μm')
+            or scale_bar['label'].endswith('um')
+            or scale_bar['label'].endswith('A')
+            or scale_bar['label'].endswith('Å')
+        )
     ):
         if scale_bar['label'].endswith('A'):    # 'A' can be used as synonym for 'Å'
              scale_bar['label'] = scale_bar['label'][:-1] + 'Å'
