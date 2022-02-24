@@ -2242,8 +2242,9 @@ class JEOL_PointLine():
 
             Parameters
             ----------
-                ROI:        Tuple (top, bottom, left, right)
-                            Region to zoom in. Default is use full image.
+                ROI:        Tuple (top, bottom, left, right) or 'auto' [None]
+                            Specific region to zoom in or use automatically chosen
+                            region. Default [None] is use full image.
                 color:      Str
                             Color used to draw markers (plus sign) ['white'].
                 ann_color:  Str
@@ -2274,11 +2275,21 @@ class JEOL_PointLine():
         if not ROI:
             xlim = (0, self.ref_image.image.shape[0])
             ylim = (self.ref_image.image.shape[1], 0)
+        elif ROI == 'auto':
+            xmin = np.asarray([self.eds_dict[k][1] for k in self.eds_dict]).min()
+            xmax = np.asarray([self.eds_dict[k][1] for k in self.eds_dict]).max()
+            dx = (xmax - xmin) / 10.0
+            xlim = (xmin - dx, xmax + dx)
+            ymin = np.asarray([self.eds_dict[k][2] for k in self.eds_dict]).min()
+            ymax = np.asarray([self.eds_dict[k][2] for k in self.eds_dict]).max()
+            dy = (ymax - ymin) / 10.0
+            ylim = (ymin - dy, ymax + dy)
         else:
             xlim = (ROI[2], ROI[3])
             ylim = (ROI[1], ROI[0])
         plt.xlim(xlim)
         plt.ylim(ylim)
+
         ax = plt.gca()
         ax.set_xticks([])
         ax.set_yticks([])
