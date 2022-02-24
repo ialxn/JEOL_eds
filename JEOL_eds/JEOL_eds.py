@@ -2234,3 +2234,54 @@ class JEOL_PointLine():
             for m in markers:
                 profile[m] =self.eds_data[m, interval[0]:interval[1]].sum()
         return profile
+
+    def show_PointLine(self, ROI=None,
+                       color='white', ann_color='black',
+                       outfile=None):
+        """Plots definition (points / markers) of Pointline on reference image.
+
+            Parameters
+            ----------
+                ROI:        Tuple (top, bottom, left, right)
+                            Region to zoom in. Default is use full image.
+                color:      Str
+                            Color used to draw markers (plus sign) ['white'].
+                ann_color:  Str
+                            Color used to draw marker annotations ['black'].
+                outfile:    Str
+                            Filename (optional) to store plot.
+
+            Examples
+            --------
+            >>>> from JEOL_eds import JEOL_PointLine
+            >>>> pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
+            >>>> pl.show_PointLine(ROI=(45,110,50,100),
+                                   color='red', ann_color='blue')
+        """
+        # Reference image
+        plt.imshow(self.ref_image.image)
+
+        # Plot '+' and annotate at PointLine positions
+        for key in self.eds_dict:
+            xPos = self.eds_dict[key][1]
+            yPos = self.eds_dict[key][2]
+            plt.plot(xPos, yPos, '+', color=color)
+            plt.annotate(key, (xPos, yPos), color=ann_color)
+
+        # Use xlim, ylim for zoomed in region.
+        # y axis in image is inverted (origin is top/left). Thus
+        # inverte order of ylim coordinates.
+        if not ROI:
+            xlim = (0, self.ref_image.image.shape[0])
+            ylim = (self.ref_image.image.shape[1], 0)
+        else:
+            xlim = (ROI[2], ROI[3])
+            ylim = (ROI[1], ROI[0])
+        plt.xlim(xlim)
+        plt.ylim(ylim)
+        ax = plt.gca()
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+        if outfile:
+            plt.savefig(outfile)
