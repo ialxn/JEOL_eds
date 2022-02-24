@@ -116,6 +116,9 @@ def __add_scalebar(ax, scale_bar, extent):
              scale_bar['label'] = scale_bar['label'][:-1] + 'Å'
         if scale_bar['label'].endswith('um'):    # 'um' can be used as synonym for 'μm'
              scale_bar['label'] = scale_bar['label'][:-2] + 'μm'
+        if scale_bar['label'].endswith('px'):   # 'px' means uncalibrated i.e. set 'f_calib'
+            scale_bar['f_calib'] = 1.0
+
         pos = scale_bar['position'] if 'position' in scale_bar else 'lower right'
         color = scale_bar['color'] if 'color' in scale_bar else 'black'
         fontprops = fm.FontProperties(size=16)
