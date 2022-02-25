@@ -461,7 +461,7 @@ class JEOL_pts:
             ----------
                 dtype:      Str
                             Data type used to store data cube in memory.
-                hsize:      Int
+                offset:     Int
                             Number of header bytes.
          split_frames:      Bool
                             Store individual frames in the data cube (if
@@ -1522,7 +1522,7 @@ class JEOL_pts:
 
 
 
-class JEOL_image():
+class JEOL_image:
     """Read JEOL image data ('.img' and '.map' files).
 
         Parameters
