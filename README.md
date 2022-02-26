@@ -32,7 +32,7 @@ to upgrade an existing installation.
 
 ## Usage
 ```python
->>>> from JEOL_eds import JEOL_pts, JEOL_image
+>>>> from JEOL_eds import JEOL_pts, JEOL_spectrum, JEOL_image
 >>>> import JEOL_eds.utils as JU
 
 # Read EDS data
@@ -265,6 +265,71 @@ Frame 5 used a reference
 .
 .
     'FocusMP': 16043213}}}}
+
+
+# Read spectral data.
+>>>> s = JEOL_spectrum('data/spot.eds')
+
+>>>> s.file_name
+'data/spot.eds'
+
+>>>> s.file_date
+'2022-02-17 15:15:20'
+
+# Display meta data
+
+# First header
+>>>> s.header
+{'sp_name': '001',
+ 'username': 'JEM Administrator',
+ 'arr': array([0.e+00, 1.e+01, 1.e+00, 0.e+00, 1.e+03, 1.e+02, 1.e+00, 1.e+05,
+        0.e+00, 0.e+00]),
+ 'Esc': 1.75,
+ 'Fnano F': 0.12,
+ 'E Noise': 45.0,
+ 'CH Res': 0.01,
+ 'live time': 30.0,
+ 'real time': 30.84,
+ 'DeadTime': 2.0,
+ 'CountRate': 1238.0,
+ 'CountRate n': 58,
+ 'CountRate sum': array([6.8256000e+04, 8.4252794e+07]),
+ 'CountRate value': 1176.8275862068965,
+ 'DeadTime n': 58,
+ 'DeadTime sum': array([150., 412.]),
+ 'DeadTime value': 2.586206896551724,
+ 'CoefA': 0.0100006,
+ 'CoefB': -0.00122558,
+ 'State': 'Live Time',
+ 'Tpl': 'T4',
+ 'NumCH': 4096}
+
+# Now footer
+>>>> s.footer
+{'Excluded elements': array([  1,   2,   3,   4,  10,  18,  36,  43,  54,  61,  84,  85,  86,
+         87,  88,  89,  91,  93,  94,  95,  96,  97,  98,  99, 100, 101,
+        102, 103], dtype=uint16),
+ 'Selected elements': {'O K': {'Z': 8,
+   'Roi_min': 46,
+               .
+               .
+               .
+   'SpatZ': 79,
+   'SpatThic': 0.015000000596046448,
+   'SiDead': 0.09999999403953552,
+   'SiThic': 0.5}}
+
+# Size of spectral data
+>>>> s.data.shape
+(4096,)
+
+# Plot (uncalibrated) data
+>>>> JU.plot_spectrum(s.data,
+                      E_range=(0, 20),
+                      M_ticks=(4, 1))
+
+# If you need the calibrated data (x-axis)
+>>>> x = range(s.data.shape[0]) * s.header['CoefA'] + s.header['CoefB']
 ```
 
 ## Bugs
