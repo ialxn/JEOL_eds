@@ -1,1 +1,4 @@
-from JEOL_eds.JEOL_eds import JEOL_pts, JEOL_PointLine, JEOL_spectrum, JEOL_image
+from .JEOL_image import JEOL_image
+from .JEOL_PointLine import JEOL_PointLine
+from .JEOL_pts import JEOL_pts
+from .JEOL_spectrum import JEOL_spectrum
