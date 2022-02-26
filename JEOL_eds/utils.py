@@ -71,8 +71,8 @@ def __scalebar_length(label):
                     label:  Str
                             Label string (for scale bar) as 'NNN U' with or
                             without space between number (NNN) and unit (U).
-                            Allowed units are 'nm', 'μm', 'Å' or 'px' for
-                            uncalibrated images.
+                            Allowed units are 'nm', 'μm' ('um'), 'Å' ('A')
+                            or 'px' for uncalibrated images.
 
         Returns:
         --------
@@ -103,7 +103,22 @@ def __add_scalebar(ax, scale_bar, extent):
         isinstance(scale_bar, dict)
         and 'f_calib' in scale_bar
         and 'label' in scale_bar
+        and (
+            scale_bar['label'].endswith('px')
+            or scale_bar['label'].endswith('nm')
+            or scale_bar['label'].endswith('μm')
+            or scale_bar['label'].endswith('um')
+            or scale_bar['label'].endswith('A')
+            or scale_bar['label'].endswith('Å')
+        )
     ):
+        if scale_bar['label'].endswith('A'):    # 'A' can be used as synonym for 'Å'
+             scale_bar['label'] = scale_bar['label'][:-1] + 'Å'
+        if scale_bar['label'].endswith('um'):    # 'um' can be used as synonym for 'μm'
+             scale_bar['label'] = scale_bar['label'][:-2] + 'μm'
+        if scale_bar['label'].endswith('px'):   # 'px' means uncalibrated i.e. set 'f_calib'
+            scale_bar['f_calib'] = 1.0
+
         pos = scale_bar['position'] if 'position' in scale_bar else 'lower right'
         color = scale_bar['color'] if 'color' in scale_bar else 'black'
         fontprops = fm.FontProperties(size=16)
@@ -145,7 +160,6 @@ def __get_extent(m, scale_bar):
         isinstance(scale_bar, dict)
         and 'f_calib' in scale_bar
         and 'label' in scale_bar
-        and scale_bar['f_calib']
     ):
         width = scale_bar['f_calib'] * m.shape[0]
         height = scale_bar['f_calib'] * m.shape[1]
@@ -181,7 +195,7 @@ def create_overlay(images, colors,
                     into map. Allows for the following keys
                     label: Str
                            Label (NNN U) for scale bar (required) with
-                           NNN number and U units ('nm', 'μm', or 'Å').
+                           NNN number and U units ['nm'|'μm' or 'um'|'Å' or 'A'].
                     f_calib: Float
                              Calibration (pixel size in nm) (required).
                     position: Str
@@ -387,7 +401,7 @@ def plot_map(m, color,
                             into map. Allows for the following keys
                             label: Str
                                    Label (NNN U) for scale bar (required) with
-                                   NNN number and U units ('nm', 'μm', or 'Å').
+                                   NNN number and U units ['nm'|'μm' or 'um'|'Å' or 'A']).
                             f_calib: Float
                                      Calibration (pixel size in nm) (required).
                             position: Str
@@ -444,8 +458,8 @@ def plot_map(m, color,
                          gamma=0.9,
                          smooth=0.75)
 
-        # Insert scale bar
-        >>>> scale_bar={'label': '50 nm',
+        # Insert scale bar. Use 'A' as synonym for 'Å'.
+        >>>> scale_bar={'label': '500 A',
                         'f_calib': dc.nm_per_pixel,
                         'position': 'lower left',
                         'color': 'white'}
