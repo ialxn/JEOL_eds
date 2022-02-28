@@ -24,115 +24,89 @@ import copy
 import numpy as np
 import matplotlib.pyplot as plt
 
-from .JEOL_image import JEOL_image
-from .JEOL_spectrum import JEOL_spectrum
+from JEOL_eds.JEOL_image import JEOL_image
+from JEOL_eds.JEOL_spectrum import JEOL_spectrum
 
-from .misc import _decode, _parsejeol
+from JEOL_eds.misc import _decode, _parsejeol
 
 
 
 class JEOL_PointLine:
     """Work with JEOL PointLine data (sequence of individual point spectra)
 
-        Parameters
-        ----------
-            fname:      Str
-                        Filename.
+    Parameters
+    ----------
+    fname : Str
+        Filename.
 
-        Examples
-        --------
+    Examples
+    --------
 
-        >>>> from JEOL_eds import JEOL_PointLine
-        >>>> import JEOL_eds.utils as JU
+    >>> from JEOL_eds import JEOL_PointLine
+    >>> import JEOL_eds.utils as JU
 
-        >>>> pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
+    >>> pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
 
-        # Report some info.
-        # '.pln' file contains list of spectra and image.
-        >>>> pl.file_name
-        'View000_0000001.pln'
+    Report some info. '.pln' file contains list of spectra and image:
+    >>> pl.file_name
+    'View000_0000001.pln'
 
-        >>>> pl.Image_name
-        'View000_0000000.img'
+    >>> pl.Image_name
+    'View000_0000000.img'
 
-        # ``JEOL_PointLine.eds_dict`` is a dict with marker as key and a list
-        # [FileName, xPos, yPos] as content.
-        >>>> pl.eds_dict
-        {0: ['View000_0000006.eds', 85.3125, 96.4375],
-         1: ['View000_0000005.eds', 81.4375, 92.6875],
-         2: ['View000_0000004.eds', 77.5625, 88.9375],
-         3: ['View000_0000003.eds', 73.6875, 85.1875],
-         4: ['View000_0000002.eds', 69.8125, 81.4375]}
+     ``JEOL_PointLine.eds_dict`` is a dict with marker as key and a list
+     [FileName, xPos, yPos] as content:
+    >>> pl.eds_dict
+    {0: ['View000_0000006.eds', 85.3125, 96.4375], 1: ['View000_0000005.eds', 81.4375, 92.6875], 2: ['View000_0000004.eds', 77.5625, 88.9375], 3: ['View000_0000003.eds', 73.6875, 85.1875], 4: ['View000_0000002.eds', 69.8125, 81.4375]}
 
-        # Image object (``JEOL_image``) is stored as ``JEOL_PointLine.ref_image``.
-        >>>> pl.ref_image
-        <JEOL_eds.JEOL_eds.JEOL_image at 0x7fd6963d53d0>
+    Image object (``JEOL_image``) is stored as ``JEOL_PointLine.ref_image``:
+    >>> ref = pl.ref_image
 
-        >>>> pl.ref_image.file_name
-        'data/PointLine/View000_0000000.img'
+    >>> ref.file_name
+    'data/PointLine/View000_0000000.img'
 
-        >>>> pl.ref_image.file_date
-        '2022-02-17 15:21:48'
+    >>> ref.file_date
+    '2022-02-17 15:21:48'
 
-        # Image parameters can be accessed such as MAG calibration and image size.
-        >>>> pl.ref_image.nm_per_pixel
-        1.93359375
+    Image parameters can be accessed such as MAG calibration and image size:
+    >>> ref.nm_per_pixel
+    1.93359375
 
-        >>>> pl.ref_image.parameters['Image']['Size']
-        array([256, 256], dtype=int32)
+    >>> ref.parameters['Image']['Size']
+    array([256, 256], dtype=int32)
 
-        # The image itself is available too.
-        >>>> JU.plot_map(pl.ref_image.image, 'inferno_r')
+    The image itself is available too:
+    >>> JU.plot_map(ref.image, 'inferno_r')
 
-        # Meta data of the first file in ``JEOL_PointList.eds_list``. Most
-        # important values should be ``CoefA``, ``CoefB`` (calibration of
-        # energy axis).
-        >>>> pl.eds_header
-        {'sp_name': 'LG10004 ; 41.676 nm',
-         'username': 'JEM Administrator',
-         'arr': array([0.e+00, 1.e+01, 1.e+00, 0.e+00, 1.e+03, 1.e+02, 1.e+00, 1.e+05,
-                       0.e+00, 0.e+00]),
-         'Esc': 1.75,
-         'Fnano F': 0.12,
-         'E Noise': 45.0,
-         'CH Res': 0.01,
-         'live time': 30.0,
-         'real time': 30.28,
-         'DeadTime': 1.0,
-         'CountRate': 234.0,
-         'CountRate n': 56,
-         'CountRate sum': array([  13930., 3479674.]),
-         'CountRate value': 248.75,
-         'DeadTime n': 56,
-         'DeadTime sum': array([55., 81.]),
-         'DeadTime value': 0.9821428571428571,
-         'CoefA': 0.0100006,
-         'CoefB': -0.00122558,
-         'State': 'Live Time',
-         'Tpl': 'T4',
-         'NumCH': 4096}
+    Meta data of the first file in ``JEOL_PointList.eds_list``. Most important
+    values should be ``CoefA``, ``CoefB`` (calibration of energy axis):
+    >>> h = pl.eds_header
+    >>> h['CoefA']
+    0.0100006
+    >>> h['CoefB']
+    -0.00122558
 
-        # Spectral data is availabe
-        >>>> pl.eds_data.shape
-        (5, 4096)
+    Spectral data is availabe:
+    >>> pl.eds_data.shape
+    (5, 4096)
 
-        # Plot the spectrum corresponding to marker '1'.
-        >>>> JU.plot_spectrum(pl.eds_data[1])
+    Plot the spectrum corresponding to marker '1':
+    >>> JU.plot_spectrum(pl.eds_data[1])
     """
     def __init__(self, fname):
         """Initializes object
 
-            Parameters
-            ----------
-                fname:      Str
-                            Filename.
+        Parameters
+        ----------
+        fname : Str
+            Filename.
         """
         def read_string(fp):
             """Reads string
 
-                Parameter:
-                ----------
-                    fp:     File pointer
+            Parameter:
+            ----------
+            fp : File pointer
             """
             assert fp.read(1) == b'\xff'
             fp.read(1)
@@ -142,9 +116,9 @@ class JEOL_PointLine:
         def skip_zeros(fp):
             """Skips over a series of b'\x00' bytes
 
-                Parameter:
-                ----------
-                    fp:     File pointer
+            Parameter:
+            ----------
+            fp : File pointer
             """
             tmp = fp.read(1)
             while tmp == b'\x00':
@@ -153,10 +127,10 @@ class JEOL_PointLine:
         def find_next_tag(fp, char):
             """Advances File pointer until ``char`` is found (byte)
 
-                Parameter:
-                ----------
-                    fp:     File pointer
-                    char:   Byte
+            Parameter:
+            ----------
+            fp : File pointer
+            char : Byte
             """
 
             tmp = fp.read(1)
@@ -166,13 +140,14 @@ class JEOL_PointLine:
         def read_eds_meta(fp):
             """Reads meta data bloch for each ".eds" file
 
-                Parameter:
-                ----------
-                    fp:     File pointer
+            Parameter:
+            ----------
+            fp : File pointer
 
-                Returns:
-                --------
-                            Int (marker), list [FileName, xPos, yPos]
+            Returns:
+            --------
+            marker : Int
+            [FileName, xPos, yPos] : List
             """
             assert fp.read(1) == b'\xff'
             fp.read(1)
@@ -255,41 +230,38 @@ class JEOL_PointLine:
     def profile(self, interval=None, energy=False, markers=None):
         """Returns profile of x-ray intensity integrated in `interval`.
 
-            Parameters
-            ----------
-                interval:   Tuple (number, number).
-                            Defines interval (channels, or energy [keV]) to be
-                            used for profile. None implies that all channels are
-                            integrated.
-                  energy:   Bool.
-                            If false (default) interval is specified as channel
-                            numbers otherwise (True) interval is specified as
-                            'keV'.
-                  markers:  Iterable (tuple, list, array, range object).
-                            Spectra (defined by their markers) included in the
-                            profile (or None if all spectra are used). The
-                            integrated number of counts is set to 'NaN' for
-                            spectra omitted.
+        Parameters
+        ----------
+        interval : Tuple (number, number) or None
+            Defines interval (channels, or energy [keV]) to be used for profile.
+            None implies that all channels are integrated.
+        energy : Bool
+            If false (default) interval is specified as channel numbers otherwise
+            (True) interval is specified as 'keV'.
+        markers : Tuple, List
+            Spectra (defined by their markers) included in the profile (or None
+            if all spectra are used). The integrated number of counts is set to
+            'NaN' for spectra omitted.
 
-            Returns
-            -------
-                            Ndarray
-                            Profile of intergrated intensity in interval.
+        Returns
+        -------
+        profile : Ndarray
+            Profile of intergrated intensity in interval.
 
-            Examples
-            --------
-                >>>> from JEOL_eds import JEOL_PointLine
-                >>>> import JEOL_eds.utils as JU
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_PointLine
+        >>> import JEOL_eds.utils as JU
 
-                >>>> pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
+        >>> pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
 
-                # Profile of total x-ray intensity
-                >>>> p_tot = pl.profile()
+        Profile of total x-ray intensity:
+        >>> p_tot = pl.profile()
 
-                # Profile of Ti Ka line with one spectrum (marker '2') omitted.
-                >>>> p_Ti = pl.profile(interval=(4.4, 4.65),
-                                       energy=True,
-                                       markers=[0, 1, 3, 4])
+        Profile of Ti Ka line with one spectrum (marker '2') omitted.
+        >>> p_Ti = pl.profile(interval=(4.4, 4.65),
+        ...                   energy=True,
+        ...                   markers=[0, 1, 3, 4])
 
         """
         if not interval:
@@ -320,24 +292,25 @@ class JEOL_PointLine:
                        outfile=None):
         """Plots definition (points / markers) of Pointline on reference image.
 
-            Parameters
-            ----------
-                ROI:        Tuple (top, bottom, left, right) or 'auto' [None]
-                            Specific region to zoom in or use automatically chosen
-                            region. Default [None] is use full image.
-                color:      Str
-                            Color used to draw markers (plus sign) ['white'].
-                ann_color:  Str
-                            Color used to draw marker annotations ['black'].
-                outfile:    Str
-                            Filename (optional) to store plot.
+        Parameters
+        ----------
+        ROI : Tuple (top, bottom, left, right), 'auto', or [None]
+            Specific region to zoom in or use automatically chosen region.
+            Default [None] is use full image.
+        color : Str
+            Color used to draw markers (plus sign) ['white'].
+        ann_color : Str
+        Color used to draw marker annotations ['black'].
+        outfile : Str
+            Filename (optional) to store plot.
 
-            Examples
-            --------
-            >>>> from JEOL_eds import JEOL_PointLine
-            >>>> pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
-            >>>> pl.show_PointLine(ROI=(45,110,50,100),
-                                   color='red', ann_color='blue')
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_PointLine
+        >>> pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
+        >>> pl.show_PointLine(ROI=(45,110,50,100),
+        ...                   color='red',
+        ...                   ann_color='blue')
         """
         # Reference image
         plt.imshow(self.ref_image.image)
@@ -376,3 +349,7 @@ class JEOL_PointLine:
 
         if outfile:
             plt.savefig(outfile)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

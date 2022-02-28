@@ -29,172 +29,148 @@ from scipy.signal import wiener, correlate
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-from .misc import _parsejeol
+from JEOL_eds.misc import _parsejeol
 
 
 class JEOL_pts:
     """Work with JEOL '.pts' files
 
-        Parameters
-        ----------
-            fname:      Str
-                        Filename.
-            dtype:      Str
-                        Data type used to store (not read) data cube.
-                        Can be any of the dtype supported by numpy.
-                        If a '.npz' file is loaded, this parameter is
-                        ignored and the dtype corresponds to the one
-                        of the data cube when it was stored.
-     split_frames:      Bool
-                        Store individual frames in the data cube (if
-                        True), otherwise add all frames and store in
-                        a single frame (default).
-       frame_list:      List (or None)
-                        List of frames to be read if split_frames was specified.
-                        Default (None) implies all frames present in data are
-                        read.
-         E_cutoff:      Float
-                        Energy cutoff in spectra. Only data below E_cutoff
-                        are read.
-       read_drift:      Bool
-                        Read BF images (one BF image per frame stored in
-                        the raw data, if the option "correct for sample
-                        movement" was active while the data was collected).
-                        All images are read even if only a subset of frames
-                        is read (frame_list is specified).
-    only_metadata:      Bool
-                        Only meta data is read (True) but nothing else. All
-                        other keywords are ignored.
-          verbose:      Bool
-                        Turn on (various) output.
+    Parameters
+    ----------
+    fname : Str
+        Filename.
+    dtype : Str
+        Data type used to store (not read) data cube. Can be any of the dtypes
+        supported by numpy. If a '.npz' file is loaded, this parameter is
+        ignored and the dtype corresponds to the one of the data cube when it
+        was stored.
+    split_frames : Bool
+        Store individual frames in the data cube (if True), otherwise add all
+        frames and store in a single frame (default).
+    frame_list : List (or None)
+        List of frames to be read if split_frames was specified. Default (None)
+        implies all frames present in data are read.
+    E_cutoff : Float
+        Energy cutoff in spectra. Only data below E_cutoff are read.
+    read_drift : Bool
+        Read BF images (one BF image per frame stored in the raw data, if the
+        option "correct for sample movement" was active while the data was
+        collected). All images are read even if only a subset of frames is read
+        (frame_list is specified).
+    only_metadata : Bool
+        Only meta data is read (True) but nothing else. All other keywords are
+        ignored.
+    verbose : Bool
+        Turn on (various) output.
 
-        Examples
-        --------
+    Examples
+    --------
+    >>> from JEOL_eds import JEOL_pts
+    >>> import JEOL_eds.utils as JU
 
-        >>>> from JEOL_eds import JEOL_pts
-        >>>> import JEOL_eds.utils as JU
+    Initialize JEOL_pts object (read data from '.pts' file). Data cube has
+    dtype = 'uint16' (default):
+    >>> dc = JEOL_pts('data/128.pts')
+    >>> dc.dcube.shape     # Shape of data cube
+    (1, 128, 128, 4000)
+    >>> dc.dcube.dtype
+    dtype('uint16')
 
-        # Initialize JEOL_pts object (read data from '.pts' file).
-        # Data cube has dtype = 'uint16' (default).
-        >>>> dc = JEOL_pts('data/128.pts')
-        >>>> dc.dcube.shape     # Shape of data cube
-        (1, 128, 128, 4000)
-        >>>> dc.dcube.dtype
-        dtype('uint16')
+    Same, but specify dtype to be used for data cube:
+    >>> dc = JEOL_pts('data/128.pts', dtype='int')
+    >>> dc.dcube.dtype
+    dtype('int64')
 
-        # Same, but specify dtype to be used for data cube.
-        >>>> dc = JEOL_pts('data/128.pts', dtype='int')
-        >>>> dc.dcube.dtype
-        dtype('int64')
+    Provide additional (debug) output when loading:
+    >>> dc = JEOL_pts('data/128.pts', dtype='uint16', verbose=True) #doctest: +NORMALIZE_WHITESPACE
+    Unidentified data items (82810 out of 2081741, 3.98%) found:
+        24576: found 41858
+        28672: found 40952
 
-        # Provide additional (debug) output when loading.
-        >>>> dc = JEOL_pts('data/128.pts', dtype='uint16', verbose=True)
-        Unidentified data items (2081741 out of 82810, 3.98%) found:
-	        24576: found 41858 times
-	        28672: found 40952 times
+    Store individual frames:
+    >>> dc = JEOL_pts('data/128.pts', split_frames=True)
+    >>> dc.dcube.shape
+    (50, 128, 128, 4000)
 
-        # Store individual frames.
-        >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
-        >>>> dc.dcube.shape
-        (50, 128, 128, 4000)
+    For large data sets, read only a subset of frames.
+    >>> small_dc = JEOL_pts('data/128.pts',
+    ...                     split_frames=True, frame_list=[1,2,4,8,16])
+    >>> small_dc.frame_list
+    [1, 2, 4, 8, 16]
 
-        # For large data sets, read only a subset of frames.
-        >>>> small_dc = JEOL_pts('data/128.pts',
-                                 split_frames=True, list_frames=[1,2,4,8,16])
-        +>>>> small_dc.frame_list
-        [1, 2, 4, 8, 16]
-        >>>> small_dc.dcube.shape
-        (5, 128, 128, 1100)
-        # The frames in the data cube correspond to the original frames 1, 2,
-        # 4, 8, and 16.
+    >>> small_dc.dcube.shape
+    (5, 128, 128, 4000)
 
-        # Only import spectrum up to cutoff energy [keV]
-        >>>> dc = JEOL_pts('data/128.pts', E_cutoff=10.0)
-        >>>> dc.dcube.shape
-        (1, 128, 128, 1000)
+    The frames in the data cube correspond to the original frames 1, 2, 4, 8,
+    and 16.
 
-        # Also read and store BF images (one per frame) present.
-        # Attribute will be set to 'None' if no data was not read
-        # or found!
-        >>> dc = JEOL_pts('data/128.pts', read_drift=True)
-        dc.drift_images is None
-        False
-        >>> dc.drift_images.shape
-        (50, 128, 128)
-        # If only a subset of frames was read select the corresponding
-        # BF images as follows:
-        >>>> [dc.drift_images[i] for i in dc.frame_list]
-        [array([[67, 70, 57, ..., 37, 39, 41],
-                [68, 70, 63, ..., 43, 44, 39],
-                [68, 67, 58, ..., 48, 47, 47],
-                ...,
-                [64, 63, 61, ..., 58, 66, 68],
-                [59, 53, 57, ..., 60, 58, 58],
-                [56, 67, 68, ..., 62, 56, 58]], dtype=uint16)]
+    Only import spectrum up to cutoff energy [keV]:
+    >>> dc = JEOL_pts('data/128.pts', E_cutoff=10.0)
+    >>> dc.dcube.shape
+    (1, 128, 128, 1000)
 
-        # Useful attributes.
-        >>>> dc.file_name
-        'data/128.pts'               # File name loaded from.
-        >>>> dc.file_date
-        '2020-10-23 11:18:40'   # File creation date
-        >>>> dc.nm_per_pixel
-        1.93359375              # Mag calibration [nm / pixel]
+    Also read and store BF images (one per frame) present Attribute will be set
+    to 'None' if no data was not read or found:
+    >>> dc = JEOL_pts('data/128.pts', split_frames=True,
+    ...               read_drift=True, frame_list=[1,2,4,8,16])
+    >>> dc.drift_images is None
+    False
 
-        # More info is stored in attribute `JEOL_pts.parameters`.
-        >>>> dc.parameters      # Full dict
-        {'PTTD Cond': {'Meas Cond': {'CONDPAGE0_C.R': {'Tpl': {'index': 3,
-             'List': ['T1', 'T2', 'T3', 'T4']},
-        .
-        .
-        .
-            'FocusMP': 16043213}}}}
+    >>> dc.drift_images.shape
+    (50, 128, 128)
 
-        # Measurement parameters active when map was acquired.
-        >>>> dc.parameters['EDS Data']['AnalyzableMap MeasData']['Doc']
-        {'LiveTime': 409.5,
-         'RealTime': 418.56,
-         'CountRate': {'value': 538,
-          'n': 1085,
-          'sum': array([7.84546000e+05, 6.31998988e+08])},
-         'DeadTime': {'value': 1, 'n': 1085, 'sum': array([2025., 4409.])},
-         'DwellTime(msec)': 0.5,
-         'Sweep': 50,
-         'ScanLine': 128,
-         'CoefA': 0.0100006,
-         'CoefB': -0.00122558,
-         'Esc': 1.75}
+    If only a subset of frames was read select the corresponding BF images
+    as follows:
+    >>> drift_images = [dc.drift_images[i] for i in dc.frame_list]
 
-        # JEOL_pts objects can also be initialized from a saved data cube. In
-        # this case, the dtype of the data cube is the same as in the stored
-        # data and a possible 'dtype=' keyword is ignored.
-        # This only initializes the data cube. Most attributes are not loaded
-        # and are set to 'None'
-        >>>> dc2 = JEOL_pts('data/128.npz')
-        >>>> dc2.file_name
-        'data/128.npz'
-        >>>> dc2.parameters is None
-        True
+    Useful attributes:
+    File name loaded from:
+    >>> dc.file_name
+    'data/128.pts'
 
-        # Additionally, JEOL_pts object can be saved as hdf5 files.
-        # This has the benefit that all attributes (drift_images, parameters)
-        # are also stored.
-        # Use base name of original file and pass along keywords to
-        # `h5py.create_dataset()`.
-        >>>> dc.save_hdf5(compression='gzip', compression_opts=9)
+    File creation date:
+    >>> dc.file_date
+    '2020-10-23 11:18:40'
 
-        # Initialize from hdf5 file. Only filename is used, additional keywords
-        # are ignored.
-        >>>> dc3 = JEOL_pts('128.h5')
-        >>>> dc3.parameters
-        {'PTTD Cond': {'Meas Cond': {'CONDPAGE0_C.R': {'Tpl': {'index': 3,
-             'List': ['T1', 'T2', 'T3', 'T4']},
-        .
-        .
-        .
-            'FocusMP': 16043213}}}}
+     Mag calibration [nm / pixel]
+    >>> dc.nm_per_pixel
+    1.93359375
 
-        # Fast way to read and plot reference spectrum.
-        >>>> JU.plot_spectrum(JEOL_pts('data/64.pts', only_metadata=True).ref_spectrum)
+    More info is stored in attribute `JEOL_pts.parameters`:
+    >>> p = dc.parameters
+
+    Measurement parameters active when map was acquired:
+    >>> meas = p['EDS Data']['AnalyzableMap MeasData']['Doc']
+    >>> meas['LiveTime']
+    409.5
+
+    >>> meas['RealTime']
+    418.56
+
+    JEOL_pts objects can also be initialized from a saved data cube. In this
+    case, the dtype of the data cube is the same as in the stored data and a
+    possible 'dtype=' keyword is ignored. This only initializes the data cube.
+    Most attributes are not loaded and are set to 'None':
+    >>> dc2 = JEOL_pts('data/128.npz')
+    >>> dc2.file_name
+    'data/128.npz'
+
+    >>> dc2.parameters is None
+    True
+
+    Additionally, JEOL_pts object can be saved as hdf5 files. This has the
+    benefit that all attributes (drift_images, parameters) are also stored.
+    Use base name of original file and pass along keywords to
+    `h5py.create_dataset()`:
+    >>> dc.save_hdf5(fname='128.h5',
+    ...              compression='gzip', compression_opts=9)
+
+    Initialize from hdf5 file. Only filename is used, additional keywords are
+    ignored.
+    >>> dc3 = JEOL_pts('128.h5')
+
+    Fast way to read and plot reference spectrum.
+    >>> JU.plot_spectrum(JEOL_pts('data/64.pts', only_metadata=True).ref_spectrum)
     """
 
     def __init__(self, fname, dtype='uint16',
@@ -203,38 +179,33 @@ class JEOL_pts:
                  only_metadata=False, verbose=False):
         """Reads data cube from JEOL '.pts' file or from previously saved data cube.
 
-            Parameters
-            ----------
-                 fname:     Str
-                            Filename.
-                 dtype:     Str
-                            Data type used to store (not read) data cube.
-                            Can be any of the dtype supported by numpy.
-                            If a '.npz' file is loaded, this parameter is
-                            ignored and the dtype corresponds to the one
-                            of the data cube when it was stored.
-          split_frames:     Bool
-                            Store individual frames in the data cube (if
-                            True), otherwise add all frames and store in
-                            a single frame (default).
-            frame_list:     List
-                            List of frames to be read if split_frames was
-                            specified. Default (None) implies all frames
-                            present in data are read.
-              E_cutoff:     Float
-                            Energy cutoff in spectra. Only data below E_cutoff
-                            are read.
-            read_drift:     Bool
-                            Read BF images (one BF image per frame stored in
-                            the raw data, if the option "correct for sample
-                            movement" was active while the data was collected).
-                            All images are read even if only a subset of frames
-                            is read (frame_list is specified).
-         only_metadata:     Bool
-                            Only metadata are read (True) but nothing else. All
-                            other keywords are ignored.
-               verbose:     Bool
-                            Turn on (various) output.
+        Parameters
+        ----------
+        fname : Str
+            Filename.
+        dtype : Str
+            Data type used to store (not read) data cube. Can be any of the
+            dtypes supported by numpy. If a '.npz' file is loaded, this
+            parameter is ignored and the dtype corresponds to the one of the
+            data cube when it was stored.
+        split_frames : Bool
+            Store individual frames in the data cube (if True), otherwise sum
+            all frames and store in a single frame (default).
+        frame_list : List
+            List of frames to be read if split_frames was specified. Default
+            (None) implies all frames present in data are read.
+        E_cutoff : Float
+            Energy cutoff in spectra. Only data below E_cutoff are read.
+        read_drift : Bool
+            Read BF images (one BF image per frame stored in the raw data, if
+            the option "correct for sample movement" was active while the data
+            was collected). All images are read even if only a subset of frames
+            is read (frame_list is specified).
+        only_metadata : Bool
+            Only metadata are read (True) but nothing else. All other keywords
+            are ignored.
+        verbose : Bool
+            Turn on (various) output.
         """
         if os.path.splitext(fname)[1] == '.pts':
             self.file_name = fname
@@ -293,18 +264,21 @@ class JEOL_pts:
     def __parse_header(self, fname):
         """Extract meta data from header in JEOL ".pts" file.
 
-            Parameters
-            ----------
-                fname:  Str
-                        Filename.
+        Parameters
+        ----------
+        fname : Str
+            Filename.
 
-            Returns
-            -------
-                        Dict
-                        Dictionary containing all meta data stored in header.
-            Notes
-            -----
-                    Copied almost verbatim from Hyperspy (hyperspy/io_plugins/jeol.py).
+        Returns
+        -------
+        header : Dict
+            Dictionary containing all meta data stored in header.
+        offset : Int
+            Number of header bytes.
+
+        Notes
+        -----
+            Copied almost verbatim from Hyperspy (hyperspy/io_plugins/jeol.py).
         """
         with open(fname, 'br') as fd:
             file_magic = np.fromfile(fd, '<I', 1)[0]
@@ -334,28 +308,26 @@ class JEOL_pts:
                         E_cutoff=None, verbose=False):
         """Returns data cube (F x X x Y x E).
 
-            Parameters
-            ----------
-                dtype:      Str
-                            Data type used to store data cube in memory.
-                offset:     Int
-                            Number of header bytes.
-         split_frames:      Bool
-                            Store individual frames in the data cube (if
-                            True), otherwise add all frames and store in
-                            a single frame (default).
-             E_cutoff:      Float
-                            Cutoff energy for spectra. Only store data below
-                            this energy.
-              verbose:      Bool
-                            Print additional output
+        Parameters
+        ----------
+        dtype : Str
+            Data type used to store data cube in memory.
+        offset : Int
+            Number of header bytes.
+        split_frames : Bool
+            Store individual frames in the data cube (if True), otherwise sum
+            all frames and store in a single frame (default).
+        E_cutoff : Float
+            Cutoff energy for spectra. Only store data below this energy.
+        verbose : Bool
+            Print additional output.
 
-            Returns
-            -------
-                dcube:      Ndarray (N x size x size x numCH)
-                            Data cube. N is the number of frames (if split_frames
-                            was selected) otherwise N=1, image is size x size pixels,
-                            spectra contain numCH channels.
+        Returns
+        -------
+        dcube : Ndarray (N x size x size x numCH)
+            Data cube. N is the number of frames (if split_frames was selected)
+            otherwise N=1, image is size x size pixels, spectra contain numCH
+            channels.
         """
         CH_offset = self.__CH_offset_from_meta()
         NumCH = self.parameters['PTTD Param'] \
@@ -463,15 +435,16 @@ class JEOL_pts:
     def __read_drift_images(self, fname):
         """Read BF images stored in raw data
 
-            Parameters
-            ----------
-                fname:      Str
-                            Filename.
+        Parameters
+        ----------
+        fname : Str
+            Filename.
 
-            Returns
-            -------
-                Ndarray or None if data is not available
-                Stack of images with shape (N_images, im_size, im_size)
+        Returns
+        -------
+        I : Ndarray or None
+            Stack of images with shape (N_images, im_size, im_size) or None if
+            no data is available.
 
         Notes
         -----
@@ -508,51 +481,45 @@ class JEOL_pts:
     def drift_statistics(self, filtered=False, verbose=False):
         """Returns 2D frequency distribution of frame shifts (x, y).
 
-            Parameters
-            ----------
-             filtered:     Bool
-                           If True, use Wiener filtered data.
-              verbose:     Bool
-                           Provide additional info if set to True.
+        Parameters
+        ----------
+        filtered : Bool
+            If True, use Wiener filtered data.
+        verbose : Bool
+            Provide additional info if set to True.
 
-           Returns
-           -------
-                    h:     Ndarray or None if data cube contains a single
-                           frame only.
-               extent:     List
-                           Used to plot histogram as plt.imshow(h, extent=extent)
+        Returns
+        -------
+        h : Ndarray or None
+            Histogram data or None if data cube contains a single frame only.
+        extent : List
+            Used to plot histogram as plt.imshow(h, extent=extent)
 
-            Examples
-            --------
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_pts
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
-            >>>> from JEOL_eds import JEOL_pts
-            >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
+        Calculate the 2D frequency distribution of the frames shifts using unfiltered frames (verbose output).
+        >>> dc.drift_statistics(verbose=True) #doctest: +NORMALIZE_WHITESPACE
+        Frame 0 used a reference
+        Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
+        Shifts (unfiltered):
+           Range: -2 - 1
+           Maximum 12 at (0, 0)
+           (array([[ 0.,  0.,  5.,  0.,  0.],
+                   [ 0.,  9.,  7.,  0.,  0.],
+                   [ 1., 10., 12.,  1.,  0.],
+                   [ 0.,  0.,  4.,  1.,  0.],
+                   [ 0.,  0.,  0.,  0.,  0.]]),
+        [-2, 2, -2, 2])
 
-            # Calculate the 2D frequency distribution of the frames shifts
-            # using unfiltered frames (verbose output).
-            >>>> dc.drift_statistics(verbose=True)
-            Frame 0 used a reference
-            Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
-            Shifts (unfiltered):
-                Range: -2 - 1
-                Maximum 12 at (0, 0)
-            (array([[ 0.,  0.,  5.,  0.,  0.],
-                    [ 0.,  9.,  7.,  0.,  0.],
-                    [ 1., 10., 12.,  1.,  0.],
-                    [ 0.,  0.,  4.,  1.,  0.],
-                    [ 0.,  0.,  0.,  0.,  0.]]),
-             [-2, 2, -2, 2])
+        Return the 2D frequency distribution of the Wiener filtered frames
+        (plus extent useful for plotting).
+        >>> m, e = dc.drift_statistics(filtered=True) #doctest: +NORMALIZE_WHITESPACE
 
-            # Return the 2D frequency distribution of the Wiener filtered
-            # frames (plus extent useful for plotting).
-            >>>> m, e = dc.drift_statistics(filtered=True)
-            /.../scipy/signal/signaltools.py:1475: RuntimeWarning: divide by zero encountered in true_divide
-              res *= (1 - noise / lVar)
-            /.../scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
-              res *= (1 - noise / lVar)
-
-            >>>> import matplotlib.pyplot as plt
-            >>>> plt.imshow(m, extent=e)
+        >>> import matplotlib.pyplot as plt
+        >>> ax = plt.imshow(m, extent=e)
         """
         if self.dcube is None or self.dcube.shape[0] == 1:
             return None, None
@@ -579,82 +546,150 @@ class JEOL_pts:
     def shifts(self, frames=None, filtered=False, verbose=False):
         """Calcultes frame shift by cross correlation of images (total intensity).
 
-            Parameters
-            ----------
-               frames:     Iterable
-                           Frame numbers for which shifts are calculated. First
-                           frame given is used a reference.
-                           Note, that the frame number denotes the index within
-                           the data cube loaded. This is different from the
-                           real frame number (stored in the `frame_list`
-                           attribute) if only a subset of frames was loaded.
+        Parameters
+        ----------
+        frames : Iterable
+            Frame numbers for which shifts are calculated. First frame given is
+            used a reference. Note, that the frame number denotes the index
+            within the data cube loaded. This is different from the real frame
+            number (stored in the `frame_list` attribute) if only a subset of
+            frames was loaded.
 
-             filtered:     Bool
-                           If True, use Wiener filtered data.
-              verbose:     Bool
-                           Provide additional info if set to True.
+        filtered : Bool
+            If True, use Wiener filtered data.
+        verbose : Bool
+            Provide additional info if set to True.
 
-            Returns
-            -------
-                            List of tuples (dx, dy) containing the shift for
-                            all frames or empty list if only a single frame
-                            is present.
-                            CAREFUL! Non-empty list ALWAYS contains 'meta.Sweeps'
-                            elements and contains (0, 0) for frames that were
-                            not in the list provided by keyword 'frames='.
+        Returns
+        -------
+        shifts : List of tuples (dx, dy)
+            List contains the shift for all frames or empty list if only a
+            single frame is present.
+            CAREFUL! Non-empty list ALWAYS contains 'meta.Sweeps' elements and
+            contains (0, 0) for frames that were not in the list provided by
+            keyword 'frames'.
 
-            Examples
-            --------
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_pts
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
-                >>>> from JEOL_eds import JEOL_pts
-                >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
+        Get list of (possible) shifts [(dx0, dy0), (dx1, dx2), ...] in pixels
+        of individual frames using frame 0 as reference. The shifts are
+        calculated from the cross correlation of the images of the total x-ray
+        intensity of each individual frame. Verbose output:
+        >>> dc.shifts(verbose=True) #doctest: +NORMALIZE_WHITESPACE
+        Frame 0 used a reference
+        Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
+        [(0, 0),
+         (0, 0),
+         (1, 1),
+         (-1, 0),
+         (0, 1),
+         (1, 0),
+         (1, 0),
+         (0, 0),
+         (0, -1),
+         (1, 0),
+         (-1, -1),
+         (-1, -1),
+         (-1, 0),
+         (-1, 0),
+         (-1, -1),
+         (0, 0),
+         (0, -1),
+         (1, 0),
+         (0, 0),
+         (0, -1),
+         (-1, 0),
+         (0, 0),
+         (-2, 0),
+         (-2, 0),
+         (-1, -1),
+         (0, 0),
+         (-1, -1),
+         (0, 0),
+         (0, 0),
+         (0, -1),
+         (0, -1),
+         (-2, 0),
+         (-1, -1),
+         (-2, 0),
+         (-1, 0),
+         (-1, -1),
+         (0, -1),
+         (0, 0),
+         (-1, -1),
+         (0, -1),
+         (0, -1),
+         (0, 0),
+         (-1, -1),
+         (0, -2),
+         (0, -1),
+         (0, 0),
+         (-2, 0),
+         (-1, 0),
+         (-1, 0),
+         (0, -1)]
 
-                # Get list of (possible) shifts [(dx0, dy0), (dx1, dx2), ...]
-                # in pixels of individual frames using frame 0 as reference.
-                # The shifts are calculated from the cross correlation of the
-                # images of the total x-ray intensity of each individual frame.
-                # Verbose output.
-                >>>> dc.shifts(verbose=True)
-                Frame 0 used a reference
-                Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
-                [(0, 0),
-                 (0, 0),
-                 (1, 1),
-                 .
-                 .
-                 .
-                 (0, -1)]
 
-                # Use Wiener filtered images to calculate shifts.
-                >>>> dc.shifts(filtered=True)
-                /.../miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: divide by zero encountered in true_divide
-                  res *= (1 - noise / lVar)
-                /.../miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
-                  res *= (1 - noise / lVar)
-                [(0, 0),
-                 (0, 0),
-                 (1, 0),
-                 .
-                 .
-                 .
-                 (0, -1)]
+        Use Wiener filtered images to calculate shifts:
+        >>> shifts = dc.shifts(filtered=True) #doctest: +NORMALIZE_WHITESPACE
 
-                # Calculate shifts for selected frames (odd frames) only. In
-                # this case `dc.drift_images[1]` (first frame given) is used
-                # as reference.
-                # Verbose output.
-                >>>> dc.shifts(frames=range(1, dc.dcube.shape[0], 2), verbose=True)
-                Frame 1 used a reference
-                [(0, 0),
-                 (0, 0),
-                 (0, 0),
-                 (0, 1),
-                 (0, 0),
-                 .
-                 .
-                 .
-                 (0, 0),
-                 (-1, -1)]
+        Calculate shifts for selected frames (odd frames) only. In this case
+        `dc.drift_images[1]` (first frame given) is used as reference:
+        >>> dc.shifts(frames=range(1, dc.dcube.shape[0], 2), verbose=True) #doctest: +NORMALIZE_WHITESPACE
+        Frame 1 used a reference
+        [(0, 0),
+         (0, 0),
+         (0, 0),
+         (0, 1),
+         (0, 0),
+         (1, 1),
+         (0, 0),
+         (-1, 0),
+         (0, 0),
+         (1, -1),
+         (0, 0),
+         (-1, -1),
+         (0, 0),
+         (-1, 0),
+         (0, 0),
+         (0, 0),
+         (0, 0),
+         (-1, -1),
+         (0, 0),
+         (1, -1),
+         (0, 0),
+         (-1, -1),
+         (0, 0),
+         (-1, -1),
+         (0, 0),
+         (-2, -2),
+         (0, 0),
+         (0, 0),
+         (0, 0),
+         (1, 0),
+         (0, 0),
+         (-1, 0),
+         (0, 0),
+         (-2, -1),
+         (0, 0),
+         (-2, -1),
+         (0, 0),
+         (-1, -1),
+         (0, 0),
+         (0, -1),
+         (0, 0),
+         (1, 0),
+         (0, 0),
+         (0, 0),
+         (0, 0),
+         (0, -1),
+         (0, 0),
+         (-1, 0),
+         (0, 0),
+         (-1, -1)]
         """
         if self.dcube is None or self.dcube.shape[0] == 1:
             # only a single frame present
@@ -694,91 +729,77 @@ class JEOL_pts:
             verbose=False):
         """Returns map corresponding to an interval in spectrum.
 
-            Parameters
-            ----------
-                interval:   Tuple (number, number)
-                            Defines interval (channels, or energy [keV]) to be
-                            used for map. None implies that all channels are
-                            integrated.
-                  energy:   Bool
-                            If false (default) interval is specified as channel
-                            numbers otherwise (True) interval is specified as
-                            'keV'.
-                  frames:   Iterable (tuple, list, array, range object)
-                            Frame numbers included in map. If split_frames is
-                            active and frames is not specified all frames are
-                            included.
-                            Note, that the frame number denotes the index within
-                            the data cube loaded. This is different from the
-                            real frame number (stored in the `frame_list`
-                            attribute) if only a subset of frames was loaded.
+        Parameters
+        ----------
+        interval : Tuple (number, number)
+            Defines interval (channels, or energy [keV]) to be used for map.
+            None implies that all channels are integrated.
+        energy : Bool
+            If false (default) interval is specified as channel numbers
+            otherwise (True) interval is specified as 'keV'.
+        frames : Iterable (tuple, list, array, range object)
+            Frame numbers included in map. If split_frames is active and frames
+            is not specified all frames are included.
+            Note, that the frame number denotes the index within the data cube
+            loaded. This is different from the real frame number (stored in the
+            `frame_list` attribute) if only a subset of frames was loaded.
+        align : Str
+            'no': Do not align individual frames.
+            'yes': Align frames (use unfiltered frames in cross correlation).
+            'filter': Align frames (use  Wiener filtered frames in cross correlation).
+        verbose : Bool
+            If True, output some additional info.
 
-                   align:   Str
-                            'no': Do not align individual frames.
-                            'yes': Align frames (use unfiltered frames in
-                                   cross correlation).
-                            'filter': Align frames (use  Wiener filtered
-                                      frames in cross correlation).
-                 verbose:   Bool
-                            If True, output some additional info.
+        Returns
+        -------
+        map : Ndarray
+            Spectral Map.
 
-            Returns
-            -------
-                map:   Ndarray
-                       Spectral Map.
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_pts
+        >>> import JEOL_eds.utils as JU
 
-            Examples
-            --------
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
-                >>>> from JEOL_eds import JEOL_pts
-                >>>> import JEOL_eds.utils as JU
+        Plot x-ray intensity integrated over all frames:
+        >>> JU.plot_map(dc.map(), 'Greys_r')
 
-                >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
+        Only use given interval of energy channels to calculate map:
+        >>> JU.plot_map(dc.map(interval=(115, 130)), 'Greys_r')
 
-                # Plot x-ray intensity integrated over all frames.
-                >>>> JU.plot_map(dc.map(), 'Greys_r')
+        Specify interval by energy [keV] instead of channel numbers:
+        >>> JU.plot_map(dc.map(interval=(8,10), energy=True), 'Greys_r')
 
-                # Only use given interval of energy channels to calculate
-                # map.
-                >>>> JU.plot_map(dc.map(interval=(115, 130)), 'Greys_r')
+        If option 'split_frames' was used to read the data you can plot the map
+        of a single frame:
+        >>> JU.plot_map(dc.map(frames=[3]), 'inferno')
 
-                # Specify interval by energy [keV] instead of channel numbers.
-                >>>> JU.plot_map(dc.map(interval=(8,10), energy=True), 'Greys_r')
+        Map corresponding to the sum of a few selected frames:
+        >>> m = dc.map(frames=[3,5,11,12,13])
 
-                # If option 'split_frames' was used to read the data you can
-                # plot the map of a single frame.
-                >>>> JU.plot_map(dc.map(frames=[3]), 'inferno')
+        Cu Kalpha map of all even frames:
+        >>> m = dc.map(interval=(7.9, 8.1),
+        ...            energy=True,
+        ...            frames=range(0, dc.dcube.shape[0], 2))
 
-                # Map corresponding to the sum of a few selected frames.
-                >>>> m = dc.map(frames=[3,5,11,12,13])
+        Correct for frame shifts (calculated from unfiltered frames) with
+        verbose output:
+        >>> m = dc.map(align='yes', verbose=True)
+        Using channels 0 - 4000
+        Frame 0 used a reference
+        Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
 
-                # Cu Kalpha map of all even frames.
-                >>>> m = dc.map(interval=(7.9, 8.1),
-                                energy=True,
-                                frames=range(0, dc.dcube.shape[0], 2))
-
-                # Correct for frame shifts (calculated from unfiltered frames)
-                # with verbose output.
-                >>>> m = dc.map(align='yes', verbose=True)
-                Using channels 0 - 4000
-                Frame 0 used a reference
-                Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
-
-                # Cu Kalpha map of frames 0..10. Frames are aligned using
-                # frame 5 as reference. Wiener filtered frames are used to
-                # calculate the shifts.
-                # Verbose output
-                >>>> m = dc.map(interval=(7.9, 8.1),
-                                energy=True,
-                                frames=[5,0,1,2,3,4,6,7,8,9,10],
-                                align='filter',
-                                verbose=True)
-                Using channels 790 - 810
-                Frame 5 used a reference
-                /home/alxneit/share/miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: divide by zero encountered in true_divide
-                  res *= (1 - noise / lVar)
-                /home/alxneit/share/miniconda3/lib/python3.7/site-packages/scipy/signal/signaltools.py:1475: RuntimeWarning: invalid value encountered in multiply
-                  res *= (1 - noise / lVar)
+        Cu Kalpha map of frames 0..10. Frames are aligned using frame 5 as
+        reference. Wiener filtered frames are used to calculate the shifts.
+        Verbose output
+        >>> m = dc.map(interval=(7.9, 8.1),
+        ...            energy=True,
+        ...            frames=[5,0,1,2,3,4,6,7,8,9,10],
+        ...            align='filter',
+        ...            verbose=True)
+        Using channels 790 - 810
+        Frame 5 used a reference
         """
         # Check for valid keyword arguments
         assert align.lower() in ['yes', 'no', 'filter']
@@ -845,31 +866,31 @@ class JEOL_pts:
     def __correct_spectrum(self, s):
         """Apply non-linear energy correction at low energies to spectrum.
 
-            Parameters
-            ----------
-                    s:  Ndarray
-                        Uncorrected spectrum.
+        Parameters
+        ----------
+        s : Ndarray
+            Uncorrected spectrum.
 
-            Returns
-            -------
-                        Ndarray
-                        Original or corrected spectrum, depending on whether
-                        correction is necessary.
+        Returns
+        -------
+        s : Ndarray
+            Original or corrected spectrum, depending on whether correction is
+            necessary.
         """
         def apply_correction(s, ExCoef):
             """Applies the correction formula.
 
-                Parameters
-                ----------
-                        s:  Ndarray
-                            Original spectrum
-                   ExCoef:  List
-                            Correction coefficients.
+            Parameters
+            ----------
+            s :  Ndarray
+                Original spectrum
+            ExCoef :  List
+                Correction coefficients.
 
-                Returns
-                -------
-                        s:  Ndarray
-                            Corrected spectrum.
+            Returns
+            -------
+            s : Ndarray
+                Corrected spectrum.
             """
             CH_Res = self.parameters['PTTD Param'] \
                                     ['Params']['PARAMPAGE1_EDXRF'] \
@@ -911,18 +932,17 @@ class JEOL_pts:
     def __spectrum_cROI(self, ROI, frames):
         """Returns spectrum integrated over a circular ROI
 
-            Parameters
-            ----------
-                    ROI:    Tuple (center_x, center_y, radius)
-                 frames:    Iterable (tuple, list, array, range object)
-                            Frame numbers included in spectrum. If split_frames
-                            is active and frames is not specified all frames
-                            are included.
+        Parameters
+        ----------
+        ROI : Tuple (center_x, center_y, radius)
+        frames : Iterable (tuple, list, array, range object)
+            Frame numbers included in spectrum. If split_frames is active and
+            frames is not specified all frames are included.
 
-            Returns
-            -------
-               spectrum:    Ndarray
-                            EDX spectrum.
+        Returns
+        -------
+        spectrum : Ndarray
+            EDX spectrum.
         """
         # check validity of ROI
         min_x = ROI[0] - ROI[2]
@@ -961,75 +981,70 @@ class JEOL_pts:
     def spectrum(self, ROI=None, frames=None):
         """Returns spectrum integrated over a ROI.
 
-            Parameters
-            ----------
-                     ROI:   Tuple (int, int)
-                            Tuple (int, int, int)
-                            Tuple (int, int, int, int)
-                            or None.
-                            Defines ROI for which spectrum is extracted.
-                            None implies that the whole data cube is used.
-                            A tuple (v, h) defines a single point ROI given by
-                            its vertical and horizontal pixel index.
-                            A tuple (center_v, center_h, radius) defines a
-                            circular ROI including its boundary.
-                            A tuple (top, bottom, left, right) defines a
-                            rectangular ROI with boundaries included.
-                            Numbers are pixel indices in the range 0 <= N < ImageSize.
-                            Note, that this definition implies y-axis before
-                            x-axis and the order of the numbers is the same as
-                            when applied in a python slice ([top:bottom, left:right]).
-                  frames:   Iterable (tuple, list, array, range object)
-                            Frame numbers included in spectrum. If split_frames
-                            is active and frames is not specified all frames
-                            are included.
-                            Note, that the frame number denotes the index within
-                            the data cube loaded. This is different from the
-                            real frame number (stored in the `frame_list`
-                            attribute) if only a subset of frames was loaded.
+        Parameters
+        ----------
+        ROI : Tuple (int, int)
+            Tuple (int, int, int)
+            Tuple (int, int, int, int)
+            or None
+            Defines ROI for which spectrum is extracted. None implies that
+            the whole data cube is used.
+            A tuple (v, h) defines a single point ROI given by its vertical and
+            horizontal pixel index.
+            A tuple (center_v, center_h, radius) defines a circular ROI
+            including its boundary.
+            A tuple (top, bottom, left, right) defines a rectangular ROI with
+            boundaries included. Numbers are pixel indices in the range
+            0 <= N < ImageSize. Note, that this definition implies y-axis
+            before x-axis and the order of the numbers is the same as when
+            applied in a python slice ([top:bottom, left:right]).
+        frames : Iterable (tuple, list, array, range object)
+            Frame numbers included in spectrum. If split_frames is active and
+            frames is not specified all frames are included.
+            Note, that the frame number denotes the index within the data cube
+            loaded. This is different from the real frame number (stored in the
+            `frame_list` attribute) if only a subset of frames was loaded.
 
-            Returns
-            -------
-                spectrum:   Ndarray
-                            EDX spectrum
+        Returns
+        -------
+        spectrum :   Ndarray
+            EDX spectrum
 
-            Examples
-            --------
-                >>>> from JEOL_eds import JEOL_pts
-                >>>> import JEOL_eds.utils as JU
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_pts
+        >>> import JEOL_eds.utils as JU
 
-                >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
-                # Plot spectrum integrated over full image.
-                # If option 'split_frames' was used to read the data the
-                # following plots spectra of all frames added together.
-                >>>> JU.plot_spectrum(dc.spectrum())
-                [<matplotlib.lines.Line2D at 0x7f7192feec10>]
+        Plot spectrum integrated over full image. If option 'split_frames' was
+        used to read the data the following plots spectra of all frames summed:
+        >>> JU.plot_spectrum(dc.spectrum())
 
-                # The integrated spectrum is also stored in the raw data and
-                # can be accessed much quicker.
-                >>>> JU.plot_spectrum(dc.ref_spectrum)
+        The integrated spectrum is also stored in the raw data and can be
+        accessed much quicker:
+        >>> JU.plot_spectrum(dc.ref_spectrum)
 
-                # Plot spectrum corresponding to a single pixel. ROI is specified
-                # as tuple (v, h) of pixel coordinatess.
-                >>>> JU.plot_spectrum(dc.spectrum(ROI=(45, 13)))
+        Plot spectrum corresponding to a single pixel. ROI is specified as
+        tuple (v, h) of pixel coordinates:
+        >>> JU.plot_spectrum(dc.spectrum(ROI=(45, 13)))
 
-                # Plot spectrum corresponding to a circular ROI specified
-                # as tuple (center_v, center_h, radius) of pixel coordinatess.
-                >>>> JU.plot_spectrum(dc.spectrum(ROI=(80, 60, 15)))
+        Plot spectrum corresponding to a circular ROI specified as tuple
+        (center_v, center_h, radius) of pixel coordinates:
+        >>> JU.plot_spectrum(dc.spectrum(ROI=(80, 60, 15)))
 
-                # Plot spectrum corresponding to a (rectangular) ROI specified
-                # as tuple (top, bottom, left, right) of pixels.
-                >>>> JU.plot_spectrum(dc.spectrum(ROI=(10, 20, 50, 100)))
+        Plot spectrum corresponding to a (rectangular) ROI specified as tuple
+        (top, bottom, left, right) of pixels:
+        >>> JU.plot_spectrum(dc.spectrum(ROI=(10, 20, 50, 100)))
 
-                # Plot spectrum for a single frame ('split_frames' used).
-                >>>> JU.plot_spectrum(dc.spectrum(frames=[23]))
+        Plot spectrum for a single frame ('split_frames' used):
+        >>> JU.plot_spectrum(dc.spectrum(frames=[23]))
 
-                # Extract spectrum corresponding to a few frames added.
-                >>>> spec = dc.spectrum(frames=[0,2,5,6])
+        Extract spectrum corresponding to a few frames summed:
+        >>> spec = dc.spectrum(frames=[0,2,5,6])
 
-                # Spectrum of all odd frames added.
-                >>>> spec = dc.spectrum(frames=range(1, dc.dcube.shape[0], 2))
+        Spectrum of all odd frames summed:
+        >>> spec = dc.spectrum(frames=range(1, dc.dcube.shape[0], 2))
         """
         if self.dcube is None:  # Only metadata was read
             return None
@@ -1066,58 +1081,40 @@ class JEOL_pts:
     def time_series(self, interval=None, energy=False, frames=None):
         """Returns x-ray intensity integrated in `interval` for all frames.
 
-            Parameters
-            ----------
-                interval:   Tuple (number, number).
-                            Defines interval (channels, or energy [keV]) to be
-                            used for map. None implies that all channels are
-                            integrated.
-                  energy:   Bool.
-                            If false (default) interval is specified as channel
-                            numbers otherwise (True) interval is specified as
-                            'keV'.
-                  frames:   Iterable (tuple, list, array, range object).
-                            Frame numbers included in time series (or None if
-                            all frames are used). The integrated number of
-                            counts is set to 'NaN' for all other frames.
-                            Note, that the frame number denotes the index within
-                            the data cube loaded. This is different from the
-                            real frame number (stored in the `frame_list`
-                            attribute) if only a subset of frames was loaded.
+        Parameters
+        ----------
+        interval : Tuple (number, number)
+            Defines interval (channels, or energy [keV]) to be used for map.
+            None implies that all channels are integrated.
+        energy:   Bool
+            If false (default) interval is specified as channel numbers
+            otherwise (True) interval is specified as 'keV'.
+        frames : Iterable (tuple, list, array, range object)
+            Frame numbers included in time series (or None if all frames are
+            used). The integrated number of counts is set to 'NaN' for all other
+            frames. Note, that the frame number denotes the index within
+            the data cube loaded. This is different from the real frame number
+            (stored in the `frame_list` attribute) if only a subset of frames
+            was loaded.
 
+        Returns
+        -------
+            ts : Ndarray
+                Time evolution of intergrated intensity in interval.
 
-            Returns
-            -------
-                            Ndarray
-                            Time evolution of intergrated intensity in interval.
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_pts
 
-            Examples
-            --------
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
-                >>>> from JEOL_eds import JEOL_pts
+        Intgrate carbon Ka peak (interval specified as channels):
+        >>> ts = dc.time_series(interval=(20,40))
 
-                >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
-
-                # Intgrate carbon Ka peak (interval specified as channels)
-                >>>> dc.time_series(interval=(20,40))
-                array([1696., 1781., 1721., 1795., 1744., 1721., 1777., 1711., 1692.,
-                       1752., 1651., 1664., 1693., 1696., 1736., 1682., 1707., 1710.,
-                       1685., 1785., 1731., 1752., 1729., 1757., 1678., 1752., 1721.,
-                       1740., 1696., 1718., 1737., 1740., 1719., 1670., 1692., 1649.,
-                       1718., 1660., 1700., 1702., 1693., 1722., 1675., 1716., 1664.,
-                       1761., 1691., 1731., 1663., 1669.])
-
-                # Integrate oxygen Ka peak (interval specified as energy [keV])
-                # and remove a few bad frames (11,12) from time series.
-                >>>> frames = [f for f in range(dc.dcube.shape[0]) if f not in [11, 12]]
-                >>>> dc.time_series(interval=(0.45, 0.6), energy=True, frames=frames)
-                array([1042., 1128., 1032., 1016., 1031., 1019., 1070., 1014., 1078.,
-                       1078., 1086.,   nan,   nan, 1025., 1028., 1040., 1084., 1020.,
-                       1015., 1099., 1074., 1108., 1059., 1032., 1131., 1029., 1073.,
-                       990., 1088., 1092., 1093., 1038., 1119., 1023., 1129., 1054.,
-                       1072., 1051., 1039., 1048., 1062., 1099., 1063., 1092., 1073.,
-                       1050., 1088., 1018., 1070., 1089.])
-
+        Integrate oxygen Ka peak (interval specified as energy [keV]) and remove
+        a few bad frames (11,12) from time series:
+        >>> frames = [f for f in range(dc.dcube.shape[0]) if f not in [11, 12]]
+        >>> ts = dc.time_series(interval=(0.45, 0.6), energy=True, frames=frames)
         """
         if self.dcube is None:  # Only metadata was read
             return None
@@ -1153,30 +1150,27 @@ class JEOL_pts:
     def make_movie(self, fname=None, **kws):
         """Makes a movie of EDS data and drift_images
 
-            Parameters
-            ----------
-                fname :     Str (or None)
-                            Filename for movie file. If none is supplied the base
-                            name of the '.pts' file is used.
+        Parameters
+        ----------
+        fname  : Str (or None)
+            Filename for movie file. If none is supplied the base name of the
+            '.pts' file is used.
 
-            Returns
-            -------
-                            None.
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_pts
 
-            Examples
-            --------
-                >>>> from JEOL_eds import JEOL_pts
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift=True)
 
-                >>>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift=True)
+        Make movie and store is as 'data/128.mp4':
+        >>> dc.make_movie()
 
-                # Make movie and store is as 'data/128.mp4'.
-                >>>> dc.make_movie()
-                # Only use Cu K_alpha line.
-                >>>> dc.make_movie(interval=(7.9, 8.1), energy=True)
+        Only use Cu K_alpha line:
+        >>> dc.make_movie(interval=(7.9, 8.1), energy=True)
 
-                # Make movie (one frame only, drift_image will be blank) and
-                # save is as 'dummy.mp4'.
-                >>>> dc.make_movie(fname='dummy.mp4')
+        Make movie (one frame only, drift_image will be blank) and save iT as
+        'dummy.mp4':
+        >>> dc.make_movie(fname='dummy.mp4')
         """
         if self.dcube is None:  # Only metadata was read
             return
@@ -1242,38 +1236,35 @@ class JEOL_pts:
     def save_dcube(self, fname=None):
         """Saves (compressed) data cube.
 
-            Parameters
-            ----------
-                fname:  Str (or None)
-                        Filename. If none is supplied the base name of the
-                        '.pts' file is used.
+        Parameters
+        ----------
+        fname : Str (or None)
+            Filename. If none is supplied the base name of the '.pts' file is used.
 
-            Examples
-            --------
-                >>>> from JEOL_eds import JEOL_pts
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_pts
 
-                >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
-                # Save extracted data cube. File name is the same as the '.pts'
-                # file but extension is changed to 'npz'.
-                # This makes only sense if option 'split_frames' was NOT used
-                # to read the data. Otherwise the file size is larger than the
-                #'.pts' file and saving becomes time consuming.
-                >>>> dc.save_dcube()
+        Save extracted data cube. File name is the same as the '.pts' file but
+        extension is changed to 'npz'. This makes only sense if option
+        'split_frames' was NOT used to read the data. Otherwise the file size
+        is MUCH larger than the '.pts' file and saving becomes time consuming:
+        >>> dc.save_dcube()
 
-                # You can also supply your own filename, but use '.npz' as
-                # extension.
-                >>>> dc.save_dcube(fname='my_new_filename.npz')
+        You can also supply your own filename, but use '.npz' as extension:
+        >>> dc.save_dcube(fname='my_new_filename.npz')
 
-                # If you want to read the data cube into your own program.
-                >>>> npzfile = np.load('data/128.npz')
-                >>>> dcube = npzfile['arr_0']
+        If you want to read the data cube into your own program:
+        >>> npzfile = np.load('data/128.npz')
+        >>> dcube = npzfile['arr_0']
 
-                >>>> dcube.shape
-                (50, 128, 128, 4000)
+        >>> dcube.shape
+        (50, 128, 128, 4000)
 
-                >>>> dc.dcube.shape
-                (50, 128, 128, 4000)
+        >>> dc.dcube.shape
+        (50, 128, 128, 4000)
         """
         if self.dcube is None:  # Only metadata was read
             return
@@ -1301,57 +1292,51 @@ class JEOL_pts:
     def save_hdf5(self, fname=None, **kws):
         """Saves all data including attributes to hdf5 file
 
-            Parameters
-            ----------
-                fname:  Str
-                        File name of '.h5' file (must end in '.h5').
-                        If none is supplied the base name of the
-                        '.pts' file is used.
+        Parameters
+        ----------
+        fname : Str
+            File name of '.h5' file (must end in '.h5'). If none is supplied the
+            base name of the '.pts' file is used.
 
-            Examples
-            --------
-                >>>> from JEOL_eds import JEOL_pts
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_pts
 
-                >>>> dc = JEOL_pts('data/128.pts', split_frames=True)
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
-                # Save data with file name based on the '.pts' file but
-                # extension is changed to 'h5'.
-                >>>> dc.save_hdf5()
+        Save data with file name based on the '.pts' file but extension is
+        changed to 'h5':
+        >>> dc.save_hdf5()
 
-                # You can also supply your own filename, but use '.h5' as
-                # extension.
-                >>>> dc.save_hdf5(fname='my_new_filename.h5')
+        You can also supply your own filename, but use '.h5' as extension:
+        >>> dc.save_hdf5(fname='my_new_filename.h5')
 
-                # Pass along keyword arguments such as e.g. compression
-                >>>> dc.save_hdf5('compressed.h5',
-                                  compression='gzip',
-                                  compression_opts=9)
+        Pass along keyword arguments such as e.g. compression:
+        >>> dc.save_hdf5('compressed.h5',
+        ...              compression='gzip',
+        ...              compression_opts=9)
 
-                # If you want to read the data cube into your own program.
-                >>>> hf = h5py.File('my_file.h5', 'r')
+        If you want to read the data cube into your own program:
+        >>> hf = h5py.File('data/128.h5', 'r')
 
-                # List data sets available
-                >>>> for name in hf:
-                         print(name)
-                EDXRF
-                dcube
-                drift_images
+        List data sets available
+        >>> for name in hf:
+        ...     print(name)
+        dcube
 
-                # Use '[()]' to get actual data not just a reference to
-                # stored data in file
-                >>>> hf['EDXRF'][()]
-               array([    0,     0,     0,     0,   876,   719,   339,   531,   904,
-                       1223,  1268,  1099,   899,   695,   621,   584,   519,   525,
-                        .
-                        .
-                         22,    33,    23,    20,    20,    15,    29,    27,    17,
-                         19], dtype=int32)
+        Use '[()]' to get actual data not just a reference to stored data
+        in file:
+        >>> data = hf['dcube'][()]
 
-                # List attributes
-                >>>> print(hf1.attrs.keys())
-                <KeysViewHDF5 ['file_date', 'file_name', 'parameters']>
-                >>>> hf.attrs['file_name']
-                'data/128.pts'
+        >>> data.shape
+        (50, 128, 128, 4000)
+
+        List attributes:
+        >>> print(hf.attrs.keys())
+        <KeysViewHDF5 ['file_date', 'file_name', 'nm_per_pixel', 'parameters']>
+
+        >>> hf.attrs['file_name']
+        'data/128.pts'
         """
         if self.dcube is None:  # Only metadata was read
             return
@@ -1376,10 +1361,10 @@ class JEOL_pts:
     def __load_hdf5(self, fname):
         """Loads data including attributes from hdf5 file
 
-            Parameters
-            ----------
-                fname:  Str
-                        File name of '.h5' file (must end in '.h5').
+        Parameters
+        ----------
+        fname : Str
+            File name of '.h5' file (must end in '.h5').
         """
         with h5py.File(fname, 'r') as hf:
             self.dcube = hf['dcube'][()]
@@ -1396,3 +1381,7 @@ class JEOL_pts:
 
             aeval = asteval.Interpreter()
             self.parameters = aeval(hf.attrs['parameters'])
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

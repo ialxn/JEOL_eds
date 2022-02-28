@@ -22,115 +22,85 @@ along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 from datetime import datetime, timedelta
 import numpy as np
 
-from .misc import _decode
+from JEOL_eds.misc import _decode
 
 
 
 class JEOL_spectrum:
-    """Reads JEOL spectra ('.eds.)
+    """Reads JEOL spectra ('.eds'.)
 
-        Parameters:
-        -----------
-             fname:     Str
-                        Filename.
+    Parameters:
+    -----------
+    fname : Str
+        Filename.
 
-        Examples:
-        ---------
+    Examples:
+    ---------
 
-        >>>> from JEOL_eds import JEOL_spectrum
-        >>>> import JEOL_eds.utils as JU
+    >>> from JEOL_eds import JEOL_spectrum
+    >>> import JEOL_eds.utils as JU
 
-        >>>> s = JEOL_spectrum('data/spot.eds')
+    >>> s = JEOL_spectrum('data/spot.eds')
 
-        >>>> s.file_name
-        'data/spot.eds'
+    >>> s.file_name
+    'data/spot.eds'
 
-        >>>> s.file_date
-        '2022-02-17 15:15:20'
+    >>> s.file_date
+    '2022-02-17 15:15:20'
 
-        # Display meta data
+    Display meta data, first header:
+    >>> _ = s.header
+    >>> s.header['username']
+    'JEM Administrator'
+    >>> s.header['CountRate']
+    1238.0
 
-        # First header
-        >>>> s.header
-        {'sp_name': '001',
-         'username': 'JEM Administrator',
-         'arr': array([0.e+00, 1.e+01, 1.e+00, 0.e+00, 1.e+03, 1.e+02, 1.e+00, 1.e+05,
-                       0.e+00, 0.e+00]),
-         'Esc': 1.75,
-         'Fnano F': 0.12,
-         'E Noise': 45.0,
-         'CH Res': 0.01,
-         'live time': 30.0,
-         'real time': 30.84,
-         'DeadTime': 2.0,
-         'CountRate': 1238.0,
-         'CountRate n': 58,
-         'CountRate sum': array([6.8256000e+04, 8.4252794e+07]),
-         'CountRate value': 1176.8275862068965,
-         'DeadTime n': 58,
-         'DeadTime sum': array([150., 412.]),
-         'DeadTime value': 2.586206896551724,
-         'CoefA': 0.0100006,
-         'CoefB': -0.00122558,
-         'State': 'Live Time',
-         'Tpl': 'T4',
-         'NumCH': 4096}
+    Now footer:
+    >>> _ = s.footer
+    >>> s.footer['Parameters']['SEM']
+    'JEM-ARM200F(HRP)'
+    >>> s.footer['Parameters']['AccKV']
+    200.0
 
-        # Now footer
-        >>>> s.footer
-        {'Excluded elements': array([  1,   2,   3,   4,  10,  18,  36,  43,  54,  61,  84,  85,  86,
-                 87,  88,  89,  91,  93,  94,  95,  96,  97,  98,  99, 100, 101,
-                102, 103], dtype=uint16),
-         'Selected elements': {'O K': {'Z': 8,
-           'Roi_min': 46,
-               .
-               .
-               .
-         'SpatZ': 79,
-         'SpatThic': 0.015000000596046448,
-         'SiDead': 0.09999999403953552,
-         'SiThic': 0.5}}
+    Size of spectral data:
+    >>> s.data.shape
+    (4096,)
 
-        # Size of spectral data
-        >>>> s.data.shape
-        (4096,)
+    Plot (uncalibrated) data
+    >>> JU.plot_spectrum(s.data,
+    ...                  E_range=(0, 20),
+    ...                  M_ticks=(4, 1))
 
-        # Plot (uncalibrated) data
-        >>>> JU.plot_spectrum(s.data,
-                              E_range=(0, 20),
-                              M_ticks=(4, 1))
+    If you need the calibrated data (x-axis)
+    >>> import matplotlib.pyplot as plt
+    >>> x = range(s.data.shape[0]) * s.header['CoefA'] + s.header['CoefB']
+    >>> _ = plt.plot(x, s.data)
 
-        # If you need the calibrated data (x-axis)
-        >>>> import matplotlib.pyplot as plt
-        >>>> x = range(s.data.shape[0]) * s.header['CoefA'] + s.header['CoefB']
-        >>>> plt.plot(x, s.data)
+    Notes:
+    ------
+    Reading Analysis Station '.eds' files copied almost verbatim from
+    the io_plugin jeol.py of HyperSpy (https://github.com/hyperspy).
 
-        Notes:
-        ------
-            Reading Analysis Station '.eds' files copied almost verbatim from
-            the io_plugin jeol.py of HyperSpy (https://github.com/hyperspy).
-
-            Minor adjustments consist of:
-                - slight refactoring of code (__read_eds_header() and
-                  __read_eds_footer())
-                - removing unused variables
-                - adjusting meta data structure to JEOL_eds's general layout
-                - convertion to a class
+    Minor adjustments consist of:
+        - slight refactoring of code (__read_eds_header() and
+              __read_eds_footer())
+        - removing unused variables
+        - adjusting meta data structure to JEOL_eds's general layout
+        - convertion to a class
 
     """
     @staticmethod
     def __read_eds_header(fd):
         """Reads the header part of an '.eds' file
 
-            Parameters:
-            -----------
-                fd:     Stream (open file)
+        Parameters:
+        -----------
+        fd : Stream (open file)
 
-            Returns:
-            --------
-                header:     Dict
-                            Dict with header data (data stored before
-                            edx data).
+        Returns:
+        --------
+        header : Dict
+            Dict with header data (data stored before edx data).
         """
         header = {}
         header["sp_name"] = _decode(fd.read(80).rstrip(b"\x00"))
@@ -168,15 +138,14 @@ class JEOL_spectrum:
     def __read_eds_footer(fd):
         """Reads the footer part of an '.eds' file
 
-            Parameters:
-            -----------
-                fd:     Stream (open file)
+        Parameters:
+        -----------
+        fd : Stream (open file)
 
-            Returns:
-            --------
-                header:     Dict
-                            Dict with footer data (data stored after
-                            edx data).
+        Returns:
+        --------
+        footer : Dict
+        Dict with footer data (data stored after edx data).
         """
         footer = {}
         np.fromfile(fd, "<i", 1)  # unknown
@@ -325,8 +294,8 @@ class JEOL_spectrum:
 
         Parameters:
         -----------
-             fname:     Str
-                        Filename.
+        fname : Str
+            Filename.
         """
         assert fname.endswith('.eds')
         with open(fname, "br") as fd:
@@ -339,3 +308,7 @@ class JEOL_spectrum:
             self.header = self.__read_eds_header(fd)
             self.data = np.fromfile(fd, "<i", self.header["NumCH"])
             self.footer = self.__read_eds_footer(fd)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

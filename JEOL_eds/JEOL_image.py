@@ -23,98 +23,65 @@ import os
 from datetime import datetime, timedelta
 import numpy as np
 
-from .misc import _decode, _parsejeol
+from JEOL_eds.misc import _decode, _parsejeol
 
 
 
 class JEOL_image:
     """Read JEOL image data ('.img' and '.map' files).
 
-        Parameters
-        ----------
-            fname:      Str
-                        Filename.
+    Parameters
+    ----------
+    fname : Str
+        Filename.
 
-        Examples
-        --------
-        >>>> from JEOL_eds import JEOL_image
-        >>>> import JEOL_eds.utils as JU
+    Examples
+    --------
+    >>> from JEOL_eds import JEOL_image
+    >>> import JEOL_eds.utils as JU
 
-        >>>> demo_im = JEOL_image('data/demo.img')
-        >>>> demo_im.file_name
-        'data/demo.img'
+    >>> demo_im = JEOL_image('data/demo.img')
+    >>> demo_im.file_name
+    'data/demo.img'
 
-        >>>> demo_im.file_date
-        '2021-08-13 16:09:06'
+    >>> demo_im.file_date
+    '2021-08-13 16:09:06'
 
-        # Meta data stored in file.
-        >>>> demo_im.parameters
-        {'Instrument': {'Type': 0,
-          'ScanSize': 198.0,
-          'Name': 'JEM-ARM200F(HRP)',
-          'AccV': 200.0,
-          'Currnnt': 7.475,
-          'Mag': 200000,
-          'WorkD': 3.2,
-          'ScanR': 0.0},
-         'FileType': 'JED-2200:IMG',
-         'Image': {'Created': 44421.67298611111,
-          'GroupName': '',
-          'Memo': '',
-          'DataType': 1,
-          'Size': array([512, 512], dtype=int32),
-          'Bits': array([[255, 255, 255, ..., 255, 255, 255],
-                 [255, 255, 255, ..., 255, 255, 255],
-                 [255, 255, 255, ..., 255, 255, 255],
-                 ...,
-                 [255, 255, 255, ..., 255, 255, 255],
-                 [255, 255, 255, ..., 255, 255, 255],
-                 [255, 255, 255, ..., 255, 255, 255]], dtype=uint8),
-          'Title': 'IMG1'},
-         'Palette': {'RGBQUAD': array([       0,    65793,   131586,   197379,   263172,   328965,
-                   394758,   460551,   526344,   592137,   657930,   723723,
-                   789516,   855309,   921102,   986895,  1052688,  1118481,
-                  ...,
-                 16185078, 16250871, 16316664, 16382457, 16448250, 16514043,
-                 16579836, 16645629, 16711422, 16777215], dtype=int32),
-          '4': {'0': {'Pos': 0, 'Color': 0}, '1': {'Pos': 255, 'Color': 16777215}},
-          'Active': 1,
-          'Min': 0.0,
-          'Max': 255.0,
-          'Contrast': 1.0,
-          'Brightness': -0.0,
-          'Scheme': 1}}
+    Meta data stored in file:
+    >>> demo_im.parameters['Instrument']['Name']
+    'JEM-ARM200F(HRP)'
+    >>> demo_im.parameters['Image']['Size']
+    array([512, 512], dtype=int32)
 
-        # Plot image.
-        >>>> import matplotlib.pyplot as plt
-        >>>> JU.plot_map(demo_im.image, 'Greys_r')
+    Plot image:
+    >>> import matplotlib.pyplot as plt
+    >>> JU.plot_map(demo_im.image, 'Greys_r')
 
-        # Read a map file.
-        >>>> demo_map = JEOL_image('data/demo.map')
+    Read a map file:
+    >>> demo_map = JEOL_image('data/demo.map')
 
-        # Print calibration data (pixel size in nm).
-        >>>> demo_map.nm_per_pixel
-        0.99
+    Print calibration data (pixel size in nm):
+    >>> demo_map.nm_per_pixel
+    3.8671875
 
-        # Use ``plot_map()`` for more features
-        # ``demo_im``is a BF image. Thus use inverted color map.
-        >>>> scale_bar = {'label': '200nm',
-                          'f_calib': demo_im.nm_per_pixel,
-                          'color': 'white'}
-        >>>> JU.plot_map(demo_im.image, 'inferno_r', scale_bar=scale_bar)
+    Use "plot_map()" for more features. "demo_im" is a BF image thus invert color map:
+    >>> scale_bar = {'label': '200nm',
+    ...              'f_calib': demo_im.nm_per_pixel,
+    ...              'color': 'white'}
+    >>> JU.plot_map(demo_im.image, 'inferno_r', scale_bar=scale_bar)
     """
     def __init__(self, fname):
         """Initializes object (reads image data).
 
-            Parameters
-            ----------
-                fname:      Str
-                            Filename.
+        Parameters
+        ----------
+        fname : Str
+            Filename.
 
-            Notes
-            -----
-                Based on a code fragment by @sempicor at
-                https://github.com/hyperspy/hyperspy/pull/2488
+        Notes
+        -----
+        Based on a code fragment by @sempicor at
+        https://github.com/hyperspy/hyperspy/pull/2488
         """
         assert os.path.splitext(fname)[1] in ['.img', '.map']
         with open(fname, "br") as fd:
@@ -137,3 +104,7 @@ class JEOL_image:
             ScanSize = self.parameters["Instrument"]["ScanSize"]
             Mag = self.parameters["Instrument"]["Mag"]
             self.nm_per_pixel = ScanSize / Mag * 1000000 / sh[0]
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
