@@ -33,7 +33,7 @@ from JEOL_eds.misc import _parsejeol
 
 
 class JEOL_pts:
-    """Work with JEOL '.pts' files
+    """Work with JEOL '.pts' files corresponding to elemental maps.
 
     Parameters
     ----------
@@ -62,6 +62,12 @@ class JEOL_pts:
         ignored.
     verbose : Bool
         Turn on (various) output.
+
+    Notes
+    -----
+        JEOL's Analysis Station stores edx data collected for a single
+        (horizontal) scan line in the same format. For these data use
+        ``JEOL_eds.JEOL_DigiLine()``.
 
     Examples
     --------
@@ -329,6 +335,12 @@ class JEOL_pts:
             otherwise N=1, image is size x size pixels, spectra contain numCH
             channels.
         """
+        # Verify that this is not DigiLine data
+        AimArea = self.parameters['EDS Data'] \
+                                 ['AnalyzableMap MeasData']['Meas Cond'] \
+                                 ['Aim Area']
+        assert AimArea[1] != AimArea[3] # They are identical for DigiLine data
+
         CH_offset = self.__CH_offset_from_meta()
         NumCH = self.parameters['PTTD Param'] \
                                ['Params']['PARAMPAGE1_EDXRF'] \
