@@ -251,6 +251,80 @@ class JEOL_DigiLine:
                 spectrum += self.dcube[scan, xRange[0]:xRange[1], :].sum(axis=0)
         return _correct_spectrum(self.parameters, spectrum)
 
+    def profile(self, interval=None, energy=False, scans=None, xCalib=False):
+        """Returns line profile (integrated intensity along scan line).
+
+        Parameters
+        ----------
+        interval : Tuple (number, number)
+            Defines spectral interval (channels, or energy [keV]) to be used
+            for profile. None implies that the complete spectrum is integrated.
+        energy : Bool
+            If False (default) spectral interval is specified as channels
+            otherwise (True) interval is specified as energy [keV].
+        scans :  Iterable
+            Scans included in profile (or None if all scans are used).
+        xCalib : Bool
+            If set to True x-axis data points are returned as [nm] otherwise
+            as pixels.
+
+        Returns
+        -------
+        x, profile : Ndarray, Ndarray
+            X-axis data points (pixel or [nm]) and profile of intergrated
+            intensity in interval.
+
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_DigiLine
+
+        Read data:
+        >>> dl = JEOL_DigiLine('data/DigiLine/View000_0000003.pts')
+
+        Extract Oxygen profile with x axis in [nm]:
+        >>> x, p_O = dl.profile(interval=(0.45, 0.6),
+        ...                     energy=True, xCalib=True)
+
+        >>> x[0]
+        0.0
+
+        >>> x[-1]
+        2.5245
+
+        >>> p_O[0]
+        1
+
+        >>> p_O[-1]
+        19
+        """
+        if not interval:
+            interval = (0, self.dcube.shape[2])
+
+        if energy:
+            CoefA = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefA']
+            CoefB = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefB']
+            interval = (int(round((interval[0] - CoefB) / CoefA)),
+                        int(round((interval[1] - CoefB) / CoefA)))
+
+        if interval[0] > interval[1]:   # ensure interval is (low, high)
+            interval = (interval[1], interval[0])
+
+        x = np.arange(float(self.dcube.shape[1]))
+        if xCalib:
+            x *= self.nm_per_pixel
+
+        if scans is None:
+            profile = self.dcube[:, :, interval[0]:interval[1]].sum(axis=(0, 2))
+        else:
+            profile = np.zeros((self.dcube.shape[1],))
+            for scan in scans:
+                profile +=self.dcube[scan, :, interval[0]:interval[1]].sum(axis=(1))
+        return x, profile
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
