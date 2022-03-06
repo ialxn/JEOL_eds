@@ -20,6 +20,7 @@ You should have received a copy of the GNU General Public License
 along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 """
 from datetime import datetime, timedelta
+from collections.abc import Iterable
 import numpy as np
 
 from JEOL_eds.misc import _parsejeol
@@ -185,6 +186,61 @@ class JEOL_DigiLine:
             else:   # Unknown data
                 pass
         return dcube
+
+    def sum_spectrum(self, xRange=None, scans=None):
+        """Return sum spectrum for (a fraction of) the scan line (DigiLine).
+
+        Parameters
+        ----------
+        xRange : Tuple (int, int)
+            Section of the scan line (xStart, xStop) to be integrated. Default
+            [None] implied the complete scan line.
+        scans : Iterable
+            Only use scans given for integration.
+
+        Returns
+        -------
+        spectrum : Ndarray
+
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_DigiLine
+
+        Read data:
+        >>> dl = JEOL_DigiLine('data/DigiLine/View000_0000003.pts')
+        >>> N_s = dl.dcube.shape[0]
+        >>> N_s
+        50
+
+        Sum spectrumm of odd scans integrated in the range 123-234 (pixels):
+        >>> scans = range(1, N_s, 2)
+        >>> spectrum = dl.sum_spectrum(scans=scans, xRange=(123, 234))
+        >>> spectrum.shape
+        (4000,)
+
+        >>> spectrum.sum()
+        7259
+
+        Sum spectrum for pixel number 135:
+        >>> spectrum = dl.sum_spectrum(xRange=(135, 136))
+        >>> spectrum.sum()
+        126
+        """
+
+        if xRange is None:
+            xRange = (0, self.dcube.shape[1])
+
+        assert isinstance(xRange, tuple)
+        assert len(xRange) == 2
+
+        if scans is None:
+            spectrum = self.dcube[:, xRange[0]:xRange[1], :].sum(axis=(0,1))
+        else:
+            assert isinstance(scans, Iterable)
+            spectrum = np.zeros(self.dcube.shape[-1], dtype='uint32')
+            for scan in scans:
+                spectrum += self.dcube[scan, xRange[0]:xRange[1], :].sum(axis=0)
+        return spectrum
 
 if __name__ == "__main__":
     import doctest
