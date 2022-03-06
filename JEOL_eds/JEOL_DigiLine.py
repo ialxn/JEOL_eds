@@ -325,6 +325,53 @@ class JEOL_DigiLine:
                 profile +=self.dcube[scan, :, interval[0]:interval[1]].sum(axis=(1))
         return x, profile
 
+    def spectral_map(self, E_range=None, energy=False):
+        """Returns map (spectrum as function of position).
+
+        Parameters
+        ----------
+        E_range : Tuple (number, number)
+            Limit spectral interval (channels, or energy [keV]). None implies
+            that the complete spectrum is used.
+        energy : Bool
+            If False (default) spectral interval is specified as channels
+            otherwise (True) interval is specified as energy [keV].
+
+        Returns
+        -------
+        m : Ndarray
+            Spectral map (Energy x Scan).
+
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_DigiLine
+
+        Read data:
+        >>> dl = JEOL_DigiLine('data/DigiLine/View000_0000003.pts')
+
+        Spectral map of Energies up to 2.5 keV:
+        >>> m = dl.spectral_map(E_range=(0, 2.5), energy=True)
+        >>> m.shape
+        (256, 250)
+        """
+        if not E_range:
+            E_range = (0, self.dcube.shape[2])
+
+        if energy:
+            CoefA = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefA']
+            CoefB = self.parameters['PTTD Data'] \
+                                   ['AnalyzableMap MeasData']['Doc'] \
+                                   ['CoefB']
+            E_range = (int(round((E_range[0] - CoefB) / CoefA)),
+                        int(round((E_range[1] - CoefB) / CoefA)))
+
+        if E_range[0] > E_range[1]:   # ensure interval is (low, high)
+            E_range = (E_range[1], E_range[0])
+
+        return self.dcube.sum(axis=0)[:, E_range[0]:E_range[1]]
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
