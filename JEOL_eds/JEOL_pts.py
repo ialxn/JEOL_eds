@@ -29,7 +29,7 @@ from scipy.signal import wiener, correlate
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-from JEOL_eds.misc import _parsejeol
+from JEOL_eds.misc import _parsejeol, _correct_spectrum
 
 
 class JEOL_pts:
@@ -875,72 +875,6 @@ class JEOL_pts:
 
         return res[x0:x0+N, y0:y0+N]
 
-    def __correct_spectrum(self, s):
-        """Apply non-linear energy correction at low energies to spectrum.
-
-        Parameters
-        ----------
-        s : Ndarray
-            Uncorrected spectrum.
-
-        Returns
-        -------
-        s : Ndarray
-            Original or corrected spectrum, depending on whether correction is
-            necessary.
-        """
-        def apply_correction(s, ExCoef):
-            """Applies the correction formula.
-
-            Parameters
-            ----------
-            s :  Ndarray
-                Original spectrum
-            ExCoef :  List
-                Correction coefficients.
-
-            Returns
-            -------
-            s : Ndarray
-                Corrected spectrum.
-            """
-            CH_Res = self.parameters['PTTD Param'] \
-                                    ['Params']['PARAMPAGE1_EDXRF'] \
-                                    ['CH Res']
-            E_uncorr = np.arange(0, ExCoef[3], CH_Res)
-            N = E_uncorr.shape[0]
-            ###########################################################
-            #                                                         #
-            # Correction formula (guess) using the three parameters   #
-            # given in `ExCoef`.                                      #
-            #                                                         #
-            # The correction does not yet yield exactly the reference #
-            # spectrum at EDXRF. Peak positions are matched well but  #
-            # the line shape still shows some differences. I guess    #
-            # that this is related to the interpolation part.         #
-            #                                                         #
-            # With 'data/128.pts' as example:                         #
-            #     >>>> ref_spec[0:100].sum()                          #
-            #     200468                                              #
-            #     >>>> corrected_spec[0:100].sum()                    #
-            #     200290                                              #
-            #                                                         #
-            ###########################################################
-            E_corr = ExCoef[0]*E_uncorr**2 + ExCoef[1]*E_uncorr + ExCoef[2]
-            s[0:N] = np.interp(E_uncorr, E_corr, s[0:N])
-            return s
-
-        Tpl_cond = self.parameters['EDS Data'] \
-                                  ['AnalyzableMap MeasData']['Meas Cond'] \
-                                  ['Tpl']
-        try:
-            ExCoef = self.parameters['PTTD Param'] \
-                                    ['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond] \
-                                    ['ExCoef']
-            return apply_correction(s, ExCoef)
-        except KeyError:
-            return s
-
     def __spectrum_cROI(self, ROI, frames):
         """Returns spectrum integrated over a circular ROI
 
@@ -1069,7 +1003,8 @@ class JEOL_pts:
         if len(ROI) == 2:   # point ROI
             ROI = (ROI[0], ROI[0], ROI[1], ROI[1])
         if len(ROI) == 3:   # circular ROI, special
-            return self.__correct_spectrum(self.__spectrum_cROI(ROI, frames))
+            return _correct_spectrum(self.parameters,
+                                     self.__spectrum_cROI(ROI, frames))
 
         # check that ROI lies fully within the data cube
         if not all(0 <= val < self.dcube.shape[1] for val in ROI):
@@ -1077,18 +1012,18 @@ class JEOL_pts:
 
         if self.dcube.shape[0] == 1:   # only a single frame (0) present
             s = self.dcube[0, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
-            return self.__correct_spectrum(s)
+            return _correct_spectrum(self.parameters, s)
 
         # split_frames is active
         if frames is None:  # no frames specified, sum all frames
             s = self.dcube[:, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1, 2))
-            return self.__correct_spectrum(s)
+            return _correct_spectrum(self.parameters, s)
 
         # only sum specified frames
         s = np.zeros(self.dcube.shape[3], dtype=self.dcube.dtype)
         for frame in frames:
             s += self.dcube[frame, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
-        return self.__correct_spectrum(s)
+        return _correct_spectrum(self.parameters, s)
 
     def time_series(self, interval=None, energy=False, frames=None):
         """Returns x-ray intensity integrated in `interval` for all frames.
