@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 from collections.abc import Iterable
 import numpy as np
 
-from JEOL_eds.misc import _parsejeol
+from JEOL_eds.misc import _parsejeol, _correct_spectrum
 
 
 class JEOL_DigiLine:
@@ -78,6 +78,10 @@ class JEOL_DigiLine:
         Mag = self.parameters['PTTD Data']['AnalyzableMap MeasData']['MeasCond']['Mag']
         self.nm_per_pixel = ScanSize / Mag * 1000000 / self.dcube.shape[2]
 
+        # Make reference spectrum (sum spectrum) accessible easier
+        self.ref_spectrum = self.parameters['EDS Data'] \
+                                           ['AnalyzableMap MeasData']['Data'] \
+                                           ['EDXRF']
 
     def __parse_header(self, fname):
         """Extract meta data from header in JEOL ".pts" file.
@@ -221,10 +225,15 @@ class JEOL_DigiLine:
         >>> spectrum.sum()
         7259
 
-        Sum spectrum for pixel number 135:
-        >>> spectrum = dl.sum_spectrum(xRange=(135, 136))
+        Sum spectrum:
+        >>> spectrum = dl.sum_spectrum()
         >>> spectrum.sum()
-        126
+        30710
+
+        This should be close to the reference spectrum:
+        >>> ref_spectrum = dl.ref_spectrum
+        >>> ref_spectrum.sum()
+        30759
         """
 
         if xRange is None:
@@ -240,7 +249,7 @@ class JEOL_DigiLine:
             spectrum = np.zeros(self.dcube.shape[-1], dtype='uint32')
             for scan in scans:
                 spectrum += self.dcube[scan, xRange[0]:xRange[1], :].sum(axis=0)
-        return spectrum
+        return _correct_spectrum(self.parameters, spectrum)
 
 if __name__ == "__main__":
     import doctest
