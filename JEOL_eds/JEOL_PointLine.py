@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 from JEOL_eds.JEOL_image import JEOL_image
 from JEOL_eds.JEOL_spectrum import JEOL_spectrum
 
-from JEOL_eds.misc import _decode, _parsejeol
+from JEOL_eds.misc import _decode
 
 
 
