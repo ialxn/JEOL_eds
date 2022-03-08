@@ -8,13 +8,13 @@ Created on Fri Mar 19 15:11:53 2021
 """
 import os
 import numpy as np
-import scipy.ndimage as ndimage
+from scipy import ndimage
 from skimage.measure import profile_line
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap, to_rgba
 from matplotlib.ticker import AutoMinorLocator
-from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 import matplotlib.font_manager as fm
+from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 
 
 def filter_isolated_pixels(array, struct=np.ones((3,3))):
@@ -110,9 +110,9 @@ def __add_scalebar(ax, scale_bar, extent):
         )
     ):
         if scale_bar['label'].endswith('A'):    # 'A' can be used as synonym for 'Å'
-             scale_bar['label'] = scale_bar['label'][:-1] + 'Å'
+            scale_bar['label'] = scale_bar['label'][:-1] + 'Å'
         if scale_bar['label'].endswith('um'):    # 'um' can be used as synonym for 'μm'
-             scale_bar['label'] = scale_bar['label'][:-2] + 'μm'
+            scale_bar['label'] = scale_bar['label'][:-2] + 'μm'
         if scale_bar['label'].endswith('px'):   # 'px' means uncalibrated i.e. set 'f_calib'
             scale_bar['f_calib'] = 1.0
 

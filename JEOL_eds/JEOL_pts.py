@@ -27,7 +27,7 @@ import asteval
 import numpy as np
 from scipy.signal import wiener, correlate
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
+from matplotlib import animation
 
 from JEOL_eds.misc import _parsejeol, _correct_spectrum
 
@@ -472,7 +472,7 @@ class JEOL_pts:
         h = area[2] - area[0] + 1
         v = area[3] - area[1] + 1
         image_shape = (N_images, v, h)
-        with open(fname) as f:
+        with open(fname, 'br') as f:
             f.seek(28)  # see self.__parse_header()
             data_pos = np.fromfile(f, '<I', 1)[0]
             f.seek(data_pos)
