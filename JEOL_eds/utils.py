@@ -764,6 +764,50 @@ def export_tseries(ts, outfile):
     fmt = '%d\t%f'
     np.savetxt(outfile, data, header=header, fmt=fmt)
 
+def plot_profile(x, y, units='px', M_ticks=None, outfile=None, **kws):
+    """Plots a nice profile.
+
+    Parameters
+    ----------
+    x : Ndarray.
+        x values.
+    y : Ndarray
+        y values.
+    units : str
+        Units (length) of x data. The string supplied is only used to generate
+        the axis label.
+    M_ticks : Tuple (mx, my).
+        Number of minor ticks used for x and y axis. If you want to plot minor
+        ticks for a single axis, use None for other axis.
+    outfile : Str.
+        Plot is saved as `outfile`. Graphics file type is inferred from
+        extension. Available formats might depend on your installation.
+    **kws
+        Additional keywords passed to ``matplotlib.pyplot.plot()``
+
+    Examples
+    --------
+    >>> from JEOL_eds import JEOL_DigiLine
+    >>> import JEOL_eds.utils as JU
+
+    Read data:
+    >>> dl = JEOL_DigiLine('data/DigiLine/View000_0000003.pts')
+
+    Extract Oxygen profile with x axis in [nm]:
+    >>> x, p_O = dl.profile(interval=(0.45, 0.6),
+    ...                     energy=True, xCalib=True)
+
+    >>> JU.plot_profile(x, p_O,
+    ...                 units='nm',
+    ...                 M_ticks=(9, 4),
+    ...                 color='Red', linestyle='-.', linewidth=1.0)
+    """
+    x_label = f'Length  [{units}]'
+    __plot_line(x, y,
+                x_label=x_label, y_label='counts  [-]',
+                M_ticks=M_ticks, outfile=outfile,
+                **kws)
+
 def __linewidth_from_data_units(linewidth, axis):
     """Convert a linewidth in pixels to points.
 
