@@ -17,6 +17,64 @@ import matplotlib.font_manager as fm
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 
 
+
+def __plot_line(x, y,
+                outfile=None,
+                x_label=None, y_label=None,
+                M_ticks=None,
+                log_y=None,
+                **kws):
+    """Line plot y=f(x)
+
+    Parameters
+    ----------
+    x : Ndarray
+        x data
+    y : Ndarray
+        y data
+    x_label : Str
+        Label for x-axis
+    y_label : Str
+        Label for y-axis
+    M_ticks : Tuple (int, int)
+        Number of minor ticks used for x and y axis. If you want to plot minor
+        ticks for a single axis, use None for other axis. Parameter for y axis
+        is ignored in logarithmic plots.
+    log_y : Bool
+        Plot linear [Default] or logarithmic y-axis.
+    outfile : Str
+        Plot is saved as `outfile`. Graphics file type is inferred from
+        extension. Available formats might depend on your installation.
+    **kws
+        Additional keywords passed to ``matplotlib.pyplot.plot()``
+
+   """
+    if outfile:
+        ext = os.path.splitext(outfile)[1][1:].lower()
+        supported = plt.figure().canvas.get_supported_filetypes()
+        assert ext in supported
+
+    plt.plot(x, y, **kws)
+    ax = plt.gca()
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+
+    if log_y:
+        ax.set_yscale('log')
+    # Plot minor ticks on the axis required. Careful: matplotlib specifies the
+    # number of intervals which is one more than the number of ticks!
+    if M_ticks is not None:
+        mx, my = M_ticks
+        if mx is not None:
+            ax.xaxis.set_minor_locator(AutoMinorLocator(mx + 1))
+        if my is not None:
+            ax.yaxis.set_minor_locator(AutoMinorLocator(my + 1))
+
+    if outfile:
+        plt.savefig(outfile)
+
+
+
 def filter_isolated_pixels(array, struct=np.ones((3,3))):
     """ Return array with completely isolated single cells removed.
 
@@ -523,6 +581,8 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
     outfile : Str
         Plot is saved as `outfile`. Graphics file type is inferred from
         extension. Available formats might depend on your installation.
+    **kws
+        Additional keywords passed to ``matplotlib.pyplot.plot()``
 
     Examples
     --------
@@ -547,10 +607,6 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
     ...                  color='Red', linestyle='-.', linewidth=1.0)
     """
     F = 1/100     # Calibration factor (Energy per channel)
-    if outfile:
-        ext = os.path.splitext(outfile)[1][1:].lower()
-        supported = plt.figure().canvas.get_supported_filetypes()
-        assert ext in supported
 
     if E_range is not None:
         E_low, E_high = E_range
@@ -565,24 +621,10 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
     i_low = int(np.round(E_low / F))
     i_high = int(np.round(E_high / F))
 
-    plt.plot(x, s[i_low:i_high], **kws)
-    ax = plt.gca()
-    ax.set_xlabel('E  [keV]')
-    ax.set_ylabel('counts  [-]')
-
-    if log_y:
-        ax.set_yscale('log')
-    # Plot minor ticks on the axis required. Careful: matplotlib specifies the
-    # number of intervals which is one more than the number of ticks!
-    if M_ticks is not None:
-        mx, my = M_ticks
-        if mx is not None:
-            ax.xaxis.set_minor_locator(AutoMinorLocator(mx + 1))
-        if my is not None:
-            ax.yaxis.set_minor_locator(AutoMinorLocator(my + 1))
-
-    if outfile:
-        plt.savefig(outfile)
+    __plot_line(x, s[i_low:i_high],
+                x_label='E  [keV]', y_label='counts  [-]',
+                M_ticks=M_ticks, log_y=log_y, outfile=outfile,
+                **kws)
 
 def export_spectrum(s, outfile, E_range=None):
     """Exports spectrum as tab delimited ASCII.
@@ -649,6 +691,8 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
     outfile : Str.
         Plot is saved as `outfile`. Graphics file type is inferred from
         extension. Available formats might depend on your installation.
+    **kws
+        Additional keywords passed to ``matplotlib.pyplot.plot()``
 
     Examples
     --------
@@ -675,26 +719,10 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
     ...                 outfile='carbon_Ka.pdf',
     ...                 color='Red', linestyle='-.', linewidth=1.0)
     """
-    if outfile:
-        ext = os.path.splitext(outfile)[1][1:].lower()
-        supported = plt.figure().canvas.get_supported_filetypes()
-        assert ext in supported
-
-    plt.plot(ts, **kws)
-    ax = plt.gca()
-    ax.set_xlabel('frame index  [-]')
-    ax.set_ylabel('counts  [-]')
-    # Plot minor ticks on the axis required. Careful: matplotlib specifies the
-    # number of intervals which is one more than the number of ticks!
-    if M_ticks is not None:
-        mx, my = M_ticks
-        if mx is not None:
-            ax.xaxis.set_minor_locator(AutoMinorLocator(mx + 1))
-        if my is not None:
-            ax.yaxis.set_minor_locator(AutoMinorLocator(my + 1))
-
-    if outfile:
-        plt.savefig(outfile)
+    __plot_line(range(ts.shape[0]), ts,
+                x_label='Frame Index  [-]', y_label='counts  [-]',
+                M_ticks=M_ticks, outfile=outfile,
+                **kws)
 
 def export_tseries(ts, outfile):
     """Export time series as tab delimited ASCII.
