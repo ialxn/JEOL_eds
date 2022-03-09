@@ -808,6 +808,43 @@ def plot_profile(x, y, units='px', M_ticks=None, outfile=None, **kws):
                 M_ticks=M_ticks, outfile=outfile,
                 **kws)
 
+def export_profile(x, y, outfile, units='px'):
+    """Export profile as tab delimited ASCII.
+
+    Parameters
+    ----------
+    x : Ndarray.
+        x values.
+    y : Ndarray
+        y values.
+    outfile : Str.
+        Plot is saved as `outfile`. Graphics file type is inferred from
+        extension. Available formats might depend on your installation.
+    units : str
+        Units (length) of x data. The string supplied is only used to
+        generate the header comment.
+
+    Examples
+    --------
+    >>> from JEOL_eds import JEOL_DigiLine
+    >>> import JEOL_eds.utils as JU
+
+    Read data:
+    >>> dl = JEOL_DigiLine('data/DigiLine/View000_0000003.pts')
+
+    Extract Oxygen profile with x axis in [nm]:
+    >>> x, p_O = dl.profile(interval=(0.45, 0.6),
+    ...                     energy=True, xCalib=True)
+
+    Export data:
+    >>> JU.export_profile(x, p_O, 'test_tseries.dat', units='nm')
+    """
+    assert x.shape[0] == y.shape[0]
+
+    header = f'# Position [{units}]        counts [-]'
+    fmt = '%d\t%f'
+    np.savetxt(outfile, np.vstack((x, y)).T, header=header, fmt=fmt)
+
 def __linewidth_from_data_units(linewidth, axis):
     """Convert a linewidth in pixels to points.
 
