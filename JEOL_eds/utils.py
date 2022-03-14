@@ -2,9 +2,21 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=C0103,C0301
 """
-Created on Fri Mar 19 15:11:53 2021
+Copyright 2020-2022 Ivo Alxneit (ivo.alxneit@psi.ch)
 
-@author: alxneit
+This file is part of JEOL_eds.
+JEOL_eds is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+JEOL_eds is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 """
 import os
 import numpy as np
