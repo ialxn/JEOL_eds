@@ -42,21 +42,25 @@ class test_PointLine(unittest.TestCase):
         self.assertEqual(25090.0, self.pl.eds_data.sum())
 
     def test_profile_1(self):
-        p = self.pl.profile()
+        x, p = self.pl.profile()
         self.assertEqual((5,), p.shape)
+        self.assertEqual(x.shape, p.shape)
         self.assertEqual(6046.0, p[0])
+        self.assertEqual(0.0, x[0])
         self.assertEqual(p.sum(), self.pl.eds_data.sum())
+        self.assertAlmostEqual(53.924136, x.sum(), 5)
 
     def test_profile_2(self):
-        p = self.pl.profile(interval=(4.4, 4.65), energy=True)
+        x, p = self.pl.profile(interval=(4.4, 4.65), energy=True)
         self.assertEqual((5,), p.shape)
+        self.assertEqual(x.shape, p.shape)
         self.assertEqual(1765.0, p[0])
         self.assertEqual(7123.0, p.sum())
 
     def test_profile_3(self):
-        p = self.pl.profile(interval=(4.4, 4.65), energy=True)
-        pa = self.pl.profile(interval=(4.4, 4.65), energy=True, markers=[0, 1])
-        pb = self.pl.profile(interval=(4.4, 4.65), energy=True, markers=[2, 3, 4])
+        x, p = self.pl.profile(interval=(4.4, 4.65), energy=True)
+        x, pa = self.pl.profile(interval=(4.4, 4.65), energy=True, markers=[0, 1])
+        x, pb = self.pl.profile(interval=(4.4, 4.65), energy=True, markers=[2, 3, 4])
         self.assertEqual((5,), pa.shape)
         self.assertEqual((5,), pb.shape)
         self.assertEqual(4194.0, np.nansum(pa))
@@ -64,6 +68,16 @@ class test_PointLine(unittest.TestCase):
         self.assertEqual(4194.0, pa[0:2].sum())
         self.assertEqual(2929.0, pb[2:].sum())
         self.assertEqual(0.0, np.nansum(pa) + np.nansum(pb) - p.sum())
+
+    def test_profile_4(self):
+        x, p = self.pl.profile(xCalib=True)
+        self.assertEqual((5,), p.shape)
+        self.assertEqual(x.shape, p.shape)
+        self.assertEqual(6046.0, p[0])
+        self.assertEqual(0.0, x[0])
+        self.assertEqual(p.sum(), self.pl.eds_data.sum())
+        self.assertAlmostEqual(104.26737, x.sum(), 5)
+
 
 if __name__ == '__main__':
     unittest.main()

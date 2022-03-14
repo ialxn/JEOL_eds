@@ -227,7 +227,33 @@ class JEOL_PointLine:
                 first = False
             self.eds_data[key] = s.data
 
-    def profile(self, interval=None, energy=False, markers=None):
+    def __get_x(self, xCalib=False):
+        """Returns relative x coordinates of marker poinst on line
+
+        Parameters
+        ----------
+        xCalib : Bool
+            If set to True x-axis data points are returned as [nm] otherwise
+            as pixels.
+
+        Returns
+        -------
+        X : Ndarry
+            Coordinates corresponding to markers
+        """
+        N = len(self.eds_dict)
+        X = np.zeros((N,))
+        x0, y0 = self.eds_dict[0][1:3]
+        for i in range(1,N):
+            x, y = self.eds_dict[i][1:3]
+            X[i] = np.sqrt((x - x0)**2 + (y - y0)**2)
+        if xCalib:
+            X *= self.ref_image.nm_per_pixel
+        return X
+
+
+
+    def profile(self, interval=None, energy=False, markers=None, xCalib=False):
         """Returns profile of x-ray intensity integrated in `interval`.
 
         Parameters
@@ -242,11 +268,16 @@ class JEOL_PointLine:
             Spectra (defined by their markers) included in the profile (or None
             if all spectra are used). The integrated number of counts is set to
             'NaN' for spectra omitted.
+        xCalib : Bool
+            If set to True x-axis data points are returned as [nm] otherwise
+            as pixels.
+
 
         Returns
         -------
-        profile : Ndarray
-            Profile of intergrated intensity in interval.
+        x, profile : Ndarray, ndarray
+            X-axis data points (pixel or [nm]) and integrated intensity
+            in interval.
 
         Examples
         --------
@@ -255,13 +286,21 @@ class JEOL_PointLine:
 
         >>> pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
 
-        Profile of total x-ray intensity:
-        >>> p_tot = pl.profile()
+        Profile of total x-ray intensity (x coordinates as pixels):
+        >>> x, p_tot = pl.profile()
 
-        Profile of Ti Ka line with one spectrum (marker '2') omitted.
-        >>> p_Ti = pl.profile(interval=(4.4, 4.65),
-        ...                   energy=True,
-        ...                   markers=[0, 1, 3, 4])
+        >>> x
+        array([ 0.        ,  5.39241365, 10.78482731, 16.17724096, 21.56965461])
+
+        Profile of Ti Ka line with one spectrum (marker '2') omitted. X
+        coordinates as 'nm':
+        >>> x, p_Ti = pl.profile(interval=(4.4, 4.65),
+        ...                      energy=True,
+        ...                      markers=[0, 1, 3, 4],
+        ...                      xCalib=True)
+
+        >>> x
+        array([ 0.        , 10.42673734, 20.85347467, 31.28021201, 41.70694934])
 
         """
         if not interval:
@@ -285,7 +324,8 @@ class JEOL_PointLine:
             profile = np.full((self.eds_data.shape[0],), np.nan)
             for m in markers:
                 profile[m] =self.eds_data[m, interval[0]:interval[1]].sum()
-        return profile
+
+        return self.__get_x(xCalib=xCalib), profile
 
     def show_PointLine(self, ROI=None,
                        color='white', ann_color='black',

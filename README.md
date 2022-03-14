@@ -249,9 +249,16 @@ JU.plot_spectrum(dl.sum_spectrum(scans=[0], xRange=(0, 100)))
                       ann_color='white')
                       
 # Extract profile of Ti Ka line with one spectrum (marker '2') omitted
->>> p_Ti = pl.profile(interval=(4.4, 4.65),
+# x axis in [nm].
+>>> x, p_Ti = pl.profile(interval=(4.4, 4.65),
                       energy=True,
-                      markers=[0, 1, 3, 4])
+                      markers=[0, 1, 3, 4],
+                      xCalib=True)
+>>> x
+array([ 0.        , 10.42673734, 20.85347467, 31.28021201, 41.70694934])
+
+JU.plot_profile(x, p_Ti, units='nm')
+
 ```
 
 
