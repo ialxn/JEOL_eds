@@ -156,7 +156,12 @@ class JEOL_pts:
     JEOL_pts objects can also be initialized from a saved data cube. In this
     case, the dtype of the data cube is the same as in the stored data and a
     possible 'dtype=' keyword is ignored. This only initializes the data cube.
-    Most attributes are not loaded and are set to 'None':
+    Most attributes are not loaded and are set to 'None'.
+
+    First save data:
+    >>> dc.save_dcube(fname='data/128.npz')
+
+    Now load it again:
     >>> dc2 = JEOL_pts('data/128.npz')
     >>> dc2.file_name
     'data/128.npz'
