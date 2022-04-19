@@ -21,7 +21,7 @@ class test_DigiLine(unittest.TestCase):
     def test_toplevel(self):
         self.assertEqual('data/DigiLine/View000_0000003.pts', self.dl.file_name)
         self.assertEqual('2022-03-04 13:19:43', self.dl.file_date)
-        self.assertEqual(0.0099, self.dl.nm_per_pixel)
+        self.assertEqual(0.1546875, self.dl.nm_per_pixel)
 
     def test_parameters1(self):
         p = self.dl.parameters['EDS Data']['AnalyzableMap MeasData']
@@ -62,7 +62,7 @@ class test_DigiLine(unittest.TestCase):
         x, p = self.dl.profile(interval=(1.4, 1.6), energy=True, xCalib=True)
         self.assertEqual((256,), p.shape)
         self.assertEqual(x.shape, p.shape)
-        self.assertAlmostEqual(323.136, x.sum(), 6)
+        self.assertEqual(5049.0, x.sum())
         self.assertEqual(6740, p.sum())
 
     def test_sum_spectrum(self):

@@ -56,7 +56,7 @@ class JEOL_DigiLine:
 
     Mag calibration factor:
     >>> dl.nm_per_pixel
-    0.0099
+    0.1546875
 
     Full parameter set stored by Analysis Station is available via the attribute
     ``parameters``. Here we query LiveTime:
@@ -76,7 +76,7 @@ class JEOL_DigiLine:
         # Set MAG calibration factor
         ScanSize = self.parameters['PTTD Param']['Params']['PARAMPAGE0_SEM']['ScanSize']
         Mag = self.parameters['PTTD Data']['AnalyzableMap MeasData']['MeasCond']['Mag']
-        self.nm_per_pixel = ScanSize / Mag * 1000000 / self.dcube.shape[2]
+        self.nm_per_pixel = ScanSize / Mag * 1000000 / self.dcube.shape[1]
 
         # Make reference spectrum (sum spectrum) accessible easier
         self.ref_spectrum = self.parameters['EDS Data'] \
@@ -289,7 +289,7 @@ class JEOL_DigiLine:
         0.0
 
         >>> x[-1]
-        2.5245
+        39.4453125
 
         >>> p_O[0]
         1
