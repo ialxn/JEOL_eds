@@ -58,6 +58,10 @@ class JEOL_DigiLine:
     >>> dl.nm_per_pixel
     0.1546875
 
+    EDX data corresponds to which scan line?
+    >>> dl.scan_line
+    144
+
     Full parameter set stored by Analysis Station is available via the attribute
     ``parameters``. Here we query LiveTime:
     >>> dl.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['LiveTime']
@@ -82,6 +86,10 @@ class JEOL_DigiLine:
         self.ref_spectrum = self.parameters['EDS Data'] \
                                            ['AnalyzableMap MeasData']['Data'] \
                                            ['EDXRF']
+        # Easy access to scan line index
+        AimArea = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Aim Area']
+        assert AimArea[1] == AimArea[3]
+        self.scan_line = AimArea[1]
 
     def __parse_header(self, fname):
         """Extract meta data from header in JEOL ".pts" file.
