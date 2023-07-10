@@ -350,6 +350,12 @@ class JEOL_DigiLine:
         m : Ndarray
             Spectral map (Energy x Scan).
 
+        Notes
+        -----
+        The energy axis of the spectral map is always in energy channels. Thus,
+        in the example below, data for the first 250 channels (0 < 2.5 keV) is
+        returned.
+
         Examples
         --------
         >>> from JEOL_eds import JEOL_DigiLine
