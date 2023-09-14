@@ -30,6 +30,50 @@ from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 
 
 
+def filter_isolated_pixels(array, struct=np.ones((3,3))):
+    """ Return array with completely isolated single cells removed.
+
+    Parameters
+    ----------
+    array : Ndarray
+        Array with completely isolated single cells
+    struct : Tuple(tuple)
+        Structure array for generating unique regions. Default region is 3x3,
+        i.e. only the direct neighbors matter.
+
+    Returns
+    -------
+    filtered_array : Ndarray
+        Input array with isolated cells removed.
+
+    Notes
+    -----
+        Copied almost verbatim from
+        https://stackoverflow.com/questions/28274091/removing-completely-isolated-cells-from-python-array
+
+    Examples
+    --------
+
+    >>> from JEOL_eds import JEOL_pts
+    >>> import JEOL_eds.utils as JU
+
+    Load data
+    >>> dc = JEOL_pts('data/64.pts', split_frames=True)
+
+    Si map of first frames
+    >>> m = dc.map(interval=(1.50, 1.80), energy=True, frames=[0])
+
+    How many pixels with no direct neighbors (most probably noise) are present?
+    >>> (m - JU.filter_isolated_pixels(m)).sum()
+    93.0
+    """
+    filtered_array = np.copy(array)
+    id_regions, num_ids = ndimage.label(filtered_array, structure=struct)
+    id_sizes = np.array(ndimage.sum(array, id_regions, range(num_ids + 1)))
+    area_mask = (id_sizes == 1)
+    filtered_array[area_mask[id_regions]] = 0
+    return filtered_array
+
 def __plot_line(x, y,
                 outfile=None,
                 x_label=None, y_label=None,
@@ -84,52 +128,6 @@ def __plot_line(x, y,
 
     if outfile:
         plt.savefig(outfile)
-
-
-
-def filter_isolated_pixels(array, struct=np.ones((3,3))):
-    """ Return array with completely isolated single cells removed.
-
-    Parameters
-    ----------
-    array : Ndarray
-        Array with completely isolated single cells
-    struct : Tuple(tuple)
-        Structure array for generating unique regions. Default region is 3x3,
-        i.e. only the direct neighbors matter.
-
-    Returns
-    -------
-    filtered_array : Ndarray
-        Input array with isolated cells removed.
-
-    Notes
-    -----
-        Copied almost verbatim from
-        https://stackoverflow.com/questions/28274091/removing-completely-isolated-cells-from-python-array
-
-    Examples
-    --------
-
-    >>> from JEOL_eds import JEOL_pts
-    >>> import JEOL_eds.utils as JU
-
-    Load data
-    >>> dc = JEOL_pts('data/64.pts', split_frames=True)
-
-    Si map of first frames
-    >>> m = dc.map(interval=(1.50, 1.80), energy=True, frames=[0])
-
-    How many pixels with no direct neighbors (most probably noise) are present?
-    >>> (m - JU.filter_isolated_pixels(m)).sum()
-    93.0
-    """
-    filtered_array = np.copy(array)
-    id_regions, num_ids = ndimage.label(filtered_array, structure=struct)
-    id_sizes = np.array(ndimage.sum(array, id_regions, range(num_ids + 1)))
-    area_mask = (id_sizes == 1)
-    filtered_array[area_mask[id_regions]] = 0
-    return filtered_array
 
 def __scalebar_length(label):
     """Returns length [nm] extracted from label string
