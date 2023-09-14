@@ -74,6 +74,58 @@ def filter_isolated_pixels(array, struct=np.ones((3,3))):
     filtered_array[area_mask[id_regions]] = 0
     return filtered_array
 
+def rebin(a, bs, func=np.sum):
+    """Rebin array
+
+    Parameters:
+    -----------
+    a: Ndarray (2D)
+        Input array
+    bs: Tuple (nx, ny)
+        Size of the bin applied, i.e. (2, 2) means that the output array will
+        be reduced by a factor of 2 in both directions.
+    func: Function
+        Function applied to the individual bins [np.sum]. Alternatively,
+        np.mean could be used.
+
+    Returns:
+    --------
+        Rebinned ndarray
+
+    Notes:
+    ------
+        + The bin size must be compatible with the size of the input array.
+        + When used with maps or images, please note that the calibration
+          (dc.nm_per_pixels) will be too small by the corresponding rebin
+          factor.
+
+    Examples:
+    ---------
+
+    >>> import JEOL_eds.utils as JU
+
+    >>> a = np.arange(36).reshape(6, 6)
+    >>> rebinned = JU.rebin(a, (2, 3))
+    >>> rebinned
+    array([[ 24,  42],
+           [ 96, 114],
+           [168, 186]])
+
+    >>> rebinned.sum() == a.sum()
+    True
+
+    >>> a.mean() == (JU.rebin(a, (3, 3), func=np.mean).mean())
+    True
+    """
+    assert len(a.shape) == 2
+    assert len(bs) == 2
+    assert (a.shape[0] / bs[0]).is_integer()
+    assert (a.shape[1] / bs[1]).is_integer()
+
+    return func(a.reshape(a.shape[0] // bs[0], bs[0],
+                          a.shape[1] // bs[1], bs[1]),
+                axis=(1, 3))
+
 def __plot_line(x, y,
                 outfile=None,
                 x_label=None, y_label=None,
