@@ -980,7 +980,6 @@ def get_profile(image, line, linewidth=1):
     profile = profile_line(image,
                            line[0:2], line[2:],
                            linewidth=linewidth,
-                           reduce_func=np.sum,
                            mode='nearest')
     return profile
 
