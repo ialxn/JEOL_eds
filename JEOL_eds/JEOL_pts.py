@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=C0103,C0301
 """
-Copyright 2020-2022 Ivo Alxneit (ivo.alxneit@psi.ch)
+Copyright 2020-2023 Ivo Alxneit (ivo.alxneit@psi.ch)
 
 This file is part of JEOL_eds.
 JEOL_eds is free software: you can redistribute it and/or modify
