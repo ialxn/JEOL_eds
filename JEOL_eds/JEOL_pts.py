@@ -221,6 +221,11 @@ class JEOL_pts:
         if os.path.splitext(fname)[1] == '.pts':
             self.file_name = fname
             self.parameters, data_offset = self.__parse_header(fname)
+
+            AimArea = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Aim Area']
+            if AimArea[1] == AimArea[3]:
+                raise Exception(f'"{fname}" does not contain map data! Aim area is {AimArea}')
+
             if only_metadata:
                 self.dcube = None
                 self.drift_images = None

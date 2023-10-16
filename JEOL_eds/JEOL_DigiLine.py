@@ -75,6 +75,13 @@ class JEOL_DigiLine:
         assert fname.endswith('pts')
         self.file_name = fname
         self.parameters, data_offset = self.__parse_header(fname)
+
+        AimArea = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Aim Area']
+        if AimArea[1] != AimArea[3]:
+            raise Exception(f'"{fname}" does not contain scan line data! Aim area is {AimArea}')
+        # Easy access to scan line index
+        self.scan_line = AimArea[1]
+
         self.dcube = self.__get_data_cube(data_offset)
 
         # Set MAG calibration factor
@@ -86,10 +93,6 @@ class JEOL_DigiLine:
         self.ref_spectrum = self.parameters['EDS Data'] \
                                            ['AnalyzableMap MeasData']['Data'] \
                                            ['EDXRF']
-        # Easy access to scan line index
-        AimArea = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Aim Area']
-        assert AimArea[1] == AimArea[3]
-        self.scan_line = AimArea[1]
 
     def __parse_header(self, fname):
         """Extract meta data from header in JEOL ".pts" file.
