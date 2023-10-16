@@ -57,10 +57,10 @@ to upgrade an existing installation.
 ### EDS maps
 
 ```python
-# Read binary EDS data (up to 11.0 keV) storing each sweep individually
+# Read binary EDS data (up to 11.0 keV) storing each sweep individually.
 >>> dc = JEOL_pts('data/128.pts', split_frames=True, E_cutoff=11.0)
 
-# Print calibration data (pixel size in nm)
+# Print calibration data (pixel size in nm) and size of data cube.
 >>> dc.nm_per_pixel
 1.93359375
 
@@ -68,12 +68,12 @@ to upgrade an existing installation.
 (50, 128, 128, 1100)
 
 # If `split_frames=True` is used and the data cube becomes too big to be kept in
-# memory a subset of frames can be read by using the keyword parameter `frame_list`
+# memory a subset of frames can be read by using the keyword parameter `frame_list`.
 >>> small_dc = JEOL_pts('data/128.pts',
                          split_frames=True, frame_list=[1,2,4,8,16],
                          E_cutoff=11.0)
 
-# The frames in the data cube correspond to the original frames 1, 2, 4, 8, and 16
+# The frames in the data cube correspond to the original frames 1, 2, 4, 8, and 16.
 >>> small_dc.frame_list
 [1, 2, 4, 8, 16]
 
@@ -99,10 +99,11 @@ to upgrade an existing installation.
 70746
 70777
 
-# The fast way to read and plot reference spectrum
+# The fast way to read and plot reference spectrum.
 >>> JU.plot_spectrum(JEOL_pts('data/64.pts', only_metadata=True).ref_spectrum)
 
-# Cu Ka map of all even frames
+# Cu Ka map of all even frames.
+>>> dc = JEOL_pts('data/128.pts')
 >>> m = dc.map(interval=(7.9, 8.1),
                energy=True,
                frames=range(0, dc.dcube.shape[0], 2))
@@ -122,7 +123,17 @@ to upgrade an existing installation.
                 gamma=0.9,
                 smooth=0.75)
 
->>> dc = JEOL_pts('data/128.pts', read_drift=True)
+# Plot simple map that includes a scale bar.
+>>> scale_bar = {'label': '50 nm',
+                 'f_calib': dc.nm_per_pixel}
+>>> JU.plot_map(m, 'purple',scale_bar=scale_bar)
+
+# Plot rebinned (2x2) map to increase counts per pixel at decreased resolution.
+>>> f_rebin = 2
+>>> scale_bar = {'label': '50 nm',
+                 'f_calib': dc.nm_per_pixel * f_rebin}
+>>> JU.plot_map(JU.rebin(m, (f_rebin, f_rebin)),
+                'purple',scale_bar=scale_bar)
 
 # Overlays of elemental maps
 >>> Fe = dc.map(interval=(6.25, 6.6), energy=True)
@@ -132,8 +143,8 @@ to upgrade an existing installation.
 >>> scale_bar = {'label': '50 nm',
                  'f_calib': dc.nm_per_pixel}
 
-JU.create_overlay([Si, Al, Fe], ['blue', 'red', 'green'],
-                  scale_bar=scale_bar)
+>>> JU.create_overlay([Si, Al, Fe], ['blue', 'red', 'green'],
+                      scale_bar=scale_bar)
 
 ```
 
@@ -142,36 +153,36 @@ JU.create_overlay([Si, Al, Fe], ['blue', 'red', 'green'],
 ```python
 >>> dl = JEOL_DigiLine('data/DigiLine/View000_0000003.pts')
 
-# Report some meta data
+# Report some meta data.
 >>> dl.file_name
 'data/DigiLine/View000_0000003.pts'
 
-# Mag calibration factor
+# Mag calibration factor.
 >>> dl.nm_per_pixel
 0.0099
 
-# Data cube N x X x E (N_scans x N_pixels x N_E-channels)
+# Data cube N x X x E (N_scans x N_pixels x N_E-channels).
 >>> dl.dcube.shape
 (50, 256, 4000)
 
 # Full parameter set stored by Analysis Station is available via the
-# `parameters` attribute. Here we query LiveTime
+# `parameters` attribute. Here we query LiveTime.
 >>> dl.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['LiveTime']
 63.13
 
-# Plot part of reference spectrum (re-calibrated sum spectrum)
+# Plot part of reference spectrum (re-calibrated sum spectrum).
 >>> JU.plot_spectrum(dl.ref_spectrum,
                      E_range=(1.2, 2.0),
                      M_ticks=(4,1))
 
-# Plot sum spectrum of first 100 pixels in first scan
-JU.plot_spectrum(dl.sum_spectrum(scans=[0], xRange=(0, 100)))
+# Plot sum spectrum of first 100 pixels in first scan.
+>>> JU.plot_spectrum(dl.sum_spectrum(scans=[0], xRange=(0, 100)))
 
-# Extract oxygen profile, x-axis [nm]
+# Extract oxygen profile, x-axis [nm].
 >>> x, p_O = dl.profile(interval=(0.45, 0.6),
                         energy=True, xCalib=True)
 
-# Spectral map (spectrum versus position) of energies up to 2.5 keV
+# Spectral map (spectrum versus position) of energies up to 2.5 keV.
 >>> m = dl.spectral_map(E_range=(0, 2.5), energy=True)
 >>> m.shape
 (256, 250)
@@ -184,25 +195,25 @@ JU.plot_spectrum(dl.sum_spectrum(scans=[0], xRange=(0, 100)))
 ```python
 >>> s = JEOL_spectrum('data/spot.eds')
 
-# Size of spectral data
+# Size of spectral data.
 >>> s.data.shape
 (4096,)
 
-# Report some meta data
+# Report some meta data.
 >>> s.file_name
 'data/spot.eds'
 
-# Display some meta data of header
+# Display some meta data of header.
 >>> header = s.header
 >>> header['CountRate']
 1238.0
 
-# Display some meta data of footer
+# Display some meta data of footer.
 >>> footer = s.footer
 >>> footer['Parameters']['AccKV']
 200.0
 
-# Plot data
+# Plot data.
 >>> JU.plot_spectrum(s.data,
                      E_range=(0, 20),
                      M_ticks=(4, 1))
@@ -213,15 +224,15 @@ JU.plot_spectrum(dl.sum_spectrum(scans=[0], xRange=(0, 100)))
 ```python
 >>> pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
 
-# Report some meta data. '.pln' file contains list of spectra and image
+# Report some meta data. '.pln' file contains list of spectra and image.
 >>> pl.file_name
 'View000_0000001.pln'
 
->>> pl.Image_name
+>>> pl.Image_name.
 'View000_0000000.img'
 
-# The attribute `eds_dict` is a dict with `marker` as key and a list
-# [FileName, xPos, yPos] as content
+# The attribute `eds_dict` is a dict with `marker` as key and a list with
+# [FileName, xPos, yPos] as content.
 >>> pl.eds_dict
 {0: ['View000_0000006.eds', 85.3125, 96.4375],
  1: ['View000_0000005.eds', 81.4375, 92.6875],
@@ -229,21 +240,21 @@ JU.plot_spectrum(dl.sum_spectrum(scans=[0], xRange=(0, 100)))
  3: ['View000_0000003.eds', 73.6875, 85.1875],
  4: ['View000_0000002.eds', 69.8125, 81.4375]}
 
-# Image object (`JEOL_image`) is stored as attribute `ref_image`
+# Image object (`JEOL_image`) is stored as attribute `ref_image`.
 >>> ref = pl.ref_image
 
->>> ref.file_name
+>>> ref.file_name.
 'data/PointLine/View000_0000000.img'
 
-# Image parameters can be accessed such as MAG calibration
+# Image parameters can be accessed such as MAG calibration.
 >>> ref.nm_per_pixel
 1.93359375
 
-# Spectral data is available
+# Spectral data is available.
 >>> pl.eds_data.shape
 (5, 4096)
 
-# Visualize the position of the individual data points on a zoomed-in image
+# Visualize the position of the individual data points on a zoomed-in image.
 >>> pl.show_PointLine(ROI=(45,110,50,100),
                       color='red',
                       ann_color='white')
@@ -257,29 +268,28 @@ JU.plot_spectrum(dl.sum_spectrum(scans=[0], xRange=(0, 100)))
 >>> x
 array([ 0.        , 10.42673734, 20.85347467, 31.28021201, 41.70694934])
 
-JU.plot_profile(x, p_Ti, units='nm')
-
+>>> JU.plot_profile(x, p_Ti, units='nm')
 ```
 
 
 ### Image files
 ```python
-# Read an image file
+# Read an image file.
 >>> demo_im = JEOL_image('data/demo.img')
 
 >>> demo_im.file_name
 'data/demo.img'
 
-# Report some meta data stored in file
+# Report some meta data stored in file.
 >>> demo_im.parameters['Instrument']['Name']
 'JEM-ARM200F(HRP)'
 >>> demo_im.parameters['Image']['Size']
 array([512, 512], dtype=int32)
 
-# Read a map file
+# Read a map file.
 >>> demo_map = JEOL_image('data/demo.map')
 
-# Print calibration data (pixel size in nm)
+# Print calibration data (pixel size in nm).
 >>> demo_map.nm_per_pixel
 3.8671875
 
