@@ -224,7 +224,7 @@ class JEOL_pts:
 
             AimArea = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Aim Area']
             if AimArea[1] == AimArea[3]:
-                raise Exception(f'"{fname}" does not contain map data! Aim area is {AimArea}')
+                raise ValueError(f'"{fname}" does not contain map data! Aim area {AimArea} suggests to use `JEOL_DigiLine()` to load data.')
 
             if only_metadata:
                 self.dcube = None
