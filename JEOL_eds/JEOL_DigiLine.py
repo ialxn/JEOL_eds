@@ -78,7 +78,7 @@ class JEOL_DigiLine:
 
         AimArea = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Aim Area']
         if AimArea[1] != AimArea[3]:
-            raise Exception(f'"{fname}" does not contain scan line data! Aim area is {AimArea}')
+            raise TypeError(f'"{fname}" does not contain scan line data! Aim area {AimArea} suggests to use `JEOL_pts() to load data.')
         # Easy access to scan line index
         self.scan_line = AimArea[1]
 
