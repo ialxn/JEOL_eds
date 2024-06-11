@@ -258,7 +258,6 @@ class JEOL_pts:
 
         self.__set_ref_spectrum()
 
-
     def __set_ref_spectrum(self):
         """Sets attribute ref_spectrum from parameters dict.
         """
@@ -275,7 +274,6 @@ class JEOL_pts:
                                                ['EDXRF'][0:N]
         else:
             self.ref_spectrum = None
-
 
     def __parse_header(self, fname):
         """Extract meta data from header in JEOL ".pts" file.
@@ -308,7 +306,6 @@ class JEOL_pts:
                                   timedelta(days=np.fromfile(fd, 'd', 1)[0])))
             fd.seek(head_pos + 12)
             return _parsejeol(fd), data_pos
-
 
     def __CH_offset_from_meta(self):
         """Returns offset (channel corresponding to E=0).
@@ -349,7 +346,7 @@ class JEOL_pts:
         AimArea = self.parameters['EDS Data'] \
                                  ['AnalyzableMap MeasData']['Meas Cond'] \
                                  ['Aim Area']
-        assert AimArea[1] != AimArea[3] # They are identical for DigiLine data
+        assert AimArea[1] != AimArea[3]  # They are identical for DigiLine data
 
         CH_offset = self.__CH_offset_from_meta()
         NumCH = self.parameters['PTTD Param'] \
@@ -490,15 +487,14 @@ class JEOL_pts:
             ipos = np.where(np.logical_and(rawdata >= 40960, rawdata < 45056))[0]
             if len(ipos) == 0:  # No data available
                 return None
-            I = np.array(rawdata[ipos] - 40960, dtype='uint16')
+            Im = np.array(rawdata[ipos] - 40960, dtype='uint16')
             try:
-                return I.reshape(image_shape)
+                return Im.reshape(image_shape)
             except ValueError:  # incomplete image
                 # Add `N_addl` NaNs before reshape()
-                N_addl = N_images * v * h - I.shape[0]
-                I = np.append(I, np.full((N_addl), np.nan, dtype='uint16'))
-                return I.reshape(image_shape)
-
+                N_addl = N_images * v * h - Im.shape[0]
+                Im = np.append(Im, np.full((N_addl), np.nan, dtype='uint16'))
+                return Im.reshape(image_shape)
 
     def drift_statistics(self, filtered=False, verbose=False):
         """Returns 2D frequency distribution of frame shifts (x, y).
@@ -557,7 +553,7 @@ class JEOL_pts:
                                  bins=bins)
         if verbose:
             peak_val = int(h.max())
-            mx, my = np.where(h==np.amax(h))
+            mx, my = np.where(h == np.amax(h))
             mx = int(bins[int(mx)] + 0.5)
             my = int(bins[int(my)] + 0.5)
             print('Shifts (filtered):') if filtered else print('Shifts (unfiltered):')
@@ -729,7 +725,7 @@ class JEOL_pts:
             # c has shape (2 * s - 1, 2 * s - 1)
             # Autocorrelation peaks at [s - 1, s - 1]
             # i.e. offset is at dy (dy) index_of_maximum - s + 1.
-            dx, dy = np.where(c==np.amax(c))
+            dx, dy = np.where(c == np.amax(c))
             if dx.shape[0] > 1 and verbose:
                 # Report cases where averaging was applied
                 print('Average of', end=' ')
@@ -874,16 +870,16 @@ class JEOL_pts:
         if align == 'yes':
             shifts = self.shifts(frames=frames, verbose=verbose)
         # Allocate array for result
-        res = np.zeros((2*N, 2*N))
+        res = np.zeros((2 * N, 2 * N))
         x0 = N // 2
         y0 = N // 2
         for f in frames:
             # map of this frame summed over all energy intervals
             dx, dy = shifts[f]
-            res[x0-dx:x0-dx+N, y0-dy:y0-dy+N] += \
-                    self.dcube[f, :, :, interval[0]:interval[1]].sum(axis=-1)
+            res[x0 - dx:x0 - dx + N, y0 - dy:y0 - dy + N] += \
+                self.dcube[f, :, :, interval[0]:interval[1]].sum(axis=-1)
 
-        return res[x0:x0+N, y0:y0+N]
+        return res[x0:x0 + N, y0:y0 + N]
 
     def __spectrum_cROI(self, ROI, frames):
         """Returns spectrum integrated over a circular ROI
@@ -1101,7 +1097,7 @@ class JEOL_pts:
         else:
             ts = np.full((self.dcube.shape[0],), np.nan)
             for f in frames:
-                ts[f] =self.dcube[f, :, :, interval[0]:interval[1]].sum(axis=(0, 1, 2))
+                ts[f] = self.dcube[f, :, :, interval[0]:interval[1]].sum(axis=(0, 1, 2))
         return ts
 
     def make_movie(self, fname=None, **kws):
@@ -1338,6 +1334,7 @@ class JEOL_pts:
 
             aeval = asteval.Interpreter()
             self.parameters = aeval(hf.attrs['parameters'])
+
 
 if __name__ == "__main__":
     import doctest

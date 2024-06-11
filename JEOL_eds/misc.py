@@ -21,14 +21,16 @@ along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
 
+
 def _decode(bytes_string):
     try:
         string = bytes_string.decode("utf-8")
-    except:
+    except UnicodeDecodeError:
         # See https://github.com/hyperspy/hyperspy/issues/2812
         string = bytes_string.decode("shift_jis")
 
     return string
+
 
 def _parsejeol(fd):
     """Parse meta data.
@@ -64,7 +66,7 @@ def _parsejeol(fd):
         20: 'c',
         65553: '?',
         65552: '?',
-        }
+    }
 
     final_dict = {}
     tmp_list = []
@@ -109,14 +111,14 @@ def _parsejeol(fd):
                     tmp_dict[kwrd]['value'] = value
                 elif kwrd == 'Limits':
                     pass
-                        # see https://github.com/hyperspy/hyperspy/pull/2488
-                        # first 16 bytes are encode in float32 and looks like
-                        # limit values ([20. , 1., 2000, 1.] or [1., 0., 1000., 0.001])
-                        # next 4 bytes are ASCII character and looks like
-                        # number format (%.0f or %.3f)
-                        # next 12 bytes are unclear
-                        # next 4 bytes are ASCII character and are units (kV or nA)
-                        # last 12 byes are unclear
+                    # see https://github.com/hyperspy/hyperspy/pull/2488
+                    # first 16 bytes are encode in float32 and looks like
+                    # limit values ([20. , 1., 2000, 1.] or [1., 0., 1000., 0.001])
+                    # next 4 bytes are ASCII character and looks like
+                    # number format (%.0f or %.3f)
+                    # next 12 bytes are unclear
+                    # next 4 bytes are ASCII character and are units (kV or nA)
+                    # last 12 byes are unclear
                 elif val_type == 14:
                     tmp_dict[kwrd] = {}
                     tmp_dict[kwrd]['index'] = value
@@ -124,14 +126,14 @@ def _parsejeol(fd):
                     tmp_dict[kwrd] = value
             if kwrd == 'Limits':
                 pass
-                    # see https://github.com/hyperspy/hyperspy/pull/2488
-                    # first 16 bytes are encode in int32 and looks like
-                    # limit values (10, 1, 100000000, 1)
-                    # next 4 bytes are ASCII character and looks like number
-                    # format (%d)
-                    # next 12 bytes are unclear
-                    # next 4 bytes are ASCII character and are units (mag)
-                    # last 12 byes are again unclear
+                # see https://github.com/hyperspy/hyperspy/pull/2488
+                # first 16 bytes are encode in int32 and looks like
+                # limit values (10, 1, 100000000, 1)
+                # next 4 bytes are ASCII character and looks like number
+                # format (%d)
+                # next 12 bytes are unclear
+                # next 4 bytes are ASCII character and are units (mag)
+                # last 12 byes are again unclear
             else:
                 tmp_dict = tmp_dict[kwrd]
         else:
@@ -143,6 +145,7 @@ def _parsejeol(fd):
             else:
                 mark = 0
     return final_dict
+
 
 def _correct_spectrum(parameters, s):
     """Apply non-linear energy correction at low energies to spectrum.
@@ -196,7 +199,7 @@ def _correct_spectrum(parameters, s):
         #     200290                                              #
         #                                                         #
         ###########################################################
-        E_corr = ExCoef[0]*E_uncorr**2 + ExCoef[1]*E_uncorr + ExCoef[2]
+        E_corr = ExCoef[0] * E_uncorr**2 + ExCoef[1] * E_uncorr + ExCoef[2]
         s[0:N] = np.interp(E_uncorr, E_corr, s[0:N])
         return s
 

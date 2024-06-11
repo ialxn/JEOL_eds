@@ -29,8 +29,7 @@ import matplotlib.font_manager as fm
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 
 
-
-def filter_isolated_pixels(array, struct=np.ones((3,3))):
+def filter_isolated_pixels(array, struct=np.ones((3, 3))):
     """ Return array with completely isolated single cells removed.
 
     Parameters
@@ -73,6 +72,7 @@ def filter_isolated_pixels(array, struct=np.ones((3,3))):
     area_mask = (id_sizes == 1)
     filtered_array[area_mask[id_regions]] = 0
     return filtered_array
+
 
 def rebin(a, bs, func=np.sum):
     """Rebin array
@@ -125,6 +125,7 @@ def rebin(a, bs, func=np.sum):
     return func(a.reshape(a.shape[0] // bs[0], bs[0],
                           a.shape[1] // bs[1], bs[1]),
                 axis=(1, 3))
+
 
 def __plot_line(x, y,
                 outfile=None,
@@ -181,6 +182,7 @@ def __plot_line(x, y,
     if outfile:
         plt.savefig(outfile)
 
+
 def __scalebar_length(label):
     """Returns length [nm] extracted from label string
 
@@ -205,6 +207,7 @@ def __scalebar_length(label):
     else:
         length = None
     return length
+
 
 def __add_scalebar(ax, scale_bar, extent):
     """Adds scale bar to plot at axes ``ax``.
@@ -247,7 +250,7 @@ def __add_scalebar(ax, scale_bar, extent):
             else:
                 label = scale_bar['label'][:-2] + 'px'
         else:
-            label =scale_bar['label']
+            label = scale_bar['label']
         scalebar = AnchoredSizeBar(ax.transData,
                                    length,
                                    label,
@@ -255,9 +258,10 @@ def __add_scalebar(ax, scale_bar, extent):
                                    pad=0.5,
                                    color=color,
                                    frameon=False,
-                                   size_vertical=extent[3]*0.01,
+                                   size_vertical=extent[3] * 0.01,
                                    fontproperties=fontprops)
         ax.add_artist(scalebar)
+
 
 def __get_extent(m, scale_bar):
     """Returns extent in data coordinates or image pixels (scale bar not defined)
@@ -284,6 +288,7 @@ def __get_extent(m, scale_bar):
         width = m.shape[0]
         height = m.shape[1]
     return [0, width, 0, height]
+
 
 def create_overlay(images, colors,
                    legends=None, BG_image=None, outfile=None, scale_bar=None):
@@ -391,9 +396,9 @@ def create_overlay(images, colors,
     assert isinstance(images, (list, tuple))
     assert isinstance(colors, (list, tuple))
     assert len(colors) >= len(images)   # Sufficient colors provided
-    assert all(image.shape==images[0].shape for image in images)    # all same shape
+    assert all(image.shape == images[0].shape for image in images)    # all same shape
     if legends:
-        assert isinstance(legends,(list, tuple))
+        assert isinstance(legends, (list, tuple))
         assert len(legends) == len(images)
     if BG_image is not None:
         assert images[0].shape == BG_image.shape
@@ -429,7 +434,7 @@ def create_overlay(images, colors,
         fontsize = 12
         delta = extent[3] // fontsize  # Found by trial-and-error
         for i in range(len(images)):
-            ax.text(extent[1], extent[3] - i*delta, legends[i],
+            ax.text(extent[1], extent[3] - i * delta, legends[i],
                     size=fontsize,
                     color=colors[i], backgroundcolor='white')
 
@@ -437,6 +442,7 @@ def create_overlay(images, colors,
 
     if outfile:
         plt.savefig(outfile)
+
 
 def __make_cmap(color, gamma=1.0, background="white"):
     """Return color map with uniform gradient from white to `color`.
@@ -470,6 +476,7 @@ def __make_cmap(color, gamma=1.0, background="white"):
     for i in range(3):          # set rgb channels
         t_color[:, i] = np.linspace(start, rgba[i], N) ** gamma
     return ListedColormap(t_color)
+
 
 def plot_map(m, color,
              label=None,
@@ -600,7 +607,7 @@ def plot_map(m, color,
     # Obtain size (w x h) of image
     extent = __get_extent(m, scale_bar)
 
-    cmap =  __make_cmap(color, gamma=gamma, background=background)
+    cmap = __make_cmap(color, gamma=gamma, background=background)
     plt.imshow(m, cmap=cmap, extent=extent)
     plt.colorbar(label="counts  [-]")
     ax = plt.gca()
@@ -612,7 +619,7 @@ def plot_map(m, color,
         label_BGcolor = "black" if background.lower() == "white" else "white"
         label_color = "black" if label_BGcolor == "white" else "white"
         # Position to print label in data coordinates found by trial-and-error.
-        ax.text(extent[0]*0.05, extent[3]*0.85,
+        ax.text(extent[0] * 0.05, extent[3] * 0.85,
                 label,
                 size=24,
                 color=label_color,
@@ -622,6 +629,7 @@ def plot_map(m, color,
 
     if outfile:
         plt.savefig(outfile)
+
 
 def plot_spectrum(s, E_range=None, M_ticks=None,
                   log_y=False, outfile=None, **kws):
@@ -668,11 +676,11 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
     ...                  outfile='ref_spectrum.pdf',
     ...                  color='Red', linestyle='-.', linewidth=1.0)
     """
-    F = 1/100     # Calibration factor (Energy per channel)
+    F = 1 / 100     # Calibration factor (Energy per channel)
 
     if E_range is not None:
         E_low, E_high = E_range
-        if E_high > s.shape[0] * F: # E_high is out of range
+        if E_high > s.shape[0] * F:  # E_high is out of range
             E_high = s.shape[0] * F
     else:
         E_low, E_high = 0, s.shape[0] * F
@@ -687,6 +695,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
                 x_label='E  [keV]', y_label='counts  [-]',
                 M_ticks=M_ticks, log_y=log_y, outfile=outfile,
                 **kws)
+
 
 def export_spectrum(s, outfile, E_range=None):
     """Exports spectrum as tab delimited ASCII.
@@ -718,11 +727,11 @@ def export_spectrum(s, outfile, E_range=None):
     >>> JU.export_spectrum(dc.ref_spectrum, 'test_spectrum.dat',
     ...                    E_range=(1, 2.5))
     """
-    F = 1/100     # Calibration factor (Energy per channel)
+    F = 1 / 100     # Calibration factor (Energy per channel)
 
     if E_range is not None:
         E_low, E_high = E_range
-        if E_high > s.shape[0] * F: # E_high is out of range
+        if E_high > s.shape[0] * F:  # E_high is out of range
             E_high = s.shape[0] * F
     else:
         E_low, E_high = 0, s.shape[0] * F
@@ -786,6 +795,7 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
                 M_ticks=M_ticks, outfile=outfile,
                 **kws)
 
+
 def export_tseries(ts, outfile):
     """Export time series as tab delimited ASCII.
 
@@ -825,6 +835,7 @@ def export_tseries(ts, outfile):
     header = '# Frame idx [-]        counts [-]'
     fmt = '%d\t%f'
     np.savetxt(outfile, data, header=header, fmt=fmt)
+
 
 def plot_profile(x, y, units='px', M_ticks=None, outfile=None, **kws):
     """Plots a nice profile.
@@ -870,6 +881,7 @@ def plot_profile(x, y, units='px', M_ticks=None, outfile=None, **kws):
                 M_ticks=M_ticks, outfile=outfile,
                 **kws)
 
+
 def export_profile(x, y, outfile, units='px'):
     """Export profile as tab delimited ASCII.
 
@@ -907,6 +919,7 @@ def export_profile(x, y, outfile, units='px'):
     fmt = '%d\t%f'
     np.savetxt(outfile, np.vstack((x, y)).T, header=header, fmt=fmt)
 
+
 def __linewidth_from_data_units(linewidth, axis):
     """Convert a linewidth in pixels to points.
 
@@ -934,6 +947,7 @@ def __linewidth_from_data_units(linewidth, axis):
     length *= 72    # 72 points per inch
     # Scale linewidth to value range
     return linewidth * (length / value_range)
+
 
 def show_line(image, line, linewidth=1, outfile=None, **kws):
     """Plots a white (profile) line on image.
@@ -980,10 +994,11 @@ def show_line(image, line, linewidth=1, outfile=None, **kws):
     x = (line[1], line[3])
     y = (line[0], line[2])
     width = __linewidth_from_data_units(linewidth, ax.axes)
-    plt.plot(x,y, color='white', linewidth=width)
+    plt.plot(x, y, color='white', linewidth=width)
 
     if outfile:
         plt.savefig(outfile)
+
 
 def get_profile(image, line, linewidth=1):
     """Returns a profile along line on image.
@@ -1032,6 +1047,7 @@ def get_profile(image, line, linewidth=1):
                            linewidth=linewidth,
                            mode='nearest')
     return profile
+
 
 def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
     """Plots ROI on image.
@@ -1095,6 +1111,7 @@ def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
 
     if outfile:
         plt.savefig(outfile)
+
 
 if __name__ == "__main__":
     import doctest

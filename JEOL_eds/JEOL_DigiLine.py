@@ -125,7 +125,6 @@ class JEOL_DigiLine:
             fd.seek(head_pos + 12)
             return _parsejeol(fd), data_pos
 
-
     def __CH_offset_from_meta(self):
         """Returns offset (channel corresponding to E=0).
         """
@@ -165,7 +164,7 @@ class JEOL_DigiLine:
         AimArea = self.parameters['EDS Data'] \
                                  ['AnalyzableMap MeasData']['Meas Cond'] \
                                  ['Aim Area']
-        assert AimArea[1] == AimArea[3] # This is a scan line
+        assert AimArea[1] == AimArea[3]  # This is a scan line
 
         Sweep = self.parameters['PTTD Data'] \
                                ['AnalyzableMap MeasData']['Doc'] \
@@ -254,7 +253,7 @@ class JEOL_DigiLine:
         assert len(xRange) == 2
 
         if scans is None:
-            spectrum = self.dcube[:, xRange[0]:xRange[1], :].sum(axis=(0,1))
+            spectrum = self.dcube[:, xRange[0]:xRange[1], :].sum(axis=(0, 1))
         else:
             assert isinstance(scans, Iterable)
             spectrum = np.zeros(self.dcube.shape[-1], dtype='uint32')
@@ -333,7 +332,7 @@ class JEOL_DigiLine:
         else:
             profile = np.zeros((self.dcube.shape[1],))
             for scan in scans:
-                profile +=self.dcube[scan, :, interval[0]:interval[1]].sum(axis=(1))
+                profile += self.dcube[scan, :, interval[0]:interval[1]].sum(axis=(1))
         return x, profile
 
     def spectral_map(self, E_range=None, energy=False):
@@ -382,12 +381,13 @@ class JEOL_DigiLine:
                                    ['AnalyzableMap MeasData']['Doc'] \
                                    ['CoefB']
             E_range = (int(round((E_range[0] - CoefB) / CoefA)),
-                        int(round((E_range[1] - CoefB) / CoefA)))
+                       int(round((E_range[1] - CoefB) / CoefA)))
 
         if E_range[0] > E_range[1]:   # ensure interval is (low, high)
             E_range = (E_range[1], E_range[0])
 
         return self.dcube.sum(axis=0)[:, E_range[0]:E_range[1]]
+
 
 if __name__ == "__main__":
     import doctest

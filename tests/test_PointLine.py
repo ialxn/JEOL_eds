@@ -11,6 +11,7 @@ import numpy as np
 
 from JEOL_eds import JEOL_PointLine
 
+
 class test_PointLine(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
