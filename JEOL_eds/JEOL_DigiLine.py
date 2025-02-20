@@ -56,16 +56,16 @@ class JEOL_DigiLine:
 
     Mag calibration factor:
     >>> dl.nm_per_pixel
-    0.1546875
+    np.float64(0.1546875)
 
     EDX data corresponds to which scan line?
     >>> dl.scan_line
-    144
+    np.uint16(144)
 
     Full parameter set stored by Analysis Station is available via the attribute
     ``parameters``. Here we query LiveTime:
     >>> dl.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['LiveTime']
-    63.13
+    np.float64(63.13)
 
     Data cube N x X x E (N_scans x N_pixels x N_E-channels
     >>> dl.dcube.shape
@@ -234,17 +234,17 @@ class JEOL_DigiLine:
         (4000,)
 
         >>> spectrum.sum()
-        7259
+        np.uint64(7259)
 
         Sum spectrum:
         >>> spectrum = dl.sum_spectrum()
         >>> spectrum.sum()
-        30710
+        np.uint64(30710)
 
         This should be close to the reference spectrum:
         >>> ref_spectrum = dl.ref_spectrum
         >>> ref_spectrum.sum()
-        30759
+        np.int64(30759)
         """
 
         if xRange is None:
@@ -297,16 +297,16 @@ class JEOL_DigiLine:
         ...                     energy=True, xCalib=True)
 
         >>> x[0]
-        0.0
+        np.float64(0.0)
 
         >>> x[-1]
-        39.4453125
+        np.float64(39.4453125)
 
         >>> p_O[0]
-        1
+        np.uint64(1)
 
         >>> p_O[-1]
-        19
+        np.uint64(19)
         """
         if not interval:
             interval = (0, self.dcube.shape[2])

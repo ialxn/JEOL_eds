@@ -53,14 +53,14 @@ class JEOL_spectrum:
     >>> s.header['username']
     'JEM Administrator'
     >>> s.header['CountRate']
-    1238.0
+    np.float64(1238.0)
 
     Now footer:
     >>> _ = s.footer
     >>> s.footer['Parameters']['SEM']
     'JEM-ARM200F(HRP)'
     >>> s.footer['Parameters']['AccKV']
-    200.0
+    np.float64(200.0)
 
     Size of spectral data:
     >>> s.data.shape

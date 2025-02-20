@@ -56,8 +56,12 @@ class JEOL_PointLine:
 
      ``JEOL_PointLine.eds_dict`` is a dict with marker as key and a list
      [FileName, xPos, yPos] as content:
-    >>> pl.eds_dict
-    {0: ['View000_0000006.eds', 85.3125, 96.4375], 1: ['View000_0000005.eds', 81.4375, 92.6875], 2: ['View000_0000004.eds', 77.5625, 88.9375], 3: ['View000_0000003.eds', 73.6875, 85.1875], 4: ['View000_0000002.eds', 69.8125, 81.4375]}
+    >>> pl.eds_dict #doctest: +NORMALIZE_WHITESPACE
+    {0: ['View000_0000006.eds', np.float64(85.3125), np.float64(96.4375)],
+     1: ['View000_0000005.eds', np.float64(81.4375), np.float64(92.6875)],
+     2: ['View000_0000004.eds', np.float64(77.5625), np.float64(88.9375)],
+     3: ['View000_0000003.eds', np.float64(73.6875), np.float64(85.1875)],
+     4: ['View000_0000002.eds', np.float64(69.8125), np.float64(81.4375)]}
 
     Image object (``JEOL_image``) is stored as ``JEOL_PointLine.ref_image``:
     >>> ref = pl.ref_image
@@ -70,7 +74,7 @@ class JEOL_PointLine:
 
     Image parameters can be accessed such as MAG calibration and image size:
     >>> ref.nm_per_pixel
-    1.93359375
+    np.float64(1.93359375)
 
     >>> ref.parameters['Image']['Size']
     array([256, 256], dtype=int32)
@@ -82,9 +86,9 @@ class JEOL_PointLine:
     values should be ``CoefA``, ``CoefB`` (calibration of energy axis):
     >>> h = pl.eds_header
     >>> h['CoefA']
-    0.0100006
+    np.float64(0.0100006)
     >>> h['CoefB']
-    -0.00122558
+    np.float64(-0.00122558)
 
     Spectral data is availabe:
     >>> pl.eds_data.shape

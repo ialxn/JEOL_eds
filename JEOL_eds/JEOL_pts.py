@@ -140,7 +140,7 @@ class JEOL_pts:
 
      Mag calibration [nm / pixel]
     >>> dc.nm_per_pixel
-    1.93359375
+    np.float64(1.93359375)
 
     More info is stored in attribute `JEOL_pts.parameters`:
     >>> p = dc.parameters
@@ -148,10 +148,10 @@ class JEOL_pts:
     Measurement parameters active when map was acquired:
     >>> meas = p['EDS Data']['AnalyzableMap MeasData']['Doc']
     >>> meas['LiveTime']
-    409.5
+    np.float64(409.5)
 
     >>> meas['RealTime']
-    418.56
+    np.float64(418.56)
 
     JEOL_pts objects can also be initialized from a saved data cube. In this
     case, the dtype of the data cube is the same as in the stored data and a
@@ -534,7 +534,7 @@ class JEOL_pts:
                    [ 1., 10., 12.,  1.,  0.],
                    [ 0.,  0.,  4.,  1.,  0.],
                    [ 0.,  0.,  0.,  0.,  0.]]),
-        [-2, 2, -2, 2])
+        [np.int64(-2), np.int64(2), np.int64(-2), np.int64(2)])
 
         Return the 2D frequency distribution of the Wiener filtered frames
         (plus extent useful for plotting).

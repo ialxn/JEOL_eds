@@ -65,7 +65,7 @@ def filter_isolated_pixels(array, struct=np.ones((3,3))):
 
     How many pixels with no direct neighbors (most probably noise) are present?
     >>> (m - JU.filter_isolated_pixels(m)).sum()
-    93.0
+    np.float64(93.0)
     """
     filtered_array = np.copy(array)
     id_regions, num_ids = ndimage.label(filtered_array, structure=struct)
@@ -112,10 +112,10 @@ def rebin(a, bs, func=np.sum):
            [168, 186]])
 
     >>> rebinned.sum() == a.sum()
-    True
+    np.True_
 
     >>> a.mean() == (JU.rebin(a, (3, 3), func=np.mean).mean())
-    True
+    np.True_
     """
     assert len(a.shape) == 2
     assert len(bs) == 2
@@ -332,61 +332,39 @@ def create_overlay(images, colors,
     >>> import JEOL_eds.utils as JU
 
     Load data.
-    Data does not contain drift images and all frames were added, thus only a
-    single frame is present.
-    NOTE: This specific file was saved with an old version of JEOL_eds and
-    contains no calibration data (scale).
-    >>> dc = JEOL_pts('data/complex_oxide.h5')
+    >>> dc = JEOL_pts('data/64.pts', read_drift=True)
 
     Extract some elemental maps. Where possible, add contribution of several
     lines.
-    >>> Ti = dc.map(interval=(4.4, 5.1), energy=True)
+    >>> Al = dc.map(interval=(1.4, 1.6), energy=True)
 
-    >>> Fe = dc.map(interval=(6.25, 6.6), energy=True)
+    >>> Si = dc.map(interval=(1.7, 1.8), energy=True)
 
-    >>> Sr = dc.map(interval=(13.9, 14.4), energy=True)
+    >>> Cu = dc.map(interval=(7.9, 8.2), energy=True)
 
-    >>> Co = dc.map(interval=(6.75, 7.0), energy=True)
+    >>> Cu += dc.map(interval=(8.8, 9.1), energy=True)
 
-    >>> Co += dc.map(interval=(7.5, 7.8), energy=True)
-
-    >>> O = dc.map(interval=(0.45, 0.6), energy=True)
-
-    Create overlays. Visualize the SrTiO3 base oxide. No legends plotted and
+    Create overlays. No legends plotted and
     file is saved.
-    >>> JU.create_overlay((Sr, Ti, O), ('Red', 'Green', 'Blue'),
+    >>> JU.create_overlay((Si, Al), ('Red', 'Green'),
     ...                   outfile='test.pdf')
 
-    Focus on the metals as they are plotted last, include legends.
-    >>> JU.create_overlay([O, Sr, Ti],
-    ...                   ['Blue', 'Red', 'Green'],
-    ...                   legends=['O', 'Sr', 'Ti'])
+    Visualize the copper background.
 
-    Visualize the CoFeOx distribution using first of the `drift_images` as
-    background.
-
-    NOTE: Drift images were not stored in the data supplied and this will raise
-    TypeError: 'NoneType' object is not subscriptable
-    >>> JU.create_overlay([Fe, Co],
-    ...                   ['Maroon', 'Violet'],
-    ...                   legends=['Fe', 'Co'],
+    >>> JU.create_overlay([Cu],
+    ...                   ['Maroon'],
+    ...                   legends=['Cu'],
     ...                   BG_image=dc.drift_images[0]) # doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    TypeError: 'NoneType' object is not subscriptable
 
-    Switch plotting order to obtain a slightly better result. Add scale bar at
-    default position (lower right) and default color (black). NOTE: Calibration
-    information is not present (`dc.nm_per_pixel is None`) so length of scale
-    bar is given as pixels.
+    Add scale bar at default position (lower right) and default color (black).
     >>> scale_bar = {'label': '100 px',
     ...             'f_calib': dc.nm_per_pixel}
 
-    >>> JU.create_overlay([Co, Fe],
-    ...                   ['Violet', 'Maroon'],
-    ...                   scale_bar=scale_bar) # doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    TypeError: 'NoneType' object is not subscriptable
-
+    >>> JU.create_overlay([Cu],
+    ...                   ['Maroon'],
+    ...                   legends=['Cu'],
+    ...                   BG_image=dc.drift_images[0],
+    ...                   scale_bar=scale_bar)
     """
     assert isinstance(images, (list, tuple))
     assert isinstance(colors, (list, tuple))
@@ -652,9 +630,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
     >>> import JEOL_eds.utils as JU
 
     Load data.
-    NOTE: This specific file saved with an old version of JEOL_eds and will raise
-    KeyError: "Can't open attribute (can't locate attribute: 'nm_per_pixel')"
-    >>> dc = JEOL_pts('data/complex_oxide.h5')
+    >>> dc = JEOL_pts('data/128.pts', only_metadata=True)
 
     Plot full reference spectrum with logarithmic y-axis:
     >>> JU.plot_spectrum(dc.ref_spectrum, log_y=True)
@@ -707,9 +683,7 @@ def export_spectrum(s, outfile, E_range=None):
     >>> import JEOL_eds.utils as JU
 
     Load data.
-    NOTE: This specific file saved with an old version of JEOL_eds and will
-    raise KeyError: "Can't open attribute (can't locate attribute: 'nm_per_pixel')"
-    >>> dc = JEOL_pts('data/complex_oxide.h5')
+    >>> dc = JEOL_pts('data/64.pts', only_metadata=True)
 
     Export full reference spectrum as 'test_spectrum.dat':
     >>> JU.export_spectrum(dc.ref_spectrum, 'test_spectrum.dat')
@@ -1058,21 +1032,13 @@ def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
     >>> dc = JEOL_pts('data/complex_oxide.h5')
     >>> my_map = dc.map()
 
-    We want to get the spectrum of the SrTiO3 substrate on the left of the
-    image. Verify definition of rectangular mask. Make image more visible (less
-    transparent). Then plot the spectrum corresponding to the ROI:
+    Verify definition of rectangular ROI. Make image more visible (less
+    transparent).
     >>> JU.show_ROI(my_map, (50, 250, 10, 75), alpha=0.6)
 
-    >>> JU.plot_spectrum(dc.spectrum(ROI=[50, 250, 10, 75]),
-    ...                  E_range=(4, 17),
-    ...                  M_ticks=(4, None))
-
-    Extract spectrum of the FeCoOx region using a circular mask. Again check
-    the definition of the mask first. Override the default color map:
+    Check the definition of a circular ROI first.
+    Override the default color map.
     >>> JU.show_ROI(my_map, (270, 122, 10), cmap='inferno')
-    >>> JU.plot_spectrum(dc.spectrum(ROI=[270, 122, 10]),
-    ...                  E_range=(4, 17),
-    ...                  M_ticks=(4, None))
     """
     if len(ROI) == 2:
         im = image.copy().astype('float')

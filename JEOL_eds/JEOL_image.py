@@ -62,7 +62,7 @@ class JEOL_image:
 
     Print calibration data (pixel size in nm):
     >>> demo_map.nm_per_pixel
-    3.8671875
+    np.float64(3.8671875)
 
     Use "plot_map()" for more features. "demo_im" is a BF image thus invert color map:
     >>> scale_bar = {'label': '200nm',
