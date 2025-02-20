@@ -1104,7 +1104,7 @@ class JEOL_pts:
                 ts[f] =self.dcube[f, :, :, interval[0]:interval[1]].sum(axis=(0, 1, 2))
         return ts
 
-    def make_movie(self, fname=None, **kws):
+    def make_movie(self, fname=None, only_drift=False, **kws):
         """Makes a movie of EDS data and drift_images
 
         Parameters
@@ -1112,6 +1112,11 @@ class JEOL_pts:
         fname  : Str (or None)
             Filename for movie file. If none is supplied the base name of the
             '.pts' file is used.
+        only_drift : Bool (False)
+            If False (default), both drift image and EDX maps of the selected
+            frames are shown next to each other in the movie. If set to True,
+            only the drift images are shown. In this case ALL drift images are
+            used even if only a subset of frames was loaded.
 
         Examples
         --------
@@ -1128,9 +1133,27 @@ class JEOL_pts:
         Make movie (one frame only, drift_image will be blank) and save iT as
         'dummy.mp4':
         >>> dc.make_movie(fname='dummy.mp4')
+
+        Only load a subset of frames (first two frames) but ALL drift images.
+        >>> dc = JEOL_pts('data/128.pts', read_drift=True,
+        ...               split_frames=True, frame_list=[0, 1])
+
+        Only two frames have been loaded
+        >>> dc.frame_list
+        [0, 1]
+        >>> dc.dcube.shape
+        (2, 128, 128, 4000)
+
+        All drift images have been loaded
+        >>> dc.drift_images.shape
+        (50, 128, 128)
         """
         if self.dcube is None:  # Only metadata was read
             return
+
+        if only_drift and self.drift_images is None:
+            # We have not loaded the drift images
+            raise ValueError ("No drift images were loaded")
 
         if fname is None:
             fname = os.path.splitext(self.file_name)[0] + '.mp4'
@@ -1141,9 +1164,13 @@ class JEOL_pts:
         except KeyError:
             pass
 
-        # We might have read only a sublist of frames thus determine frames
-        # loaded.
-        frame_list = self.frame_list if self.frame_list else range(self.dcube.shape[0])
+        if only_drift:
+            # Use all drift images
+            frame_list = range(self.drift_images.shape[0])
+        else:
+            # We might have read only a sublist of frames thus determine frames
+            # loaded.
+            frame_list = self.frame_list if self.frame_list else range(self.dcube.shape[0])
 
         # Maxima of the two type of images used to normalize images of both
         # series.
@@ -1169,22 +1196,29 @@ class JEOL_pts:
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        # Note, more STEM images are present if only a subset of frames was
-        # read.
+
         frames = []
-        for i, STEM_i in enumerate(frame_list):
-            EDS_map = self.map(frames=[i], **kws).astype(EDS_dtype)
-            try:
-                STEM_image = self.drift_images[STEM_i].astype(STEM_dtype)
-            except TypeError:   # no drift_image available, dummy image
-                STEM_image = np.full_like(EDS_map, np.nan).astype('uint8')
-            image = np.concatenate((STEM_image / STEM_max, EDS_map / EDS_max),
-                                   axis=1)
-            frame = plt.imshow(image, animated=True)
-            # Add frame number. Use index of STEM image in case only a subset
-            # of frames was read.
-            text = ax.annotate(STEM_i, (1, -5), annotation_clip=False)
-            frames.append([frame, text])
+        if only_drift:
+            for i, STEM_image in enumerate(self.drift_images):
+                frame = plt.imshow(STEM_image / STEM_max, animated=True)
+                text = ax.annotate(i, (1, -5), annotation_clip=False)
+                frames.append([frame, text])
+        else:   # Use both, drift images and EDX maps
+            # Note, more STEM images are present if only a subset of frames was
+            # read.
+            for i, STEM_i in enumerate(frame_list):
+                EDS_map = self.map(frames=[i], **kws).astype(EDS_dtype)
+                try:
+                    STEM_image = self.drift_images[STEM_i].astype(STEM_dtype)
+                except TypeError:   # no drift_image available, dummy image
+                    STEM_image = np.full_like(EDS_map, np.nan).astype('uint8')
+                image = np.concatenate((STEM_image / STEM_max, EDS_map / EDS_max),
+                                       axis=1)
+                frame = plt.imshow(image, animated=True)
+                # Add frame number. Use index of STEM image in case only a subset
+                # of frames was read.
+                text = ax.annotate(STEM_i, (1, -5), annotation_clip=False)
+                frames.append([frame, text])
 
         ani = animation.ArtistAnimation(fig, frames, interval=50, blit=True,
                                         repeat_delay=1000)
