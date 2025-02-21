@@ -79,8 +79,8 @@ def rebin(a, bs, func=np.sum):
 
     Parameters:
     -----------
-    a: Ndarray (2D)
-        Input array
+    a: Ndarray (2D or 3D)
+        Input array (or stack of arrays: N x Nx x Ny)
     bs: Tuple (nx, ny)
         Size of the bin applied, i.e. (2, 2) means that the output array will
         be reduced by a factor of 2 in both directions.
@@ -116,15 +116,36 @@ def rebin(a, bs, func=np.sum):
 
     >>> a.mean() == (JU.rebin(a, (3, 3), func=np.mean).mean())
     True
-    """
-    assert len(a.shape) == 2
-    assert len(bs) == 2
-    assert (a.shape[0] / bs[0]).is_integer()
-    assert (a.shape[1] / bs[1]).is_integer()
 
-    return func(a.reshape(a.shape[0] // bs[0], bs[0],
-                          a.shape[1] // bs[1], bs[1]),
-                axis=(1, 3))
+    Try with 3D array
+    >>> a = np.asarray(range(24)).reshape(3, 4, 2)
+    >>> a.shape
+    (3, 4, 2)
+
+    >>> rebinned = rebin(a, (2, 1))
+    >>> rebinned.shape
+    (3, 2, 2)
+
+    >>> a[0, 2:4, 0].sum() == rebinned[0, 1, 0]
+    np.True_
+    """
+    assert len(a.shape) in (2, 3)
+    assert len(bs) == 2
+
+    assert (a.shape[-1] / bs[-1]).is_integer()
+    assert (a.shape[-2] / bs[-2]).is_integer()
+
+    if len(a.shape) == 3:
+        N = a.shape[0]  # number of images in 3D array
+        a = a.reshape(a.shape[-2] * N, a.shape[-1])
+        r = func(a.reshape(a.shape[0] // bs[0], bs[0],
+                           a.shape[1] // bs[1], bs[1]),
+                          axis=(1, 3))
+        return r.reshape(N, r.shape[0] // N, r.shape[1])
+    else:
+        return func(a.reshape(a.shape[0] // bs[0], bs[0],
+                              a.shape[1] // bs[1], bs[1]),
+                              axis=(1, 3))
 
 def __plot_line(x, y,
                 outfile=None,
