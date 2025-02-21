@@ -245,6 +245,7 @@ class JEOL_pts:
             self.dcube = self.__get_data_cube(dtype, data_offset,
                                               split_frames=split_frames,
                                               E_cutoff=E_cutoff,
+                                              rebin=rebin,
                                               verbose=verbose)
 
             # Nominal pixel size [nm]
@@ -327,7 +328,7 @@ class JEOL_pts:
                               ['DigZ']
 
     def __get_data_cube(self, dtype, offset, split_frames=False,
-                        E_cutoff=None, verbose=False):
+                        E_cutoff=None, rebin=None, verbose=False):
         """Returns data cube (F x X x Y x E).
 
         Parameters
@@ -341,6 +342,11 @@ class JEOL_pts:
             all frames and store in a single frame (default).
         E_cutoff : Float
             Cutoff energy for spectra. Only store data below this energy.
+        rebin : Tuple
+            Rebin data while reading by (nv, nh). The integers nw and nh
+            must be compatible with the scan size.
+            None implied no rebinning performed.
+
         verbose : Bool
             Print additional output.
 
@@ -364,8 +370,12 @@ class JEOL_pts:
         area = self. parameters['EDS Data'] \
                                ['AnalyzableMap MeasData']['Meas Cond'] \
                                ['Pixels'].split('x')
-        h = int(area[0])
-        v = int(area[1])
+
+        if rebin is None:   # No rebinning required
+            rebin = (1, 1)
+
+        h = int(area[0]) // rebin[1]
+        v = int(area[1]) // rebin[0]
         if E_cutoff:
             CoefA = self.parameters['PTTD Data'] \
                                    ['AnalyzableMap MeasData']['Doc'] \
@@ -406,14 +416,15 @@ class JEOL_pts:
         #   36864 <= datum < 40960                  -> x-coordinate
         #   45056 <= datum < END (=45056 + NumCH)    -> count registered at energy
         END = 45056 + NumCH
-        scale = 4096 / h
+        scale_h = 4096 / h
+        scale_v = 4096 / v
         # map the size x size image into 4096x4096
         for d in data:
             N += 1
             if 32768 <= d < 36864:
-                y = int((d - 32768) / scale)
+                y = int((d - 32768) / scale_h)
             elif 36864 <= d < 40960:
-                d = int((d - 36864) / scale)
+                d = int((d - 36864) / scale_v)
                 if split_frames and d < x:
                     # A new frame starts once the slow axis (x) restarts. This
                     # does not necessary happen at x=zero, if we have very few
