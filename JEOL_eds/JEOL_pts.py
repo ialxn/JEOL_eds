@@ -876,12 +876,12 @@ class JEOL_pts:
             return self.dcube[0, :, :, interval[0]:interval[1]].sum(axis=-1)
 
         # split_frame is active but no alignment required
-        N = self.dcube.shape[1]     # image size
+        shape = self.dcube.shape[1:3]     # image size
         if align == 'no':
             if frames is None:
                 return self.dcube[:, :, :, interval[0]:interval[1]].sum(axis=(0, -1))
             # Only sum frames specified
-            m = np.zeros((N, N))
+            m = np.zeros(shape)
             for frame in frames:
                 m += self.dcube[frame, :, :, interval[0]:interval[1]].sum(axis=-1)
             return m
@@ -896,16 +896,17 @@ class JEOL_pts:
         if align == 'yes':
             shifts = self.shifts(frames=frames, verbose=verbose)
         # Allocate array for result
-        res = np.zeros((2*N, 2*N))
-        x0 = N // 2
-        y0 = N // 2
+        Nx, Ny = shape
+        res = np.zeros((2 * Nx, 2 * Ny))
+        x0 = Nx // 2
+        y0 = Nx // 2
         for f in frames:
             # map of this frame summed over all energy intervals
             dx, dy = shifts[f]
-            res[x0-dx:x0-dx+N, y0-dy:y0-dy+N] += \
+            res[x0-dx:x0-dx+Nx, y0-dy:y0-dy+Ny] += \
                     self.dcube[f, :, :, interval[0]:interval[1]].sum(axis=-1)
 
-        return res[x0:x0+N, y0:y0+N]
+        return res[x0:x0+Nx, y0:y0+Ny]
 
     def __spectrum_cROI(self, ROI, frames):
         """Returns spectrum integrated over a circular ROI
