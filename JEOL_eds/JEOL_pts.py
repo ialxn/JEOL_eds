@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 
 from JEOL_eds.misc import _parsejeol, _correct_spectrum
+from JEOL_eds.utils import rebin
 
 
 class JEOL_pts:
@@ -187,7 +188,7 @@ class JEOL_pts:
     def __init__(self, fname, dtype='uint16',
                  split_frames=False, frame_list=None,
                  E_cutoff=False, read_drift=False,
-                 only_metadata=False, verbose=False):
+                 rebin=None, only_metadata=False, verbose=False):
         """Reads data cube from JEOL '.pts' file or from previously saved data cube.
 
         Parameters
@@ -212,6 +213,11 @@ class JEOL_pts:
             the option "correct for sample movement" was active while the data
             was collected). All images are read even if only a subset of frames
             is read (frame_list is specified).
+        rebin : Tuple
+            Rebin drift images and data while reading the '.pts' file
+            by (nw, nh). The integers nw and nh must be compatible with
+            the scan size.
+            This option is not used when reading '.npz' or '.h5' files.
         only_metadata : Bool
             Only metadata are read (True) but nothing else. All other keywords
             are ignored.
@@ -235,7 +241,7 @@ class JEOL_pts:
                 return
 
             self.frame_list = sorted(list(frame_list)) if split_frames and frame_list else None
-            self.drift_images = self.__read_drift_images(fname) if read_drift else None
+            self.drift_images = self.__read_drift_images(fname, rebin) if read_drift else None
             self.dcube = self.__get_data_cube(dtype, data_offset,
                                               split_frames=split_frames,
                                               E_cutoff=E_cutoff,
@@ -454,19 +460,24 @@ class JEOL_pts:
                 print(f'\t{key}: found {unknown[key]}')
         return dcube
 
-    def __read_drift_images(self, fname):
+    def __read_drift_images(self, fname, bs):
         """Read BF images stored in raw data
 
         Parameters
         ----------
         fname : Str
             Filename.
+        bs: Tuple (nx, ny)
+            Size of the bin applied, i.e. (2, 2) means that the output array will
+            be reduced by a factor of 2 in both directions.
+
 
         Returns
         -------
         I : Ndarray or None
             Stack of images with shape (N_images, im_size, im_size) or None if
             no data is available.
+            Rebinned data is returned if rebin is given.
 
         Notes
         -----
@@ -492,12 +503,12 @@ class JEOL_pts:
                 return None
             I = np.array(rawdata[ipos] - 40960, dtype='uint16')
             try:
-                return I.reshape(image_shape)
+                return rebin(I.reshape(image_shape), bs)
             except ValueError:  # incomplete image
                 # Add `N_addl` NaNs before reshape()
                 N_addl = N_images * v * h - I.shape[0]
                 I = np.append(I, np.full((N_addl), np.nan, dtype='uint16'))
-                return I.reshape(image_shape)
+                return rebin(I.reshape(image_shape), bs)
 
 
     def drift_statistics(self, filtered=False, verbose=False):
