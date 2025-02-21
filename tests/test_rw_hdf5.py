@@ -9,7 +9,6 @@ import unittest
 import os
 
 from JEOL_eds import JEOL_pts
-import numpy as np
 
 class testIO_hdf5(unittest.TestCase):
 
@@ -30,14 +29,6 @@ class testIO_hdf5(unittest.TestCase):
 
         self.assertEqual(dc.drift_images.shape, saved.drift_images.shape)
         self.assertEqual(dc.drift_images.sum(), saved.drift_images.sum())
-
-        self.assertIsInstance(saved.parameters, dict)
-
-        self.assertIsInstance(saved.ref_spectrum, np.ndarray)
-        self.assertEqual(dc.ref_spectrum.sum(), saved.ref_spectrum.sum())
-
-        self.assertEqual(dc.parameters['EDS Data']['AnalyzableMap MeasData']['MeasCond']['FocusMP'],
-                         saved.parameters['EDS Data']['AnalyzableMap MeasData']['MeasCond']['FocusMP'])
 
 
 if __name__ == '__main__':

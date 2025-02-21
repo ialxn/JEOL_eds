@@ -13,9 +13,9 @@ from JEOL_eds import JEOL_pts
 class Map(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        print('Loading data ... ', end='', flush=True)
+        print('\nLoading data ... ', end='', flush=True)
         cls.dc = JEOL_pts('data/128.pts', split_frames=True)
-        print('done')
+        print('done: ', end='', flush=True)
 
     def test_full_dcube(self):
         m = self.dc.map()

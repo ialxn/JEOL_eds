@@ -13,13 +13,13 @@ class subset_of_frames(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         flist = [1, 2, 4, 8, 16]
-        print('Loading data ... ', end='', flush=True)
+        print('\nLoading data ... ', end='', flush=True)
         cls.dc = JEOL_pts('data/128.pts',
                           split_frames=True)
         cls.subset = JEOL_pts('data/128.pts',
                               split_frames=True, frame_list=flist)
         cls.flist = flist
-        print('done')
+        print('done: ', end='', flush=True)
 
     def test_dcube(self):
         self.assertEqual(self.subset.dcube.shape[0],

@@ -12,9 +12,9 @@ from JEOL_eds import JEOL_image
 class test_img(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        print('Loading data ... ', end='', flush=True)
+        print('\nLoading data ... ', end='', flush=True)
         cls.demo = JEOL_image('data/demo.img')
-        print('done')
+        print('done: ', end='', flush=True)
 
     def test_toplevel(self):
         self.assertEqual('data/demo.img', self.demo.file_name)
@@ -30,9 +30,9 @@ class test_img(unittest.TestCase):
 class test_map(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        print('Loading data ... ', end='', flush=True)
+        print('\nLoading data ... ', end='', flush=True)
         cls.demo = JEOL_image('data/demo.map')
-        print('done')
+        print('done: ', end='', flush=True)
 
     def test_toplevel(self):
         self.assertEqual('data/demo.map', self.demo.file_name)

@@ -7,16 +7,14 @@ Created on Thu Feb 10 11:17:05 2022
 """
 import unittest
 
-import numpy as np
-
 from JEOL_eds import JEOL_DigiLine
 
 class test_DigiLine(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        print('Loading data ... ', end='', flush=True)
+        print('\nLoading data ... ', end='', flush=True)
         cls.dl = JEOL_DigiLine('data/DigiLine/View000_0000003.pts')
-        print('done')
+        print('done: ', end='', flush=True)
 
     def test_toplevel(self):
         self.assertEqual('data/DigiLine/View000_0000003.pts', self.dl.file_name)

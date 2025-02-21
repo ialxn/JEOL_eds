@@ -14,9 +14,9 @@ from JEOL_eds import JEOL_PointLine
 class test_PointLine(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        print('Loading data ... ', end='', flush=True)
+        print('\nLoading data ... ', end='', flush=True)
         cls.pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
-        print('done')
+        print('done: ', end='', flush=True)
 
     def test_toplevel(self):
         self.assertEqual('View000_0000001.pln', self.pl.file_name)
@@ -58,9 +58,9 @@ class test_PointLine(unittest.TestCase):
         self.assertEqual(7123.0, p.sum())
 
     def test_profile_3(self):
-        x, p = self.pl.profile(interval=(4.4, 4.65), energy=True)
-        x, pa = self.pl.profile(interval=(4.4, 4.65), energy=True, markers=[0, 1])
-        x, pb = self.pl.profile(interval=(4.4, 4.65), energy=True, markers=[2, 3, 4])
+        _, p = self.pl.profile(interval=(4.4, 4.65), energy=True)
+        _, pa = self.pl.profile(interval=(4.4, 4.65), energy=True, markers=[0, 1])
+        _, pb = self.pl.profile(interval=(4.4, 4.65), energy=True, markers=[2, 3, 4])
         self.assertEqual((5,), pa.shape)
         self.assertEqual((5,), pb.shape)
         self.assertEqual(4194.0, np.nansum(pa))

@@ -12,9 +12,9 @@ from JEOL_eds import JEOL_spectrum
 class test_eds(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        print('Loading data ... ', end='', flush=True)
+        print('\nLoading data ... ', end='', flush=True)
         cls.s = JEOL_spectrum('data/spot.eds')
-        print('done')
+        print('done: ', end='', flush=True)
 
     def test_toplevel(self):
         self.assertEqual('data/spot.eds', self.s.file_name)
