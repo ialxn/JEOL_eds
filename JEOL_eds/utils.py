@@ -84,6 +84,7 @@ def rebin(a, bs, func=np.sum):
     bs: Tuple (nx, ny)
         Size of the bin applied, i.e. (2, 2) means that the output array will
         be reduced by a factor of 2 in both directions.
+        If bs is None the original array is returned.
     func: Function
         Function applied to the individual bins [np.sum]. Alternatively,
         np.mean could be used.
@@ -129,6 +130,9 @@ def rebin(a, bs, func=np.sum):
     >>> a[0, 2:4, 0].sum() == rebinned[0, 1, 0]
     np.True_
     """
+    if bs is None:  # No rebinning required
+        return a
+
     assert len(a.shape) in (2, 3)
     assert len(bs) == 2
 
