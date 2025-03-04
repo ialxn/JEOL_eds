@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 
 from JEOL_eds.misc import _parsejeol, _correct_spectrum
+from JEOL_eds.utils import rebin
 
 
 class JEOL_pts:
@@ -187,7 +188,7 @@ class JEOL_pts:
     def __init__(self, fname, dtype='uint16',
                  split_frames=False, frame_list=None,
                  E_cutoff=False, read_drift=False,
-                 only_metadata=False, verbose=False):
+                 rebin=None, only_metadata=False, verbose=False):
         """Reads data cube from JEOL '.pts' file or from previously saved data cube.
 
         Parameters
@@ -212,6 +213,11 @@ class JEOL_pts:
             the option "correct for sample movement" was active while the data
             was collected). All images are read even if only a subset of frames
             is read (frame_list is specified).
+        rebin : Tuple
+            Rebin drift images and data while reading the '.pts' file
+            by (nw, nh). The integers nw and nh must be compatible with
+            the scan size.
+            This option is not used when reading '.npz' or '.h5' files.
         only_metadata : Bool
             Only metadata are read (True) but nothing else. All other keywords
             are ignored.
@@ -235,10 +241,11 @@ class JEOL_pts:
                 return
 
             self.frame_list = sorted(list(frame_list)) if split_frames and frame_list else None
-            self.drift_images = self.__read_drift_images(fname) if read_drift else None
+            self.drift_images = self.__read_drift_images(fname, rebin) if read_drift else None
             self.dcube = self.__get_data_cube(dtype, data_offset,
                                               split_frames=split_frames,
                                               E_cutoff=E_cutoff,
+                                              rebin=rebin,
                                               verbose=verbose)
 
             # Nominal pixel size [nm]
@@ -318,7 +325,7 @@ class JEOL_pts:
                               ['DigZ']
 
     def __get_data_cube(self, dtype, offset, split_frames=False,
-                        E_cutoff=None, verbose=False):
+                        E_cutoff=None, rebin=None, verbose=False):
         """Returns data cube (F x X x Y x E).
 
         Parameters
@@ -332,6 +339,11 @@ class JEOL_pts:
             all frames and store in a single frame (default).
         E_cutoff : Float
             Cutoff energy for spectra. Only store data below this energy.
+        rebin : Tuple
+            Rebin data while reading by (nv, nh). The integers nw and nh
+            must be compatible with the scan size.
+            None implied no rebinning performed.
+
         verbose : Bool
             Print additional output.
 
@@ -355,8 +367,12 @@ class JEOL_pts:
         area = self. parameters['EDS Data'] \
                                ['AnalyzableMap MeasData']['Meas Cond'] \
                                ['Pixels'].split('x')
-        h = int(area[0])
-        v = int(area[1])
+
+        if rebin is None:   # No rebinning required
+            rebin = (1, 1)
+
+        h = int(area[0]) // rebin[1]
+        v = int(area[1]) // rebin[0]
         if E_cutoff:
             CoefA = self.parameters['PTTD Data'] \
                                    ['AnalyzableMap MeasData']['Doc'] \
@@ -397,14 +413,15 @@ class JEOL_pts:
         #   36864 <= datum < 40960                  -> x-coordinate
         #   45056 <= datum < END (=45056 + NumCH)    -> count registered at energy
         END = 45056 + NumCH
-        scale = 4096 / h
+        scale_h = 4096 / h
+        scale_v = 4096 / v
         # map the size x size image into 4096x4096
         for d in data:
             N += 1
             if 32768 <= d < 36864:
-                y = int((d - 32768) / scale)
+                y = int((d - 32768) / scale_h)
             elif 36864 <= d < 40960:
-                d = int((d - 36864) / scale)
+                d = int((d - 36864) / scale_v)
                 if split_frames and d < x:
                     # A new frame starts once the slow axis (x) restarts. This
                     # does not necessary happen at x=zero, if we have very few
@@ -451,19 +468,24 @@ class JEOL_pts:
                 print(f'\t{key}: found {unknown[key]}')
         return dcube
 
-    def __read_drift_images(self, fname):
+    def __read_drift_images(self, fname, bs):
         """Read BF images stored in raw data
 
         Parameters
         ----------
         fname : Str
             Filename.
+        bs: Tuple (nx, ny)
+            Size of the bin applied, i.e. (2, 2) means that the output array will
+            be reduced by a factor of 2 in both directions.
+
 
         Returns
         -------
-        I : Ndarray or None
-            Stack of images with shape (N_images, im_size, im_size) or None if
-            no data is available.
+        im : Ndarray or None
+             Stack of images with shape (N_images, im_size, im_size) or None if
+             no data is available.
+             Rebinned data is returned if rebin is given.
 
         Notes
         -----
@@ -487,14 +509,15 @@ class JEOL_pts:
             ipos = np.where(np.logical_and(rawdata >= 40960, rawdata < 45056))[0]
             if len(ipos) == 0:  # No data available
                 return None
-            Im = np.array(rawdata[ipos] - 40960, dtype='uint16')
+
+            im = np.array(rawdata[ipos] - 40960, dtype='uint16')
             try:
-                return Im.reshape(image_shape)
+                return rebin(im.reshape(image_shape), bs)
             except ValueError:  # incomplete image
                 # Add `N_addl` NaNs before reshape()
-                N_addl = N_images * v * h - Im.shape[0]
-                Im = np.append(Im, np.full((N_addl), np.nan, dtype='uint16'))
-                return Im.reshape(image_shape)
+                N_addl = N_images * v * h - im.shape[0]
+                im = np.append(im, np.full((N_addl), np.nan, dtype='uint16'))
+                return rebin(im.reshape(image_shape), bs)
 
     def drift_statistics(self, filtered=False, verbose=False):
         """Returns 2D frequency distribution of frame shifts (x, y).
@@ -850,12 +873,12 @@ class JEOL_pts:
             return self.dcube[0, :, :, interval[0]:interval[1]].sum(axis=-1)
 
         # split_frame is active but no alignment required
-        N = self.dcube.shape[1]     # image size
+        shape = self.dcube.shape[1:3]     # image size
         if align == 'no':
             if frames is None:
                 return self.dcube[:, :, :, interval[0]:interval[1]].sum(axis=(0, -1))
             # Only sum frames specified
-            m = np.zeros((N, N))
+            m = np.zeros(shape)
             for frame in frames:
                 m += self.dcube[frame, :, :, interval[0]:interval[1]].sum(axis=-1)
             return m
@@ -870,16 +893,17 @@ class JEOL_pts:
         if align == 'yes':
             shifts = self.shifts(frames=frames, verbose=verbose)
         # Allocate array for result
-        res = np.zeros((2 * N, 2 * N))
-        x0 = N // 2
-        y0 = N // 2
+        Nx, Ny = shape
+        res = np.zeros((2 * Nx, 2 * Ny))
+        x0 = Nx // 2
+        y0 = Nx // 2
         for f in frames:
             # map of this frame summed over all energy intervals
             dx, dy = shifts[f]
-            res[x0 - dx:x0 - dx + N, y0 - dy:y0 - dy + N] += \
+            res[x0 - dx:x0 - dx + Nx, y0 - dy:y0 - dy + Ny] += \
                 self.dcube[f, :, :, interval[0]:interval[1]].sum(axis=-1)
 
-        return res[x0:x0 + N, y0:y0 + N]
+        return res[x0:x0 + Nx, y0:y0 + Ny]
 
     def __spectrum_cROI(self, ROI, frames):
         """Returns spectrum integrated over a circular ROI
