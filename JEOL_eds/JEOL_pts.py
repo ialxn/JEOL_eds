@@ -474,10 +474,10 @@ class JEOL_pts:
 
         Returns
         -------
-        I : Ndarray or None
-            Stack of images with shape (N_images, im_size, im_size) or None if
-            no data is available.
-            Rebinned data is returned if rebin is given.
+        im : Ndarray or None
+             Stack of images with shape (N_images, im_size, im_size) or None if
+             no data is available.
+             Rebinned data is returned if rebin is given.
 
         Notes
         -----
@@ -501,14 +501,14 @@ class JEOL_pts:
             ipos = np.where(np.logical_and(rawdata >= 40960, rawdata < 45056))[0]
             if len(ipos) == 0:  # No data available
                 return None
-            I = np.array(rawdata[ipos] - 40960, dtype='uint16')
+            im = np.array(rawdata[ipos] - 40960, dtype='uint16')
             try:
-                return rebin(I.reshape(image_shape), bs)
+                return rebin(im.reshape(image_shape), bs)
             except ValueError:  # incomplete image
                 # Add `N_addl` NaNs before reshape()
-                N_addl = N_images * v * h - I.shape[0]
-                I = np.append(I, np.full((N_addl), np.nan, dtype='uint16'))
-                return rebin(I.reshape(image_shape), bs)
+                N_addl = N_images * v * h - im.shape[0]
+                im = np.append(im, np.full((N_addl), np.nan, dtype='uint16'))
+                return rebin(im.reshape(image_shape), bs)
 
 
     def drift_statistics(self, filtered=False, verbose=False):
