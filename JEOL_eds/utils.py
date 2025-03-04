@@ -144,12 +144,12 @@ def rebin(a, bs, func=np.sum):
         a = a.reshape(a.shape[-2] * N, a.shape[-1])
         r = func(a.reshape(a.shape[0] // bs[0], bs[0],
                            a.shape[1] // bs[1], bs[1]),
-                          axis=(1, 3))
+                 axis=(1, 3))
         return r.reshape(N, r.shape[0] // N, r.shape[1])
     else:
         return func(a.reshape(a.shape[0] // bs[0], bs[0],
                               a.shape[1] // bs[1], bs[1]),
-                              axis=(1, 3))
+                    axis=(1, 3))
 
 
 def __plot_line(x, y,
