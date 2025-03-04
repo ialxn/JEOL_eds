@@ -9,12 +9,13 @@ import unittest
 
 from JEOL_eds import JEOL_spectrum
 
+
 class test_eds(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        print('Loading data ... ', end='', flush=True)
+        print('\nLoading data ... ', end='', flush=True)
         cls.s = JEOL_spectrum('data/spot.eds')
-        print('done')
+        print('done: ', end='', flush=True)
 
     def test_toplevel(self):
         self.assertEqual('data/spot.eds', self.s.file_name)
@@ -33,6 +34,7 @@ class test_eds(unittest.TestCase):
     def test_footer_data(self):
         self.assertEqual(200.0, self.s.footer['Parameters']['AccKV'])
         self.assertEqual('JEM-ARM200F(HRP)', self.s.footer['Parameters']['SEM'])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -10,6 +10,7 @@ import unittest
 from JEOL_eds import JEOL_pts
 import numpy as np
 
+
 class testIO_pts(unittest.TestCase):
 
     def test_read_basic(self):

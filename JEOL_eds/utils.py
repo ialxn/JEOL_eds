@@ -29,8 +29,7 @@ import matplotlib.font_manager as fm
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 
 
-
-def filter_isolated_pixels(array, struct=np.ones((3,3))):
+def filter_isolated_pixels(array, struct=np.ones((3, 3))):
     """ Return array with completely isolated single cells removed.
 
     Parameters
@@ -65,7 +64,7 @@ def filter_isolated_pixels(array, struct=np.ones((3,3))):
 
     How many pixels with no direct neighbors (most probably noise) are present?
     >>> (m - JU.filter_isolated_pixels(m)).sum()
-    93.0
+    np.float64(93.0)
     """
     filtered_array = np.copy(array)
     id_regions, num_ids = ndimage.label(filtered_array, structure=struct)
@@ -73,6 +72,7 @@ def filter_isolated_pixels(array, struct=np.ones((3,3))):
     area_mask = (id_sizes == 1)
     filtered_array[area_mask[id_regions]] = 0
     return filtered_array
+
 
 def rebin(a, bs, func=np.sum):
     """Rebin array
@@ -112,10 +112,10 @@ def rebin(a, bs, func=np.sum):
            [168, 186]])
 
     >>> rebinned.sum() == a.sum()
-    True
+    np.True_
 
     >>> a.mean() == (JU.rebin(a, (3, 3), func=np.mean).mean())
-    True
+    np.True_
     """
     assert len(a.shape) == 2
     assert len(bs) == 2
@@ -125,6 +125,7 @@ def rebin(a, bs, func=np.sum):
     return func(a.reshape(a.shape[0] // bs[0], bs[0],
                           a.shape[1] // bs[1], bs[1]),
                 axis=(1, 3))
+
 
 def __plot_line(x, y,
                 outfile=None,
@@ -181,6 +182,7 @@ def __plot_line(x, y,
     if outfile:
         plt.savefig(outfile)
 
+
 def __scalebar_length(label):
     """Returns length [nm] extracted from label string
 
@@ -205,6 +207,7 @@ def __scalebar_length(label):
     else:
         length = None
     return length
+
 
 def __add_scalebar(ax, scale_bar, extent):
     """Adds scale bar to plot at axes ``ax``.
@@ -247,7 +250,7 @@ def __add_scalebar(ax, scale_bar, extent):
             else:
                 label = scale_bar['label'][:-2] + 'px'
         else:
-            label =scale_bar['label']
+            label = scale_bar['label']
         scalebar = AnchoredSizeBar(ax.transData,
                                    length,
                                    label,
@@ -255,9 +258,10 @@ def __add_scalebar(ax, scale_bar, extent):
                                    pad=0.5,
                                    color=color,
                                    frameon=False,
-                                   size_vertical=extent[3]*0.01,
+                                   size_vertical=extent[3] * 0.01,
                                    fontproperties=fontprops)
         ax.add_artist(scalebar)
+
 
 def __get_extent(m, scale_bar):
     """Returns extent in data coordinates or image pixels (scale bar not defined)
@@ -284,6 +288,7 @@ def __get_extent(m, scale_bar):
         width = m.shape[0]
         height = m.shape[1]
     return [0, width, 0, height]
+
 
 def create_overlay(images, colors,
                    legends=None, BG_image=None, outfile=None, scale_bar=None):
@@ -332,68 +337,46 @@ def create_overlay(images, colors,
     >>> import JEOL_eds.utils as JU
 
     Load data.
-    Data does not contain drift images and all frames were added, thus only a
-    single frame is present.
-    NOTE: This specific file was saved with an old version of JEOL_eds and
-    contains no calibration data (scale).
-    >>> dc = JEOL_pts('data/complex_oxide.h5')
+    >>> dc = JEOL_pts('data/64.pts', read_drift=True)
 
     Extract some elemental maps. Where possible, add contribution of several
     lines.
-    >>> Ti = dc.map(interval=(4.4, 5.1), energy=True)
+    >>> Al = dc.map(interval=(1.4, 1.6), energy=True)
 
-    >>> Fe = dc.map(interval=(6.25, 6.6), energy=True)
+    >>> Si = dc.map(interval=(1.7, 1.8), energy=True)
 
-    >>> Sr = dc.map(interval=(13.9, 14.4), energy=True)
+    >>> Cu = dc.map(interval=(7.9, 8.2), energy=True)
 
-    >>> Co = dc.map(interval=(6.75, 7.0), energy=True)
+    >>> Cu += dc.map(interval=(8.8, 9.1), energy=True)
 
-    >>> Co += dc.map(interval=(7.5, 7.8), energy=True)
-
-    >>> O = dc.map(interval=(0.45, 0.6), energy=True)
-
-    Create overlays. Visualize the SrTiO3 base oxide. No legends plotted and
+    Create overlays. No legends plotted and
     file is saved.
-    >>> JU.create_overlay((Sr, Ti, O), ('Red', 'Green', 'Blue'),
+    >>> JU.create_overlay((Si, Al), ('Red', 'Green'),
     ...                   outfile='test.pdf')
 
-    Focus on the metals as they are plotted last, include legends.
-    >>> JU.create_overlay([O, Sr, Ti],
-    ...                   ['Blue', 'Red', 'Green'],
-    ...                   legends=['O', 'Sr', 'Ti'])
+    Visualize the copper background.
 
-    Visualize the CoFeOx distribution using first of the `drift_images` as
-    background.
-
-    NOTE: Drift images were not stored in the data supplied and this will raise
-    TypeError: 'NoneType' object is not subscriptable
-    >>> JU.create_overlay([Fe, Co],
-    ...                   ['Maroon', 'Violet'],
-    ...                   legends=['Fe', 'Co'],
+    >>> JU.create_overlay([Cu],
+    ...                   ['Maroon'],
+    ...                   legends=['Cu'],
     ...                   BG_image=dc.drift_images[0]) # doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    TypeError: 'NoneType' object is not subscriptable
 
-    Switch plotting order to obtain a slightly better result. Add scale bar at
-    default position (lower right) and default color (black). NOTE: Calibration
-    information is not present (`dc.nm_per_pixel is None`) so length of scale
-    bar is given as pixels.
+    Add scale bar at default position (lower right) and default color (black).
     >>> scale_bar = {'label': '100 px',
     ...             'f_calib': dc.nm_per_pixel}
 
-    >>> JU.create_overlay([Co, Fe],
-    ...                   ['Violet', 'Maroon'],
-    ...                   scale_bar=scale_bar) # doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    TypeError: 'NoneType' object is not subscriptable
-
+    >>> JU.create_overlay([Cu],
+    ...                   ['Maroon'],
+    ...                   legends=['Cu'],
+    ...                   BG_image=dc.drift_images[0],
+    ...                   scale_bar=scale_bar)
     """
     assert isinstance(images, (list, tuple))
     assert isinstance(colors, (list, tuple))
     assert len(colors) >= len(images)   # Sufficient colors provided
-    assert all(image.shape==images[0].shape for image in images)    # all same shape
+    assert all(image.shape == images[0].shape for image in images)    # all same shape
     if legends:
-        assert isinstance(legends,(list, tuple))
+        assert isinstance(legends, (list, tuple))
         assert len(legends) == len(images)
     if BG_image is not None:
         assert images[0].shape == BG_image.shape
@@ -429,7 +412,7 @@ def create_overlay(images, colors,
         fontsize = 12
         delta = extent[3] // fontsize  # Found by trial-and-error
         for i in range(len(images)):
-            ax.text(extent[1], extent[3] - i*delta, legends[i],
+            ax.text(extent[1], extent[3] - i * delta, legends[i],
                     size=fontsize,
                     color=colors[i], backgroundcolor='white')
 
@@ -437,6 +420,7 @@ def create_overlay(images, colors,
 
     if outfile:
         plt.savefig(outfile)
+
 
 def __make_cmap(color, gamma=1.0, background="white"):
     """Return color map with uniform gradient from white to `color`.
@@ -470,6 +454,7 @@ def __make_cmap(color, gamma=1.0, background="white"):
     for i in range(3):          # set rgb channels
         t_color[:, i] = np.linspace(start, rgba[i], N) ** gamma
     return ListedColormap(t_color)
+
 
 def plot_map(m, color,
              label=None,
@@ -600,7 +585,7 @@ def plot_map(m, color,
     # Obtain size (w x h) of image
     extent = __get_extent(m, scale_bar)
 
-    cmap =  __make_cmap(color, gamma=gamma, background=background)
+    cmap = __make_cmap(color, gamma=gamma, background=background)
     plt.imshow(m, cmap=cmap, extent=extent)
     plt.colorbar(label="counts  [-]")
     ax = plt.gca()
@@ -612,7 +597,7 @@ def plot_map(m, color,
         label_BGcolor = "black" if background.lower() == "white" else "white"
         label_color = "black" if label_BGcolor == "white" else "white"
         # Position to print label in data coordinates found by trial-and-error.
-        ax.text(extent[0]*0.05, extent[3]*0.85,
+        ax.text(extent[0] * 0.05, extent[3] * 0.85,
                 label,
                 size=24,
                 color=label_color,
@@ -622,6 +607,7 @@ def plot_map(m, color,
 
     if outfile:
         plt.savefig(outfile)
+
 
 def plot_spectrum(s, E_range=None, M_ticks=None,
                   log_y=False, outfile=None, **kws):
@@ -652,9 +638,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
     >>> import JEOL_eds.utils as JU
 
     Load data.
-    NOTE: This specific file saved with an old version of JEOL_eds and will raise
-    KeyError: "Can't open attribute (can't locate attribute: 'nm_per_pixel')"
-    >>> dc = JEOL_pts('data/complex_oxide.h5')
+    >>> dc = JEOL_pts('data/128.pts', only_metadata=True)
 
     Plot full reference spectrum with logarithmic y-axis:
     >>> JU.plot_spectrum(dc.ref_spectrum, log_y=True)
@@ -668,11 +652,11 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
     ...                  outfile='ref_spectrum.pdf',
     ...                  color='Red', linestyle='-.', linewidth=1.0)
     """
-    F = 1/100     # Calibration factor (Energy per channel)
+    F = 1 / 100     # Calibration factor (Energy per channel)
 
     if E_range is not None:
         E_low, E_high = E_range
-        if E_high > s.shape[0] * F: # E_high is out of range
+        if E_high > s.shape[0] * F:  # E_high is out of range
             E_high = s.shape[0] * F
     else:
         E_low, E_high = 0, s.shape[0] * F
@@ -687,6 +671,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
                 x_label='E  [keV]', y_label='counts  [-]',
                 M_ticks=M_ticks, log_y=log_y, outfile=outfile,
                 **kws)
+
 
 def export_spectrum(s, outfile, E_range=None):
     """Exports spectrum as tab delimited ASCII.
@@ -707,9 +692,7 @@ def export_spectrum(s, outfile, E_range=None):
     >>> import JEOL_eds.utils as JU
 
     Load data.
-    NOTE: This specific file saved with an old version of JEOL_eds and will
-    raise KeyError: "Can't open attribute (can't locate attribute: 'nm_per_pixel')"
-    >>> dc = JEOL_pts('data/complex_oxide.h5')
+    >>> dc = JEOL_pts('data/64.pts', only_metadata=True)
 
     Export full reference spectrum as 'test_spectrum.dat':
     >>> JU.export_spectrum(dc.ref_spectrum, 'test_spectrum.dat')
@@ -718,11 +701,11 @@ def export_spectrum(s, outfile, E_range=None):
     >>> JU.export_spectrum(dc.ref_spectrum, 'test_spectrum.dat',
     ...                    E_range=(1, 2.5))
     """
-    F = 1/100     # Calibration factor (Energy per channel)
+    F = 1 / 100     # Calibration factor (Energy per channel)
 
     if E_range is not None:
         E_low, E_high = E_range
-        if E_high > s.shape[0] * F: # E_high is out of range
+        if E_high > s.shape[0] * F:  # E_high is out of range
             E_high = s.shape[0] * F
     else:
         E_low, E_high = 0, s.shape[0] * F
@@ -786,6 +769,7 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
                 M_ticks=M_ticks, outfile=outfile,
                 **kws)
 
+
 def export_tseries(ts, outfile):
     """Export time series as tab delimited ASCII.
 
@@ -825,6 +809,7 @@ def export_tseries(ts, outfile):
     header = '# Frame idx [-]        counts [-]'
     fmt = '%d\t%f'
     np.savetxt(outfile, data, header=header, fmt=fmt)
+
 
 def plot_profile(x, y, units='px', M_ticks=None, outfile=None, **kws):
     """Plots a nice profile.
@@ -870,6 +855,7 @@ def plot_profile(x, y, units='px', M_ticks=None, outfile=None, **kws):
                 M_ticks=M_ticks, outfile=outfile,
                 **kws)
 
+
 def export_profile(x, y, outfile, units='px'):
     """Export profile as tab delimited ASCII.
 
@@ -907,6 +893,7 @@ def export_profile(x, y, outfile, units='px'):
     fmt = '%d\t%f'
     np.savetxt(outfile, np.vstack((x, y)).T, header=header, fmt=fmt)
 
+
 def __linewidth_from_data_units(linewidth, axis):
     """Convert a linewidth in pixels to points.
 
@@ -934,6 +921,7 @@ def __linewidth_from_data_units(linewidth, axis):
     length *= 72    # 72 points per inch
     # Scale linewidth to value range
     return linewidth * (length / value_range)
+
 
 def show_line(image, line, linewidth=1, outfile=None, **kws):
     """Plots a white (profile) line on image.
@@ -980,10 +968,11 @@ def show_line(image, line, linewidth=1, outfile=None, **kws):
     x = (line[1], line[3])
     y = (line[0], line[2])
     width = __linewidth_from_data_units(linewidth, ax.axes)
-    plt.plot(x,y, color='white', linewidth=width)
+    plt.plot(x, y, color='white', linewidth=width)
 
     if outfile:
         plt.savefig(outfile)
+
 
 def get_profile(image, line, linewidth=1):
     """Returns a profile along line on image.
@@ -1033,6 +1022,7 @@ def get_profile(image, line, linewidth=1):
                            mode='nearest')
     return profile
 
+
 def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
     """Plots ROI on image.
 
@@ -1058,21 +1048,13 @@ def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
     >>> dc = JEOL_pts('data/complex_oxide.h5')
     >>> my_map = dc.map()
 
-    We want to get the spectrum of the SrTiO3 substrate on the left of the
-    image. Verify definition of rectangular mask. Make image more visible (less
-    transparent). Then plot the spectrum corresponding to the ROI:
+    Verify definition of rectangular ROI. Make image more visible (less
+    transparent).
     >>> JU.show_ROI(my_map, (50, 250, 10, 75), alpha=0.6)
 
-    >>> JU.plot_spectrum(dc.spectrum(ROI=[50, 250, 10, 75]),
-    ...                  E_range=(4, 17),
-    ...                  M_ticks=(4, None))
-
-    Extract spectrum of the FeCoOx region using a circular mask. Again check
-    the definition of the mask first. Override the default color map:
+    Check the definition of a circular ROI first.
+    Override the default color map.
     >>> JU.show_ROI(my_map, (270, 122, 10), cmap='inferno')
-    >>> JU.plot_spectrum(dc.spectrum(ROI=[270, 122, 10]),
-    ...                  E_range=(4, 17),
-    ...                  M_ticks=(4, None))
     """
     if len(ROI) == 2:
         im = image.copy().astype('float')
@@ -1095,6 +1077,7 @@ def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
 
     if outfile:
         plt.savefig(outfile)
+
 
 if __name__ == "__main__":
     import doctest

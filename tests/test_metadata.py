@@ -10,12 +10,13 @@ import unittest
 from JEOL_eds import JEOL_pts
 import numpy as np
 
+
 class Metadata_pts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        print('Loading data ... ', end='', flush=True)
+        print('\nLoading data ... ', end='', flush=True)
         cls.dc = JEOL_pts('data/128.pts', only_metadata=True)
-        print('done')
+        print('done: ', end='', flush=True)
 
     def test_read(self):
         self.assertEqual('data/128.pts', self.dc.file_name)
