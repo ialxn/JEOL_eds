@@ -30,7 +30,6 @@ from JEOL_eds.JEOL_spectrum import JEOL_spectrum
 from JEOL_eds.misc import _decode
 
 
-
 class JEOL_PointLine:
     """Work with JEOL PointLine data (sequence of individual point spectra)
 
@@ -159,17 +158,17 @@ class JEOL_PointLine:
             Point_nr = int(_decode(fp.read(bytes_len).rstrip(b'\x00')))
             skip_zeros(fp)
             fp.read(4)
-            Pos_MM = _decode(fp.read(12).rstrip(b'\x00'))
+            _ = _decode(fp.read(12).rstrip(b'\x00'))  # Pos_MM
             find_next_tag(fp, b'\xff')
             fp.read(5)
-            Pos_PXL = _decode(fp.read(12).rstrip(b'\x00'))
+            _ = _decode(fp.read(12).rstrip(b'\x00'))  # Pos_PXL
             fp.read(8)  # skip 2x b'\x08'
             xPos = np.fromfile(fp, "<i", 1)[0]
             yPos = np.fromfile(fp, "<i", 1)[0]
             find_next_tag(fp, b'\xff')
             fp.read(1)
             str_len = np.fromfile(fp, "<I", 1)[0]
-            FileName = _decode(fp.read(str_len).rstrip(b'\x00'))
+            _ = _decode(fp.read(str_len).rstrip(b'\x00'))  # FileName
             fp.read(4)
             str_len = np.fromfile(fp, "<I", 1)[0]
             fname = _decode(fp.read(str_len).rstrip(b'\x00'))
@@ -188,18 +187,18 @@ class JEOL_PointLine:
             fp.read(9)  # skip
             fp.read(1)  # 1
             str_len = np.fromfile(fp, "<I", 1)[0]
-            ID = _decode(fp.read(str_len).rstrip(b'\x00'))
+            _ = _decode(fp.read(str_len).rstrip(b'\x00'))  # ID
             fp.read(12)
-            Memo = read_string(fp)  # 'Memo'
+            _ = read_string(fp)  # 'Memo'
             fp.read(12)     # skip
-            Num = read_string(fp)   # 'Num'
-            fp.read(12) # skip
-            Image = read_string(fp)     # 'Image'
+            _ = read_string(fp)   # 'Num'
+            fp.read(12)  # skip
+            _ = read_string(fp)     # 'Image'
             fp.read(4)
             str_len = np.fromfile(fp, "<I", 1)[0]
             fn = _decode(fp.read(str_len).rstrip(b'\x00'))
             self.Image_name = fn.rsplit('\\', 1)[1]
-            Marker = read_string(fp)    # 'Marker'
+            _ = read_string(fp)    # 'Marker'
             fp.read(10)
 
             end = False
@@ -209,7 +208,7 @@ class JEOL_PointLine:
                     key, val = read_eds_meta(fp)
                     self.eds_dict[key] = val
                     fp.read(1)
-                except:
+                except IndexError:
                     end = True
 
         # Read and insert reference image
@@ -248,14 +247,12 @@ class JEOL_PointLine:
         N = len(self.eds_dict)
         X = np.zeros((N,))
         x0, y0 = self.eds_dict[0][1:3]
-        for i in range(1,N):
+        for i in range(1, N):
             x, y = self.eds_dict[i][1:3]
             X[i] = np.sqrt((x - x0)**2 + (y - y0)**2)
         if xCalib:
             X *= self.ref_image.nm_per_pixel
         return X
-
-
 
     def profile(self, interval=None, energy=False, markers=None, xCalib=False):
         """Returns profile of x-ray intensity integrated in `interval`.
@@ -327,7 +324,7 @@ class JEOL_PointLine:
         else:
             profile = np.full((self.eds_data.shape[0],), np.nan)
             for m in markers:
-                profile[m] =self.eds_data[m, interval[0]:interval[1]].sum()
+                profile[m] = self.eds_data[m, interval[0]:interval[1]].sum()
 
         return self.__get_x(xCalib=xCalib), profile
 
@@ -393,6 +390,7 @@ class JEOL_PointLine:
 
         if outfile:
             plt.savefig(outfile)
+
 
 if __name__ == "__main__":
     import doctest

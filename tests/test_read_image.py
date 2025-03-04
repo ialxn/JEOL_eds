@@ -9,6 +9,7 @@ import unittest
 
 from JEOL_eds import JEOL_image
 
+
 class test_img(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -27,6 +28,7 @@ class test_img(unittest.TestCase):
         self.assertTrue((self.demo.image == self.demo.parameters["Image"]["Bits"]).all())
         self.assertEqual(63782847, self.demo.image.sum())
 
+
 class test_map(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -44,6 +46,7 @@ class test_map(unittest.TestCase):
         self.assertEqual((256, 256), self.demo.image.shape)
         self.assertTrue((self.demo.image == self.demo.parameters["Image"]["Bits"]).all())
         self.assertEqual(116726, self.demo.image.sum())
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -9,6 +9,7 @@ import unittest
 
 from JEOL_eds import JEOL_DigiLine
 
+
 class test_DigiLine(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -68,7 +69,7 @@ class test_DigiLine(unittest.TestCase):
         self.assertEqual((4000,), spectrum.shape)
         self.assertEqual(30710, spectrum.sum())
         scans = range(1, 50, 3)
-        spectrum = self.dl.sum_spectrum(xRange=(24,123), scans=scans)
+        spectrum = self.dl.sum_spectrum(xRange=(24, 123), scans=scans)
         self.assertEqual((4000,), spectrum.shape)
         self.assertEqual(4304, spectrum.sum())
 

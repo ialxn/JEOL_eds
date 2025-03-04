@@ -25,7 +25,6 @@ import numpy as np
 from JEOL_eds.misc import _decode
 
 
-
 class JEOL_spectrum:
     """Reads JEOL spectra ('.eds'.)
 
@@ -108,7 +107,7 @@ class JEOL_spectrum:
         np.fromfile(fd, "<i", 1)  # 1
         header["arr"] = np.fromfile(fd, "<d", 10)
         _ = np.fromfile(fd, "<i", 1)  # 7
-        _ = np.fromfile(fd, "<d", 1)[0] # unknown
+        _ = np.fromfile(fd, "<d", 1)[0]  # unknown
         header["Esc"] = np.fromfile(fd, "<d", 1)[0]
         header["Fnano F"] = np.fromfile(fd, "<d", 1)[0]
         header["E Noise"] = np.fromfile(fd, "<d", 1)[0]
@@ -120,16 +119,16 @@ class JEOL_spectrum:
         header["CountRate n"] = np.fromfile(fd, "<i", 1)[0]
         header["CountRate sum"] = np.fromfile(fd, "<d", 2)
         header["CountRate value"] = np.fromfile(fd, "<d", 1)[0]
-        _ = np.fromfile(fd, "<d", 1)[0] # unknown
+        _ = np.fromfile(fd, "<d", 1)[0]  # unknown
         header["DeadTime n"] = np.fromfile(fd, "<i", 1)[0]
         header["DeadTime sum"] = np.fromfile(fd, "<d", 2)
         header["DeadTime value"] = np.fromfile(fd, "<d", 1)[0]
-        _ = np.fromfile(fd, "<d", 1)[0] # unknown
+        _ = np.fromfile(fd, "<d", 1)[0]  # unknown
         header["CoefA"] = np.fromfile(fd, "<d", 1)[0]
         header["CoefB"] = np.fromfile(fd, "<d", 1)[0]
         header["State"] = _decode(fd.read(32).rstrip(b"\x00"))
-        _ = np.fromfile(fd, "<i", 1)[0] # unknown
-        _ = np.fromfile(fd, "<d", 1)[0] # unknown
+        _ = np.fromfile(fd, "<i", 1)[0]  # unknown
+        _ = np.fromfile(fd, "<d", 1)[0]  # unknown
         header["Tpl"] = _decode(fd.read(32).rstrip(b"\x00"))
         header["NumCH"] = np.fromfile(fd, "<i", 1)[0]
         return header
@@ -159,18 +158,18 @@ class JEOL_spectrum:
         if n_elem != 0:
             elems = {}
             for _ in range(n_elem):
-                _ = np.fromfile(fd, "<i", 1)[0] # = 2 (mark elem)
-                _ = np.fromfile(fd, "<H", 1)[0] # Z
-                _ = np.fromfile(fd, "<i", 1)  # = 1 (mark1)
-                _ = np.fromfile(fd, "<i", 1)  # = 0 (mark2)
+                _ = np.fromfile(fd, "<i", 1)[0]  # = 2 (mark elem)
+                _ = np.fromfile(fd, "<H", 1)[0]  # Z
+                _ = np.fromfile(fd, "<i", 1)   # = 1 (mark1)
+                _ = np.fromfile(fd, "<i", 1)   # = 0 (mark2)
                 roi_min, roi_max = np.fromfile(fd, "<H", 2)
-                _ = np.fromfile(fd, "<b", 14) # unknown
+                _ = np.fromfile(fd, "<b", 14)  # unknown
                 energy = np.fromfile(fd, "<d", 1)
                 _ = np.fromfile(fd, "<d", 1)
                 _ = np.fromfile(fd, "<d", 1)
                 _ = np.fromfile(fd, "<d", 1)
                 elem_name = _decode(fd.read(32).rstrip(b"\x00"))
-                _ = np.fromfile(fd, "<i", 1)[0] # mark3 ?
+                _ = np.fromfile(fd, "<i", 1)[0]  # mark3 ?
                 n_line = np.fromfile(fd, "<i", 1)[0]
                 lines = {}
                 for _ in range(n_line):
@@ -218,7 +217,7 @@ class JEOL_spectrum:
                 atom = np.fromfile(fd, "<d", 1)[0]
                 ox_name = _decode(fd.read(16).rstrip(b"\x00"))
                 mass2 = np.fromfile(fd, "<d", 1)[0]
-                _ = np.fromfile(fd, "<d", 1)[0] # K
+                _ = np.fromfile(fd, "<d", 1)[0]  # K
                 counts = np.fromfile(fd, "<d", 1)[0]
                 # all unknown
                 _ = np.fromfile(fd, "<d", 1)[0]
@@ -308,6 +307,7 @@ class JEOL_spectrum:
             self.header = self.__read_eds_header(fd)
             self.data = np.fromfile(fd, "<i", self.header["NumCH"])
             self.footer = self.__read_eds_footer(fd)
+
 
 if __name__ == "__main__":
     import doctest

@@ -9,6 +9,7 @@ import unittest
 
 from JEOL_eds import JEOL_spectrum
 
+
 class test_eds(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -33,6 +34,7 @@ class test_eds(unittest.TestCase):
     def test_footer_data(self):
         self.assertEqual(200.0, self.s.footer['Parameters']['AccKV'])
         self.assertEqual('JEM-ARM200F(HRP)', self.s.footer['Parameters']['SEM'])
+
 
 if __name__ == '__main__':
     unittest.main()
