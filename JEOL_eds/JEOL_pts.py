@@ -553,10 +553,16 @@ class JEOL_pts:
                                  bins=bins)
         if verbose:
             peak_val = int(h.max())
-            mx, my = np.where(h == np.amax(h))
-            mx = int(bins[int(mx)] + 0.5)
-            my = int(bins[int(my)] + 0.5)
+            extrema = np.where(h == np.amax(h))
+            print(extrema)
             print('Shifts (filtered):') if filtered else print('Shifts (unfiltered):')
+            if len(extrema) > 1:
+                print('   Multiple maxima in 2D histogram of shifts detected!')
+                for mx, my in zip(extrema[0], extrema[1]):
+                    print(f'      {mx}, {my}')
+                print(f'      Only considering {extrema[0][0]}, {extrema[1][0]}')
+            mx = int(bins[int(extrema[0][0])] + 0.5)
+            my = int(bins[int(extrema[1][0])] + 0.5)
             print(f'   Range: {int(np.asarray(sh).min())} - {int(np.asarray(sh).max())}')
             print(f'   Maximum {peak_val} at ({mx}, {my})')
         return h, extent
