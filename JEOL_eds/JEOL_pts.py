@@ -53,11 +53,14 @@ class JEOL_pts:
         implies all frames present in data are read.
     E_cutoff : Float
         Energy cutoff in spectra. Only data below E_cutoff are read.
-    read_drift : Bool
-        Read BF images (one BF image per frame stored in the raw data, if the
-        option "correct for sample movement" was active while the data was
-        collected). All images are read even if only a subset of frames is read
-        (frame_list is specified).
+    read_drift : Str
+        Read BF images (one BF image per frame stored in the raw data, if
+        the option "correct for sample movement" was active while the data
+        was collected). All images are read even if only a subset of frames
+        is read (frame_list is specified).
+        "no" : Do not read drift images [Default].
+        "yes" : Read drift images (and EDX data).
+        "only" : Skip reading EDX data.
     only_metadata : Bool
         Only meta data is read (True) but nothing else. All other keywords are
         ignored.
@@ -119,7 +122,7 @@ class JEOL_pts:
     Also read and store BF images (one per frame) present Attribute will be set
     to 'None' if no data was not read or found:
     >>> dc = JEOL_pts('data/128.pts', split_frames=True,
-    ...               read_drift=True, frame_list=[1,2,4,8,16])
+    ...               read_drift="yes", frame_list=[1,2,4,8,16])
     >>> dc.drift_images is None
     False
 
@@ -153,6 +156,13 @@ class JEOL_pts:
 
     >>> meas['RealTime']
     np.float64(418.56)
+
+    Only read drift images in addition to meta data
+    >>> dc2 = JEOL_pts('data/128.pts', read_drift="only")
+    >>> dc2.drift_images.shape
+    (50, 128, 128)
+    >>> dc2.nm_per_pixel
+    np.float64(1.93359375)
 
     JEOL_pts objects can also be initialized from a saved data cube. In this
     case, the dtype of the data cube is the same as in the stored data and a
@@ -1066,7 +1076,7 @@ class JEOL_pts:
         --------
         >>> from JEOL_eds import JEOL_pts
 
-        >>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift=True)
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift="yes")
 
         Make movie and store is as 'data/128.mp4':
         >>> dc.make_movie()
@@ -1079,7 +1089,7 @@ class JEOL_pts:
         >>> dc.make_movie(fname='dummy.mp4')
 
         Only load a subset of frames (first two frames) but ALL drift images.
-        >>> dc = JEOL_pts('data/128.pts', read_drift=True,
+        >>> dc = JEOL_pts('data/128.pts', read_drift="yes",
         ...               split_frames=True, frame_list=[0, 1])
 
         Only two frames have been loaded
