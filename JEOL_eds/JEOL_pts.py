@@ -232,11 +232,15 @@ class JEOL_pts:
             if AimArea[1] == AimArea[3]:
                 raise ValueError(f'"{fname}" does not contain map data! Aim area {AimArea} suggests to use `JEOL_DigiLine()` to load data.')
 
+            # Nominal pixel size [nm]
+            ScanSize = self.parameters['PTTD Param']['Params']['PARAMPAGE0_SEM']['ScanSize']
+            Mag = self.parameters['PTTD Data']['AnalyzableMap MeasData']['MeasCond']['Mag']
+            self.nm_per_pixel = ScanSize / Mag * 1000000 / self.dcube.shape[2]
+
             if only_metadata:
                 self.dcube = None
                 self.drift_images = None
                 self.frame_list = None
-                self.nm_per_pixel = None
                 self.__set_ref_spectrum()
                 return
 
@@ -247,11 +251,6 @@ class JEOL_pts:
                                               E_cutoff=E_cutoff,
                                               rebin=rebin,
                                               verbose=verbose)
-
-            # Nominal pixel size [nm]
-            ScanSize = self.parameters['PTTD Param']['Params']['PARAMPAGE0_SEM']['ScanSize']
-            Mag = self.parameters['PTTD Data']['AnalyzableMap MeasData']['MeasCond']['Mag']
-            self.nm_per_pixel = ScanSize / Mag * 1000000 / self.dcube.shape[2]
 
         elif os.path.splitext(fname)[1] == '.npz':
             self.parameters = None
