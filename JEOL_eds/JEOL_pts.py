@@ -187,7 +187,7 @@ class JEOL_pts:
 
     def __init__(self, fname, dtype='uint16',
                  split_frames=False, frame_list=None,
-                 E_cutoff=False, read_drift=False,
+                 E_cutoff=False, read_drift="no",
                  rebin=None, only_metadata=False, verbose=False):
         """Reads data cube from JEOL '.pts' file or from previously saved data cube.
 
@@ -208,11 +208,14 @@ class JEOL_pts:
             (None) implies all frames present in data are read.
         E_cutoff : Float
             Energy cutoff in spectra. Only data below E_cutoff are read.
-        read_drift : Bool
+        read_drift : Str
             Read BF images (one BF image per frame stored in the raw data, if
             the option "correct for sample movement" was active while the data
             was collected). All images are read even if only a subset of frames
             is read (frame_list is specified).
+            "no" : Do not read drift images [Default].
+            "yes" : Read drift images (and EDX data).
+            "only" : Skip reading EDX data.
         rebin : Tuple
             Rebin drift images and data while reading the '.pts' file
             by (nw, nh). The integers nw and nh must be compatible with
@@ -225,6 +228,9 @@ class JEOL_pts:
             Turn on (various) output.
         """
         if os.path.splitext(fname)[1] == '.pts':
+            read_drift = read_drift.lower()
+            assert read_drift in ("no", "yes", "only")
+
             self.file_name = fname
             self.parameters, data_offset = self.__parse_header(fname)
 
@@ -235,7 +241,13 @@ class JEOL_pts:
             # Nominal pixel size [nm]
             ScanSize = self.parameters['PTTD Param']['Params']['PARAMPAGE0_SEM']['ScanSize']
             Mag = self.parameters['PTTD Data']['AnalyzableMap MeasData']['MeasCond']['Mag']
-            self.nm_per_pixel = ScanSize / Mag * 1000000 / self.dcube.shape[2]
+            area = self. parameters['EDS Data'] \
+                                   ['AnalyzableMap MeasData']['Meas Cond'] \
+                                       ['Pixels'].split('x')
+            if rebin is None:   # No rebinning required
+                rebin = (1, 1)
+            h = int(area[0]) // rebin[1]
+            self.nm_per_pixel = ScanSize / Mag * 1000000 / h
 
             if only_metadata:
                 self.dcube = None
@@ -244,8 +256,14 @@ class JEOL_pts:
                 self.__set_ref_spectrum()
                 return
 
+            self.drift_images = self.__read_drift_images(fname, rebin) if read_drift in ("yes", "only") else None
+            if read_drift == "only":
+                self.dcube = None
+                self.frame_list = None
+                self.__set_ref_spectrum()
+                return
+
             self.frame_list = sorted(list(frame_list)) if split_frames and frame_list else None
-            self.drift_images = self.__read_drift_images(fname, rebin) if read_drift else None
             self.dcube = self.__get_data_cube(dtype, data_offset,
                                               split_frames=split_frames,
                                               E_cutoff=E_cutoff,
