@@ -17,7 +17,7 @@ class testIO_hdf5(unittest.TestCase):
         os.remove('data/test.h5')
 
     def test_rw_hdf5(self):
-        dc = JEOL_pts('data/64.pts', split_frames=True, read_drift=True)
+        dc = JEOL_pts('data/64.pts', split_frames=True, read_drift="yes")
         dc.save_hdf5('data/test.h5', compression='gzip', compression_opts=9)
         saved = JEOL_pts('data/test.h5')
 
