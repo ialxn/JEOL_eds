@@ -74,7 +74,7 @@ class Map(unittest.TestCase):
         m = self.dc.map(align='yes')
 
         self.assertEqual((128, 128), m.shape)
-        self.assertEqual(m.sum(), 352603.0)
+        self.assertEqual(m.sum(), 352658.0)
 
     def test_align_yes_frames(self):
         pass
@@ -84,7 +84,7 @@ class Map(unittest.TestCase):
         m = self.dc.map(align='filter')
 
         self.assertEqual((128, 128), m.shape)
-        self.assertEqual(m.sum(), 352686.0)
+        self.assertEqual(m.sum(), 352881.0)
 
     def test_align_filter_frames(self):
         pass

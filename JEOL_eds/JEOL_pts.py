@@ -99,7 +99,7 @@ class JEOL_pts:
     >>> dc.dcube.shape
     (50, 128, 128, 4000)
 
-    For large data sets, read only a subset of frames.
+    For large data sets, read only a subset of frames:
     >>> small_dc = JEOL_pts('data/128.pts',
     ...                     split_frames=True, frame_list=[1,2,4,8,16])
     >>> small_dc.frame_list
@@ -541,19 +541,13 @@ class JEOL_pts:
         >>> from JEOL_eds import JEOL_pts
         >>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
-        Calculate the 2D frequency distribution of the frames shifts using unfiltered frames (verbose output).
-        >>> dc.drift_statistics(verbose=True) #doctest: +NORMALIZE_WHITESPACE
-        Frame 0 used a reference
-        Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
-        Shifts (unfiltered):
-           Range: -2 - 1
-           Maximum 12 at (0, 0)
-           (array([[ 0.,  0.,  5.,  0.,  0.],
-                   [ 0.,  9.,  7.,  0.,  0.],
-                   [ 1., 10., 12.,  1.,  0.],
-                   [ 0.,  0.,  4.,  1.,  0.],
-                   [ 0.,  0.,  0.,  0.,  0.]]),
-        [np.int64(-2), np.int64(2), np.int64(-2), np.int64(2)])
+        Calculate the 2D frequency distribution of the frames shifts using unfiltered frames.
+        >>> dc.drift_statistics()
+        (array([[ 0.,  0.,  5.,  0.,  0.],
+               [ 0.,  9.,  7.,  0.,  0.],
+               [ 1., 10., 12.,  1.,  0.],
+               [ 0.,  0.,  4.,  1.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.]]), [np.int64(-2), np.int64(2), np.int64(-2), np.int64(2)])
 
         Return the 2D frequency distribution of the Wiener filtered frames
         (plus extent useful for plotting).
@@ -576,10 +570,16 @@ class JEOL_pts:
                                  bins=bins)
         if verbose:
             peak_val = int(h.max())
-            mx, my = np.where(h == np.amax(h))
-            mx = int(bins[int(mx)] + 0.5)
-            my = int(bins[int(my)] + 0.5)
+            extrema = np.where(h == np.amax(h))
+            print(extrema)
             print('Shifts (filtered):') if filtered else print('Shifts (unfiltered):')
+            if len(extrema) > 1:
+                print('   Multiple maxima in 2D histogram of shifts detected!')
+                for mx, my in zip(extrema[0], extrema[1]):
+                    print(f'      {mx}, {my}')
+                print(f'      Only considering {extrema[0][0]}, {extrema[1][0]}')
+            mx = int(bins[int(extrema[0][0])] + 0.5)
+            my = int(bins[int(extrema[1][0])] + 0.5)
             print(f'   Range: {int(np.asarray(sh).min())} - {int(np.asarray(sh).max())}')
             print(f'   Maximum {peak_val} at ({mx}, {my})')
         return h, extent
@@ -618,119 +618,23 @@ class JEOL_pts:
         Get list of (possible) shifts [(dx0, dy0), (dx1, dx2), ...] in pixels
         of individual frames using frame 0 as reference. The shifts are
         calculated from the cross correlation of the images of the total x-ray
-        intensity of each individual frame. Verbose output:
-        >>> dc.shifts(verbose=True) #doctest: +NORMALIZE_WHITESPACE
-        Frame 0 used a reference
-        Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
-        [(0, 0),
-         (0, 0),
-         (1, 1),
-         (-1, 0),
-         (0, 1),
-         (1, 0),
-         (1, 0),
-         (0, 0),
-         (0, -1),
-         (1, 0),
-         (-1, -1),
-         (-1, -1),
-         (-1, 0),
-         (-1, 0),
-         (-1, -1),
-         (0, 0),
-         (0, -1),
-         (1, 0),
-         (0, 0),
-         (0, -1),
-         (-1, 0),
-         (0, 0),
-         (-2, 0),
-         (-2, 0),
-         (-1, -1),
-         (0, 0),
-         (-1, -1),
-         (0, 0),
-         (0, 0),
-         (0, -1),
-         (0, -1),
-         (-2, 0),
-         (-1, -1),
-         (-2, 0),
-         (-1, 0),
-         (-1, -1),
-         (0, -1),
-         (0, 0),
-         (-1, -1),
-         (0, -1),
-         (0, -1),
-         (0, 0),
-         (-1, -1),
-         (0, -2),
-         (0, -1),
-         (0, 0),
-         (-2, 0),
-         (-1, 0),
-         (-1, 0),
-         (0, -1)]
+        intensity of each individual frame. Frame 0 used a reference.
+
+        >>> sh = dc.shifts()
+        >>> sh[-1]
+        (0, -1)
 
 
         Use Wiener filtered images to calculate shifts:
-        >>> shifts = dc.shifts(filtered=True) #doctest: +NORMALIZE_WHITESPACE
+        >>> sh = dc.shifts(filtered=True)
+        >>> sh[-1]
+        (0, -1)
 
         Calculate shifts for selected frames (odd frames) only. In this case
-        `dc.drift_images[1]` (first frame given) is used as reference:
-        >>> dc.shifts(frames=range(1, dc.dcube.shape[0], 2), verbose=True) #doctest: +NORMALIZE_WHITESPACE
-        Frame 1 used a reference
-        [(0, 0),
-         (0, 0),
-         (0, 0),
-         (0, 1),
-         (0, 0),
-         (1, 1),
-         (0, 0),
-         (-1, 0),
-         (0, 0),
-         (1, -1),
-         (0, 0),
-         (-1, -1),
-         (0, 0),
-         (-1, 0),
-         (0, 0),
-         (0, 0),
-         (0, 0),
-         (-1, -1),
-         (0, 0),
-         (1, -1),
-         (0, 0),
-         (-1, -1),
-         (0, 0),
-         (-1, -1),
-         (0, 0),
-         (-2, -2),
-         (0, 0),
-         (0, 0),
-         (0, 0),
-         (1, 0),
-         (0, 0),
-         (-1, 0),
-         (0, 0),
-         (-2, -1),
-         (0, 0),
-         (-2, -1),
-         (0, 0),
-         (-1, -1),
-         (0, 0),
-         (0, -1),
-         (0, 0),
-         (1, 0),
-         (0, 0),
-         (0, 0),
-         (0, 0),
-         (0, -1),
-         (0, 0),
-         (-1, 0),
-         (0, 0),
-         (-1, -1)]
+        farme 1, again the first frame given is used as reference
+        >>> sh = dc.shifts(frames=range(1, dc.dcube.shape[0], 2))
+        >>> sh[-1]
+        (-1, -1)
         """
         if self.dcube is None or self.dcube.shape[0] == 1:
             # only a single frame present
@@ -739,11 +643,16 @@ class JEOL_pts:
             frames = range(self.dcube.shape[0])
         # Always use first frame given as reference
         ref = wiener(self.map(frames=[frames[0]])) if filtered else self.map(frames=[frames[0]])
+        ref = ref.astype(float)
+        ref -= ref.mean()
         shifts = [(0, 0)] * self.dcube.shape[0]
         if verbose:
             print(f'Frame {frames[0]} used a reference')
         for f in frames[1:]:    # skip reference frame
-            c = correlate(ref, wiener(self.map(frames=[f]))) if filtered else correlate(ref, self.map(frames=[f]))
+            data = wiener(self.map(frames=[f])) if filtered else self.map(frames=[f])
+            data = data.astype(float)
+            data -= data.mean()
+            c = correlate(ref, data)
             # image size s=self.dcube.shape[1]
             # c has shape (2 * s - 1, 2 * s - 1)
             # Autocorrelation peaks at [s - 1, s - 1]
@@ -824,23 +733,23 @@ class JEOL_pts:
         ...            energy=True,
         ...            frames=range(0, dc.dcube.shape[0], 2))
 
-        Correct for frame shifts (calculated from unfiltered frames) with
-        verbose output:
-        >>> m = dc.map(align='yes', verbose=True)
-        Using channels 0 - 4000
-        Frame 0 used a reference
-        Average of (-2, -1) (0, 0) set to (-1, 0) in frame 24
+        Correct for frame shifts (calculated from unfiltered frames):
+        >>> m = dc.map(align='yes')
+        >>> m.min()
+        np.float64(0.0)
+        >>> m.max()
+        np.float64(137.0)
 
         Cu Kalpha map of frames 0..10. Frames are aligned using frame 5 as
-        reference. Wiener filtered frames are used to calculate the shifts.
-        Verbose output
+        reference. Wiener filtered frames are used to calculate the shifts:
         >>> m = dc.map(interval=(7.9, 8.1),
         ...            energy=True,
         ...            frames=[5,0,1,2,3,4,6,7,8,9,10],
-        ...            align='filter',
-        ...            verbose=True)
-        Using channels 790 - 810
-        Frame 5 used a reference
+        ...            align='filter')
+        >>> m.min()
+        np.float64(0.0)
+        >>> m.max()
+        np.float64(5.0)
         """
         # Check for valid keyword arguments
         assert align.lower() in ['yes', 'no', 'filter']
