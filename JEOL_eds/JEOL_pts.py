@@ -1082,26 +1082,11 @@ class JEOL_pts:
         Make movie and store is as 'data/128.mp4':
         >>> dc.make_movie()
 
-        Only use Cu K_alpha line:
-        >>> dc.make_movie(interval=(7.9, 8.1), energy=True)
+        Only use Cu K_alpha line and save it as 'dummy.mp4':
+        >>> dc.make_movie(interval=(7.9, 8.1), energy=True, fname='dummy.mp4')
 
-        Make movie (one frame only, drift_image will be blank) and save iT as
-        'dummy.mp4':
-        >>> dc.make_movie(fname='dummy.mp4')
-
-        Only load a subset of frames (first two frames) but ALL drift images.
-        >>> dc = JEOL_pts('data/128.pts', read_drift="yes",
-        ...               split_frames=True, frame_list=[0, 1])
-
-        Only two frames have been loaded
-        >>> dc.frame_list
-        [0, 1]
-        >>> dc.dcube.shape
-        (2, 128, 128, 4000)
-
-        All drift images have been loaded
-        >>> dc.drift_images.shape
-        (50, 128, 128)
+        Make movie of drift images only:
+        >>> dc.make_movie(only_drift=True)
         """
         if self.dcube is None:  # Only metadata was read
             return
