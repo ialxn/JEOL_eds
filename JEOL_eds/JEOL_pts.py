@@ -1033,6 +1033,13 @@ class JEOL_pts:
 
         if not interval:
             interval = (0, self.dcube.shape[3])
+
+        if interval[0] > interval[1]:   # ensure interval is (low, high)
+            interval = (interval[1], interval[0])
+
+        if interval[0] > self.dcube.shape[3] or interval[1] > self.dcube.shape[3]:
+            warn(f'Interval {interval[0]}-{interval[1]} lies (partly) outside of data range 0-{self.dcube.shape[3]}')
+
         if energy:
             CoefA = self.parameters['PTTD Data'] \
                                    ['AnalyzableMap MeasData']['Doc'] \
@@ -1042,12 +1049,6 @@ class JEOL_pts:
                                    ['CoefB']
             interval = (int(round((interval[0] - CoefB) / CoefA)),
                         int(round((interval[1] - CoefB) / CoefA)))
-
-        if interval[0] > interval[1]:   # ensure interval is (low, high)
-            interval = (interval[1], interval[0])
-
-        if interval[0] > self.dcube.shape[3] or interval[1] > self.dcube.shape[3]:
-            warn(f'Interval {interval[0]}-{interval[1]} lies (partly) outside of data range 0-{self.dcube.shape[3]}')
 
         if frames is None:
             # For consistency, explicitly set dtype to 'float'. We need to
