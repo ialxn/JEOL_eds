@@ -279,6 +279,7 @@ class JEOL_pts:
                                               E_cutoff=E_cutoff,
                                               rebin=rebin,
                                               verbose=verbose)
+            self.__mk_idx()
 
         elif os.path.splitext(fname)[1] == '.npz':
             self.parameters = None
@@ -291,6 +292,17 @@ class JEOL_pts:
             raise OSError(f"Unknown type of file '{fname}'")
 
         self.__set_ref_spectrum()
+
+    def __mk_idx(self):
+        """Set up dict{frame_number: index_of_frame_in_data_cube}
+        """
+        if self.frame_list is None:
+            # All frames loaded
+            self.__fr_idx = {i: i for i in range(self.dcube.shape[0])}
+        else:
+            self.__fr_idx = {}
+            for i, f in enumerate(self.frame_list):
+                self.__fr_idx[f] = i
 
     def __set_ref_spectrum(self):
         """Sets attribute ref_spectrum from parameters dict.
