@@ -558,6 +558,30 @@ class JEOL_pts:
                 im = np.append(im, np.full((N_addl), np.nan, dtype='uint16'))
                 return rebin(im.reshape(image_shape), bs)
 
+    def frame(self, frame_number):
+        """Returns index of frame in data cube
+
+        Examples
+        --------
+
+        >>> from JEOL_eds import JEOL_pts
+        >>> dc = JEOL_pts("data/64.pts",
+        ...                     split_frames=True, frame_list=[10, 11, 12])
+
+        Obtain index of frame 11 in data cube
+        >>> dc.frame(11)
+        1
+
+        Without `split_frames=True` only the data cube contains just the sum
+        of all frames index by `0`.
+
+        >>> dc = JEOL_pts("data/64.pts")
+
+        >>> dc.frame(0)
+        0
+        """
+        return self.__fr_idx[frame_number]
+
     def drift_statistics(self, filtered=False, verbose=False):
         """Returns 2D frequency distribution of frame shifts (x, y).
 
