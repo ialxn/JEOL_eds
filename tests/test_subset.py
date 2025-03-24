@@ -30,18 +30,18 @@ class subset_of_frames(unittest.TestCase):
                              self.dc.dcube[j, :, :, :].sum())
 
     def test_individual_maps(self):
-        for i, j in enumerate(self.flist):
-            self.assertEqual(self.subset.map(frames=[i]).sum(),
-                             self.dc.map(frames=[j]).sum())
+        for f in self.flist:
+            self.assertEqual(self.subset.map(frames=[f]).sum(),
+                             self.dc.map(frames=[f]).sum())
 
     def test_sum_map(self):
         self.assertEqual(self.subset.map().sum(),
                          self.dc.map(frames=self.flist).sum())
 
     def test_individual_spectra(self):
-        for i, j in enumerate(self.flist):
-            self.assertEqual(self.subset.spectrum(frames=[i]).sum(),
-                             self.dc.spectrum(frames=[j]).sum())
+        for f in self.flist:
+            self.assertEqual(self.subset.spectrum(frames=[f]).sum(),
+                             self.dc.spectrum(frames=[f]).sum())
 
     def test_sum_spectrum(self):
         self.assertEqual(self.subset.spectrum().sum(),
