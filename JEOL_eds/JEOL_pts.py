@@ -582,14 +582,19 @@ class JEOL_pts:
         """
         return self.__fr_idx[frame_number]
 
-    def drift_statistics(self, filtered=False, verbose=False):
+    def drift_statistics(self, filtered=False, align_src="data", verbose=False):
         """Returns 2D frequency distribution of frame shifts (x, y).
 
         Parameters
         ----------
         filtered : Bool
             If True, use Wiener filtered data.
-        verbose : Bool
+        align_src : Str
+            "data" : Calculate shifts based on the cross-correlation of the
+                     total EDX counts. Default.
+            "drift_images" : Calculate shifts based on the cross-correlation
+                             of the drift images.
+      verbose : Bool
             Provide additional info if set to True.
 
         Returns
@@ -621,7 +626,7 @@ class JEOL_pts:
         """
         if self.dcube is None or self.dcube.shape[0] == 1:
             return None, None
-        sh = self.shifts(filtered=filtered, verbose=verbose)
+        sh = self.shifts(filtered=filtered, align_src=align_src, verbose=verbose)
         amax = np.abs(np.asarray(sh)).max()
         if amax == 0:   # all shifts are zero, prevent SyntaxError in np.histogram2d()
             amax = 1
@@ -647,7 +652,7 @@ class JEOL_pts:
             print(f'   Maximum {peak_val} at ({mx}, {my})')
         return h, extent
 
-    def shifts(self, frames=None, filtered=False, verbose=False):
+    def shifts(self, frames=None, align_src="data", filtered=False, verbose=False):
         """Calcultes frame shift by cross correlation of images (total intensity).
 
         Parameters
@@ -655,7 +660,11 @@ class JEOL_pts:
         frames : Iterable
             Frame numbers for which shifts are calculated. First frame given is
             used a reference.
-
+        align_src : Str
+            "data" : Calculate shifts based on the cross-correlation of the
+                     total EDX counts. Default.
+            "drift_images" : Calculate shifts based on the cross-correlation
+                             of the drift images.
         filtered : Bool
             If True, use Wiener filtered data.
         verbose : Bool
@@ -699,19 +708,33 @@ class JEOL_pts:
             # only a single frame present
             return []
 
+        if align_src == "drift_images" and self.drift_images is None:
+            raise ValueError("Data does not contain drift images")
+
         if frames is None:
             frames = list(self.__fr_idx.keys())
 
         # Always use first frame given as reference
-        ref = wiener(self.map(frames=[frames[0]])) if filtered else self.map(frames=[frames[0]])
-        ref = ref.astype(float)
+        if align_src == "data":
+            ref = self.map(frames=[frames[0]]).astype(float)
+        else:       # Align drift images
+            ref = self.drift_images[frames[0]].astype(float)
+        if filtered:
+            ref = wiener(ref)
         ref -= ref.mean()
+
         shifts = [(0, 0)] * self.dcube.shape[0]
+
         if verbose:
-            print(f'Frame {frames[0]} used a reference')
+            print(f'Aligning based on {align_src} with frame {frames[0]} used a reference')
+
         for f in frames[1:]:    # skip reference frame
-            data = wiener(self.map(frames=[f])) if filtered else self.map(frames=[f])
-            data = data.astype(float)
+            if align_src == "data":
+                data = self.map(frames=[f]).astype(float)
+            else:       # Align drift images
+                data = self.drift_images[f].astype(float)
+            if filtered:
+                data = wiener(data)
             data -= data.mean()
             c = correlate(ref, data)
             # image size s=self.dcube.shape[1]
@@ -736,7 +759,8 @@ class JEOL_pts:
                                      dy - self.dcube.shape[1] + 1)
         return shifts
 
-    def map(self, interval=None, energy=False, frames=None, align='no',
+    def map(self, interval=None, energy=False, frames=None,
+            align='no', align_src="data",
             verbose=False):
         """Returns map corresponding to an interval in spectrum.
 
@@ -755,7 +779,12 @@ class JEOL_pts:
             'no': Do not align individual frames.
             'yes': Align frames (use unfiltered frames in cross correlation).
             'filter': Align frames (use  Wiener filtered frames in cross correlation).
-        verbose : Bool
+        align_src : Str
+            "data" : Calculate shifts based on the cross-correlation of the
+                     total EDX counts. Default.
+            "drift_images" : Calculate shifts based on the cross-correlation
+                             of the drift images.
+         verbose : Bool
             If True, output some additional info.
 
         Returns
@@ -811,7 +840,9 @@ class JEOL_pts:
         """
         # Check for valid keyword arguments
         align = align.lower()
+        align_src = align_src.lower()
         assert align in ['yes', 'no', 'filter']
+        assert align_src in ["data", "drift_images"]
 
         if self.dcube is None:  # Only metadata was read
             return None
@@ -854,11 +885,15 @@ class JEOL_pts:
         if frames is None:
             # Sum all frames
             frames = list(self.__fr_idx.keys())
+
         # Calculate frame shifts
         if align == 'filter':
-            shifts = self.shifts(frames=frames, filtered=True, verbose=verbose)
+            shifts = self.shifts(frames=frames, filtered=True,
+                                 align_src=align_src, verbose=verbose)
         if align == 'yes':
-            shifts = self.shifts(frames=frames, verbose=verbose)
+            shifts = self.shifts(frames=frames,
+                                 align_src=align_src, verbose=verbose)
+
         # Allocate array for result
         Nx, Ny = shape
         res = np.zeros((2 * Nx, 2 * Ny))
