@@ -226,7 +226,7 @@ class JEOL_DigiLine:
         >>> N_s
         50
 
-        Sum spectrumm of odd scans integrated in the range 123-234 (pixels):
+        Sum spectrum of odd scans integrated in the range 123-234 (pixels):
         >>> scans = range(1, N_s, 2)
         >>> spectrum = dl.sum_spectrum(scans=scans, xRange=(123, 234))
         >>> spectrum.shape
@@ -281,7 +281,7 @@ class JEOL_DigiLine:
         Returns
         -------
         x, profile : Ndarray, Ndarray
-            X-axis data points (pixel or [nm]) and profile of intergrated
+            X-axis data points (pixel or [nm]) and profile of integrated
             intensity in interval.
 
         Examples
