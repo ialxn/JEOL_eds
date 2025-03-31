@@ -85,7 +85,7 @@ class JEOL_spectrum:
               __read_eds_footer())
         - removing unused variables
         - adjusting meta data structure to JEOL_eds's general layout
-        - convertion to a class
+        - conversion to a class
 
     """
     @staticmethod
@@ -99,7 +99,7 @@ class JEOL_spectrum:
         Returns:
         --------
         header : Dict
-            Dict with header data (data stored before edx data).
+            Dict with header data (data stored before EDX data).
         """
         header = {}
         header["sp_name"] = _decode(fd.read(80).rstrip(b"\x00"))
@@ -144,7 +144,7 @@ class JEOL_spectrum:
         Returns:
         --------
         footer : Dict
-        Dict with footer data (data stored after edx data).
+        Dict with footer data (data stored after EDX data).
         """
         footer = {}
         np.fromfile(fd, "<i", 1)  # unknown

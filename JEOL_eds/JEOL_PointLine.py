@@ -89,7 +89,7 @@ class JEOL_PointLine:
     >>> h['CoefB']
     np.float64(-0.00122558)
 
-    Spectral data is availabe:
+    Spectral data is available:
     >>> pl.eds_data.shape
     (5, 4096)
 
@@ -141,7 +141,7 @@ class JEOL_PointLine:
                 tmp = fp.read(1)
 
         def read_eds_meta(fp):
-            """Reads meta data bloch for each ".eds" file
+            """Reads meta data block for each ".eds" file
 
             Parameter:
             ----------
@@ -224,14 +224,14 @@ class JEOL_PointLine:
         for key in self.eds_dict:
             name = self.eds_dict[key][0]
             s = JEOL_spectrum(os.path.join(path, name))
-            if first:  # First spectrum read. Perform some initializations
+            if first:  # First spectrum read. Perform some initialization
                 self.eds_header = copy.deepcopy(s.header)
                 self.eds_data = np.zeros((len(self.eds_dict), self.eds_header['NumCH']))
                 first = False
             self.eds_data[key] = s.data
 
     def __get_x(self, xCalib=False):
-        """Returns relative x coordinates of marker poinst on line
+        """Returns relative x coordinates of marker points on line
 
         Parameters
         ----------
@@ -365,7 +365,7 @@ class JEOL_PointLine:
 
         # Use xlim, ylim for zoomed in region.
         # y axis in image is inverted (origin is top/left). Thus
-        # inverte order of ylim coordinates.
+        # invert order of ylim coordinates.
         if not ROI:
             xlim = (0, self.ref_image.image.shape[0])
             ylim = (self.ref_image.image.shape[1], 0)

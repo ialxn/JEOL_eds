@@ -61,6 +61,11 @@ class JEOL_pts:
         "no" : Do not read drift images [Default].
         "yes" : Read drift images (and EDX data).
         "only" : Skip reading EDX data.
+    rebin : Tuple
+        Rebin drift images and data while reading the '.pts' file
+        by (nw, nh). The integers nw and nh must be compatible with
+        the scan size.
+        This option is not used when reading '.npz' or '.h5' files.
     only_metadata : Bool
         Only meta data is read (True) but nothing else. All other keywords are
         ignored.
@@ -69,7 +74,7 @@ class JEOL_pts:
 
     Notes
     -----
-        JEOL's Analysis Station stores edx data collected for a single
+        JEOL's Analysis Station stores EDX data collected for a single
         (horizontal) scan line in the same format. For these data use
         ``JEOL_eds.JEOL_DigiLine()``.
 
@@ -114,6 +119,12 @@ class JEOL_pts:
     The frames in the data cube correspond to the original frames 1, 2, 4, 8,
     and 16.
 
+    Large data sets can be rebinned on-the-fly while reading
+    >>> small_dc = JEOL_pts('data/128.pts', rebin=(4, 4),
+    ...                     split_frames=True, frame_list=[1,2,4,8,16])
+    >>> small_dc.dcube.shape
+    (5, 32, 32, 4000)
+
     Only import spectrum up to cutoff energy [keV]:
     >>> dc = JEOL_pts('data/128.pts', E_cutoff=10.0)
     >>> dc.dcube.shape
@@ -129,9 +140,26 @@ class JEOL_pts:
     >>> dc.drift_images.shape
     (50, 128, 128)
 
+    Original calibration factor [nm / pixel]
+    >>> dc.nm_per_pixel
+    np.float64(1.93359375)
+
+    If data is rebinned when loaded, drift images are too. Note that in all cases
+    the full set of drift images is read.
+    >>> dc = JEOL_pts('data/128.pts', rebin=(4, 4), split_frames=True,
+    ...               read_drift="yes", frame_list=[1,2,4,8,16])
+    >>> dc.drift_images.shape
+    (50, 32, 32)
+    >>> dc.dcube.shape
+    (5, 32, 32, 4000)
+
     If only a subset of frames was read select the corresponding BF images
     as follows:
     >>> drift_images = [dc.drift_images[i] for i in dc.frame_list]
+
+    Frames are addressed by their original ID in the data cube
+    >>> dc.frame(1).sum() - dc.frame(16).sum()
+    np.uint64(141)
 
     Useful attributes:
     File name loaded from:
@@ -142,9 +170,11 @@ class JEOL_pts:
     >>> dc.file_date
     '2020-10-23 11:18:40'
 
-     Mag calibration [nm / pixel]
+    Mag calibration [nm / pixel] has been updated due to rebinned during data
+    loading.
+
     >>> dc.nm_per_pixel
-    np.float64(1.93359375)
+    np.float64(7.734375)
 
     More info is stored in attribute `JEOL_pts.parameters`:
     >>> p = dc.parameters
@@ -587,7 +617,7 @@ class JEOL_pts:
         >>> dc.frame(1) is None
         True
 
-        Without `split_frames=True` only the data cube contains just the sum
+        Without `split_frames=True` the data cube contains just the sum
         of all frames index by `0`.
 
         >>> dc = JEOL_pts("data/64.pts")
@@ -625,9 +655,12 @@ class JEOL_pts:
         Examples
         --------
         >>> from JEOL_eds import JEOL_pts
-        >>> dc = JEOL_pts('data/128.pts', split_frames=True)
+        >>> import matplotlib.pyplot as plt
 
-        Calculate the 2D frequency distribution of the frames shifts using unfiltered frames.
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift='yes')
+
+        Calculate the 2D frequency distribution of the frames shifts using
+        unfiltered frames.
         >>> dc.drift_statistics()
         (array([[ 0.,  0.,  5.,  0.,  0.],
                [ 0.,  8.,  7.,  0.,  0.],
@@ -637,10 +670,14 @@ class JEOL_pts:
 
         Return the 2D frequency distribution of the Wiener filtered frames
         (plus extent useful for plotting).
-        >>> m, e = dc.drift_statistics(filtered=True) #doctest: +NORMALIZE_WHITESPACE
+        >>> m, e = dc.drift_statistics(filtered=True)
+        >>> _ = plt.imshow(m, extent=e)
 
-        >>> import matplotlib.pyplot as plt
-        >>> ax = plt.imshow(m, extent=e)
+        Same as before but based on the drift images
+        >>> dc.drift_statistics(align_src="drift_images")
+        (array([[ 0., 18.,  0.],
+               [ 0., 32.,  0.],
+               [ 0.,  0.,  0.]]), [np.int64(-1), np.int64(1), np.int64(-1), np.int64(1)])
         """
         if self.dcube is None or self.dcube.shape[0] == 1:
             return None, None
@@ -656,18 +693,13 @@ class JEOL_pts:
                                  bins=bins)
         if verbose:
             peak_val = int(h.max())
-            extrema = np.where(h == np.amax(h))
-            print(extrema)
+            extrema = np.where(h == peak_val)
             print('Shifts (filtered):') if filtered else print('Shifts (unfiltered):')
-            if len(extrema) > 1:
-                print('   Multiple maxima in 2D histogram of shifts detected!')
+            N_maxima = len(extrema[0])
+            if N_maxima > 1:
+                print(f'   Multiple ({N_maxima}) maxima ({peak_val}) in 2D histogram of shifts detected!')
                 for mx, my in zip(extrema[0], extrema[1]):
                     print(f'      {mx}, {my}')
-                print(f'      Only considering {extrema[0][0]}, {extrema[1][0]}')
-            mx = int(bins[int(extrema[0][0])] + 0.5)
-            my = int(bins[int(extrema[1][0])] + 0.5)
-            print(f'   Range: {int(np.asarray(sh).min())} - {int(np.asarray(sh).max())}')
-            print(f'   Maximum {peak_val} at ({mx}, {my})')
         return h, extent
 
     def shifts(self, frames=None, align_src="data", filtered=False, verbose=False):
@@ -700,7 +732,7 @@ class JEOL_pts:
         Examples
         --------
         >>> from JEOL_eds import JEOL_pts
-        >>> dc = JEOL_pts('data/128.pts', split_frames=True)
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift="yes")
 
         Get list of (possible) shifts [(dx0, dy0), (dx1, dx2), ...] in pixels
         of individual frames using frame 0 as reference. The shifts are
@@ -717,10 +749,19 @@ class JEOL_pts:
         (0, -1)
 
         Calculate shifts for selected frames (odd frames) only. In this case
-        farme 1, again the first frame given is used as reference
+        farme 1, again the first frame given is used as reference.
         >>> sh = dc.shifts(frames=range(1, dc.dcube.shape[0], 2))
         >>> sh[-1]
         (-1, -1)
+
+        Calculate shifts of even frames between 10 and 40 (inclusive) based
+        on the drift images and using frame 4 a reference.
+        >>> frames = [4] + list(range(10, 41, 2))
+        >>> sh = dc.shifts(align_src="drift_images", frames=frames)
+
+        Print non-zero shifts.
+        >>> print([x for x in sh if x != (0, 0)])
+        [(-1, 0), (-1, 0), (-1, -1), (-1, 0), (-1, 0), (0, -1), (-1, 0), (-1, 0), (0, -1)]
         """
         if self.dcube is None or self.dcube.shape[0] == 1:
             # only a single frame present
@@ -855,6 +896,29 @@ class JEOL_pts:
         np.float64(0.0)
         >>> m.max()
         np.float64(4.0)
+
+        Same, but drift images are used for alignment:
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift='yes')
+        >>> m = dc.map(interval=(7.9, 8.1),
+        ...            energy=True,
+        ...            frames=[5,0,1,2,3,4,6,7,8,9,10],
+        ...            align='filter', align_src='drift_images')
+        >>> m.min()
+        np.float64(0.0)
+        >>> m.max()
+        np.float64(4.0)
+
+        Load only odd frames.
+        >>> dc = JEOL_pts('data/128.pts',
+        ...           split_frames=True, frame_list=list(range(1, 50, 2)),
+        ...           read_drift="yes")
+        >>> frames = list(range(1, 50, 10))
+        >>> m = dc.map(frames=frames, verbose=True,
+        ...            energy=True, interval=(7.9, 8.5))
+        Using channels 790 - 850
+
+        >>> m.sum()
+        np.float64(1419.0)
         """
         # Check for valid keyword arguments
         align = align.lower()
@@ -1165,9 +1229,10 @@ class JEOL_pts:
         >>> dc.make_movie(interval=(7.9, 8.1), energy=True, fname='dummy.mp4')
 
         Make movie of drift images only:
+        >>> dc = JEOL_pts("data/64.pts", read_drift="only")
         >>> dc.make_movie(only_drift=True)
         """
-        if self.dcube is None:  # Only metadata was read
+        if self.dcube is None and not only_drift:  # Only metadata was read
             return
 
         if only_drift and self.drift_images is None:
@@ -1197,7 +1262,11 @@ class JEOL_pts:
             STEM_max = max([self.drift_images[i].max() for i in frame_list])
         except TypeError:   # no drift_image available
             STEM_max = 1.0
-        EDS_max = max([self.map(frames=[i]).max() for i in frame_list])
+
+        try:
+            EDS_max = max([self.map(frames=[i]).max() for i in frame_list])
+        except AttributeError:  # no EDX data loaded
+            EDS_max = 1
 
         # Default dtype for maps is 'float64'. To minimize memory use select
         # smallest dtype possible.
@@ -1211,7 +1280,7 @@ class JEOL_pts:
             EDS_dtype = 'float64'
 
         # `self.drift_images.dtype` is 'uint16'. Select 'uint8' if possible.
-        STEM_dtype = 'uint8'if STEM_max < 2**8 else 'uint16'
+        STEM_dtype = 'uint8' if STEM_max < 2**8 else 'uint16'
 
         fig = plt.figure()
         ax = fig.add_subplot(111)

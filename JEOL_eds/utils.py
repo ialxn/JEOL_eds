@@ -59,7 +59,7 @@ def filter_isolated_pixels(array, struct=np.ones((3, 3))):
     Load data
     >>> dc = JEOL_pts('data/64.pts', split_frames=True)
 
-    Si map of first frames
+    Si map of first frame
     >>> m = dc.map(interval=(1.50, 1.80), energy=True, frames=[0])
 
     How many pixels with no direct neighbors (most probably noise) are present?
@@ -707,7 +707,7 @@ def export_spectrum(s, outfile, E_range=None):
         Spectral data which is expected to cover the energy range
         0.0 < E <= E_max at an resolution of 0.01 keV per data point.
     outfile : Str.
-        Filename wher data is saved.
+        Filename where data is saved.
     E_range : Tuple (E_low, E_high).
         Limit data to optional energy range.
 
@@ -845,7 +845,7 @@ def plot_profile(x, y, units='px', M_ticks=None, outfile=None, **kws):
         x values.
     y : Ndarray
         y values.
-    units : str
+    units : Str
         Units (length) of x data. The string supplied is only used to generate
         the axis label.
     M_ticks : Tuple (mx, my).

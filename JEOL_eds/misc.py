@@ -37,7 +37,7 @@ def _parsejeol(fd):
 
         Parameters
         ----------
-               fd:     File descriptor positioned at start of parseable header
+               fd:     File descriptor positioned at start of header
 
            Returns
            -------
