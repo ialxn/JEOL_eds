@@ -558,8 +558,18 @@ class JEOL_pts:
                 im = np.append(im, np.full((N_addl), np.nan, dtype='uint16'))
                 return rebin(im.reshape(image_shape), bs)
 
-    def frame(self, frame_number):
-        """Returns index of frame in data cube
+    def frame(self, index):
+        """Returns frame with index from data cube
+
+        Parameter
+        ---------
+            index : Int
+                Index of frame to be returned.
+
+        Returns
+        -------
+            frame : Ndarray
+                Frame with index None if frame was not loaded.
 
         Examples
         --------
@@ -569,18 +579,26 @@ class JEOL_pts:
         ...                     split_frames=True, frame_list=[10, 11, 12])
 
         Obtain index of frame 11 in data cube
-        >>> dc.frame(11)
-        1
+        >>> f = dc.frame(11)
+        >>> f.sum()
+        np.uint64(26163)
+
+        Frames not avaliable return None
+        >>> dc.frame(1) is None
+        True
 
         Without `split_frames=True` only the data cube contains just the sum
         of all frames index by `0`.
 
         >>> dc = JEOL_pts("data/64.pts")
 
-        >>> dc.frame(0)
-        0
+        >>> dc.frame(0).sum() == dc.dcube[0].sum()
+        np.True_
         """
-        return self.__fr_idx[frame_number]
+        try:
+            return self.dcube[self.__fr_idx[index]]
+        except KeyError:
+            return None
 
     def drift_statistics(self, filtered=False, align_src="data", verbose=False):
         """Returns 2D frequency distribution of frame shifts (x, y).
@@ -750,8 +768,8 @@ class JEOL_pts:
             # More than one maximum is possible, use average
             dx = round(dx.mean())
             dy = round(dy.mean())
-            shifts[self.frame(f)] = (dx - self.dcube.shape[1] + 1,
-                                     dy - self.dcube.shape[1] + 1)
+            shifts[self.__fr_idx[f]] = (dx - self.dcube.shape[1] + 1,
+                                        dy - self.dcube.shape[1] + 1)
         return shifts
 
     def map(self, interval=None, energy=False, frames=None,
@@ -872,8 +890,7 @@ class JEOL_pts:
             # Only sum frames specified
             m = np.zeros(shape)
             for f in frames:
-                i = self.frame(f)
-                m += self.dcube[i, :, :, interval[0]:interval[1]].sum(axis=-1)
+                m += self.frame(f)[:, :, interval[0]:interval[1]].sum(axis=-1)
             return m
 
         # Alignment is required
@@ -896,10 +913,9 @@ class JEOL_pts:
         y0 = Nx // 2
         for f in frames:
             # map of this frame summed over all energy intervals
-            i = self.frame(f)
-            dx, dy = shifts[i]
+            dx, dy = shifts[self.__fr_idx[f]]
             res[x0 - dx:x0 - dx + Nx, y0 - dy:y0 - dy + Ny] += \
-                self.dcube[i, :, :, interval[0]:interval[1]].sum(axis=-1)
+                self.frame(f)[:, :, interval[0]:interval[1]].sum(axis=-1)
 
         return res[x0:x0 + Nx, y0:y0 + Ny]
 
@@ -946,10 +962,9 @@ class JEOL_pts:
         spectrum = np.zeros(self.dcube.shape[3])
         # iterate through all frames
         for f in frames:
-            i = self.frame(f)
             # We have to mask the image at each energy
             for j in range(self.dcube.shape[3]):
-                spectrum[j] += (mask * self.dcube[i, min_x:max_x + 1, min_y:max_y + 1, j]).sum()
+                spectrum[j] += (mask * self.frame(f)[min_x:max_x + 1, min_y:max_y + 1, j]).sum()
 
         return spectrum
 
@@ -1048,8 +1063,7 @@ class JEOL_pts:
         # only sum specified frames
         s = np.zeros(self.dcube.shape[3], dtype=self.dcube.dtype)
         for f in frames:
-            i = self.frame(f)
-            s += self.dcube[i, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
+            s += self.frame(f)[ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
         return _correct_spectrum(self.parameters, s)
 
     def time_series(self, interval=None, energy=False, frames=None):
@@ -1116,8 +1130,7 @@ class JEOL_pts:
         else:
             ts = np.full((self.dcube.shape[0],), np.nan)
             for f in frames:
-                i = self.frame(f)
-                ts[i] = self.dcube[i, :, :, interval[0]:interval[1]].sum(axis=(0, 1, 2))
+                ts[self.__fr_idx[f]] = self.frame(f)[:, :, interval[0]:interval[1]].sum(axis=(0, 1, 2))
         return ts
 
     def make_movie(self, fname=None, only_drift=False, **kws):
