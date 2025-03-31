@@ -897,6 +897,17 @@ class JEOL_pts:
         >>> m.max()
         np.float64(4.0)
 
+        Same, but drift images are used for alignment:
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift='yes')
+        >>> m = dc.map(interval=(7.9, 8.1),
+        ...            energy=True,
+        ...            frames=[5,0,1,2,3,4,6,7,8,9,10],
+        ...            align='filter', align_src='drift_images')
+        >>> m.min()
+        np.float64(0.0)
+        >>> m.max()
+        np.float64(4.0)
+
         Load only odd frames.
         >>> dc = JEOL_pts('data/128.pts',
         ...           split_frames=True, frame_list=list(range(1, 50, 2)),
@@ -1221,7 +1232,7 @@ class JEOL_pts:
         >>> dc = JEOL_pts("data/64.pts", read_drift="only")
         >>> dc.make_movie(only_drift=True)
         """
-        if self.dcube is None:  # Only metadata was read
+        if self.dcube is None and not only_drift:  # Only metadata was read
             return
 
         if only_drift and self.drift_images is None:
@@ -1251,7 +1262,11 @@ class JEOL_pts:
             STEM_max = max([self.drift_images[i].max() for i in frame_list])
         except TypeError:   # no drift_image available
             STEM_max = 1.0
-        EDS_max = max([self.map(frames=[i]).max() for i in frame_list])
+
+        try:
+            EDS_max = max([self.map(frames=[i]).max() for i in frame_list])
+        except AttributeError:  # no EDX data loaded
+            EDS_max = 1
 
         # Default dtype for maps is 'float64'. To minimize memory use select
         # smallest dtype possible.
@@ -1265,7 +1280,7 @@ class JEOL_pts:
             EDS_dtype = 'float64'
 
         # `self.drift_images.dtype` is 'uint16'. Select 'uint8' if possible.
-        STEM_dtype = 'uint8'if STEM_max < 2**8 else 'uint16'
+        STEM_dtype = 'uint8' if STEM_max < 2**8 else 'uint16'
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
