@@ -362,7 +362,7 @@ def create_overlay(images, colors,
     >>> import JEOL_eds.utils as JU
 
     Load data.
-    >>> dc = JEOL_pts('data/64.pts', read_drift=True)
+    >>> dc = JEOL_pts('data/64.pts', read_drift="yes")
 
     Extract some elemental maps. Where possible, add contribution of several
     lines.
