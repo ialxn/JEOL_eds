@@ -7,16 +7,15 @@ Created on Thu Feb 10 11:17:05 2022
 """
 import unittest
 
-import numpy as np
-
 from JEOL_eds import JEOL_DigiLine
+
 
 class test_DigiLine(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        print('Loading data ... ', end='', flush=True)
+        print('\nLoading data ... ', end='', flush=True)
         cls.dl = JEOL_DigiLine('data/DigiLine/View000_0000003.pts')
-        print('done')
+        print('done: ', end='', flush=True)
 
     def test_toplevel(self):
         self.assertEqual('data/DigiLine/View000_0000003.pts', self.dl.file_name)
@@ -70,7 +69,7 @@ class test_DigiLine(unittest.TestCase):
         self.assertEqual((4000,), spectrum.shape)
         self.assertEqual(30710, spectrum.sum())
         scans = range(1, 50, 3)
-        spectrum = self.dl.sum_spectrum(xRange=(24,123), scans=scans)
+        spectrum = self.dl.sum_spectrum(xRange=(24, 123), scans=scans)
         self.assertEqual((4000,), spectrum.shape)
         self.assertEqual(4304, spectrum.sum())
 

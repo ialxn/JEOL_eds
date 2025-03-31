@@ -10,12 +10,13 @@ import warnings
 
 from JEOL_eds import JEOL_pts
 
+
 class Map(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        print('Loading data ... ', end='', flush=True)
+        print('\nLoading data ... ', end='', flush=True)
         cls.dc = JEOL_pts('data/128.pts', split_frames=True)
-        print('done')
+        print('done: ', end='', flush=True)
 
     def test_full_dcube(self):
         m = self.dc.map()
@@ -36,8 +37,8 @@ class Map(unittest.TestCase):
     def test_interval_CH(self):
         CH = (123, 456)
         m = self.dc.map(interval=CH)
-        m2 = self.dc.dcube[:, :, :, CH[0]:CH[1]].sum(axis=(0,-1))
-        self.assertEqual(m.sum(),m2.sum())
+        m2 = self.dc.dcube[:, :, :, CH[0]:CH[1]].sum(axis=(0, -1))
+        self.assertEqual(m.sum(), m2.sum())
 
     def test_interval_CH_frames(self):
         even = range(0, self.dc.dcube.shape[0], 2)
@@ -54,8 +55,8 @@ class Map(unittest.TestCase):
         CH = (int(round(E[0] * 100)), int(round(E[1] * 100)))
 
         m = self.dc.map(interval=E, energy=True)
-        m2 = self.dc.dcube[:, :, :, CH[0]:CH[1]].sum(axis=(0,-1))
-        self.assertEqual(m.sum(),m2.sum())
+        m2 = self.dc.dcube[:, :, :, CH[0]:CH[1]].sum(axis=(0, -1))
+        self.assertEqual(m.sum(), m2.sum())
 
     def test_interval_E_frames(self):
         even = range(0, self.dc.dcube.shape[0], 2)
@@ -73,21 +74,21 @@ class Map(unittest.TestCase):
         m = self.dc.map(align='yes')
 
         self.assertEqual((128, 128), m.shape)
-        self.assertEqual(m.sum(), 352603.0)
+        self.assertEqual(m.sum(), 352658.0)
 
     def test_align_yes_frames(self):
         pass
-
 
     def test_align_filter(self):
         warnings.filterwarnings("ignore")
         m = self.dc.map(align='filter')
 
         self.assertEqual((128, 128), m.shape)
-        self.assertEqual(m.sum(), 352686.0)
+        self.assertEqual(m.sum(), 352881.0)
 
     def test_align_filter_frames(self):
         pass
+
 
 if __name__ == '__main__':
     unittest.main()

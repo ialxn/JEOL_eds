@@ -56,16 +56,16 @@ class JEOL_DigiLine:
 
     Mag calibration factor:
     >>> dl.nm_per_pixel
-    0.1546875
+    np.float64(0.1546875)
 
     EDX data corresponds to which scan line?
     >>> dl.scan_line
-    144
+    np.uint16(144)
 
     Full parameter set stored by Analysis Station is available via the attribute
     ``parameters``. Here we query LiveTime:
     >>> dl.parameters['PTTD Data']['AnalyzableMap MeasData']['Doc']['LiveTime']
-    63.13
+    np.float64(63.13)
 
     Data cube N x X x E (N_scans x N_pixels x N_E-channels
     >>> dl.dcube.shape
@@ -125,7 +125,6 @@ class JEOL_DigiLine:
             fd.seek(head_pos + 12)
             return _parsejeol(fd), data_pos
 
-
     def __CH_offset_from_meta(self):
         """Returns offset (channel corresponding to E=0).
         """
@@ -165,7 +164,7 @@ class JEOL_DigiLine:
         AimArea = self.parameters['EDS Data'] \
                                  ['AnalyzableMap MeasData']['Meas Cond'] \
                                  ['Aim Area']
-        assert AimArea[1] == AimArea[3] # This is a scan line
+        assert AimArea[1] == AimArea[3]  # This is a scan line
 
         Sweep = self.parameters['PTTD Data'] \
                                ['AnalyzableMap MeasData']['Doc'] \
@@ -227,24 +226,24 @@ class JEOL_DigiLine:
         >>> N_s
         50
 
-        Sum spectrumm of odd scans integrated in the range 123-234 (pixels):
+        Sum spectrum of odd scans integrated in the range 123-234 (pixels):
         >>> scans = range(1, N_s, 2)
         >>> spectrum = dl.sum_spectrum(scans=scans, xRange=(123, 234))
         >>> spectrum.shape
         (4000,)
 
         >>> spectrum.sum()
-        7259
+        np.uint64(7259)
 
         Sum spectrum:
         >>> spectrum = dl.sum_spectrum()
         >>> spectrum.sum()
-        30710
+        np.uint64(30710)
 
         This should be close to the reference spectrum:
         >>> ref_spectrum = dl.ref_spectrum
         >>> ref_spectrum.sum()
-        30759
+        np.int64(30759)
         """
 
         if xRange is None:
@@ -254,7 +253,7 @@ class JEOL_DigiLine:
         assert len(xRange) == 2
 
         if scans is None:
-            spectrum = self.dcube[:, xRange[0]:xRange[1], :].sum(axis=(0,1))
+            spectrum = self.dcube[:, xRange[0]:xRange[1], :].sum(axis=(0, 1))
         else:
             assert isinstance(scans, Iterable)
             spectrum = np.zeros(self.dcube.shape[-1], dtype='uint32')
@@ -282,7 +281,7 @@ class JEOL_DigiLine:
         Returns
         -------
         x, profile : Ndarray, Ndarray
-            X-axis data points (pixel or [nm]) and profile of intergrated
+            X-axis data points (pixel or [nm]) and profile of integrated
             intensity in interval.
 
         Examples
@@ -297,16 +296,16 @@ class JEOL_DigiLine:
         ...                     energy=True, xCalib=True)
 
         >>> x[0]
-        0.0
+        np.float64(0.0)
 
         >>> x[-1]
-        39.4453125
+        np.float64(39.4453125)
 
         >>> p_O[0]
-        1
+        np.uint64(1)
 
         >>> p_O[-1]
-        19
+        np.uint64(19)
         """
         if not interval:
             interval = (0, self.dcube.shape[2])
@@ -333,7 +332,7 @@ class JEOL_DigiLine:
         else:
             profile = np.zeros((self.dcube.shape[1],))
             for scan in scans:
-                profile +=self.dcube[scan, :, interval[0]:interval[1]].sum(axis=(1))
+                profile += self.dcube[scan, :, interval[0]:interval[1]].sum(axis=(1))
         return x, profile
 
     def spectral_map(self, E_range=None, energy=False):
@@ -382,12 +381,13 @@ class JEOL_DigiLine:
                                    ['AnalyzableMap MeasData']['Doc'] \
                                    ['CoefB']
             E_range = (int(round((E_range[0] - CoefB) / CoefA)),
-                        int(round((E_range[1] - CoefB) / CoefA)))
+                       int(round((E_range[1] - CoefB) / CoefA)))
 
         if E_range[0] > E_range[1]:   # ensure interval is (low, high)
             E_range = (E_range[1], E_range[0])
 
         return self.dcube.sum(axis=0)[:, E_range[0]:E_range[1]]
+
 
 if __name__ == "__main__":
     import doctest

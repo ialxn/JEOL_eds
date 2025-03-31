@@ -30,7 +30,6 @@ from JEOL_eds.JEOL_spectrum import JEOL_spectrum
 from JEOL_eds.misc import _decode
 
 
-
 class JEOL_PointLine:
     """Work with JEOL PointLine data (sequence of individual point spectra)
 
@@ -56,8 +55,12 @@ class JEOL_PointLine:
 
      ``JEOL_PointLine.eds_dict`` is a dict with marker as key and a list
      [FileName, xPos, yPos] as content:
-    >>> pl.eds_dict
-    {0: ['View000_0000006.eds', 85.3125, 96.4375], 1: ['View000_0000005.eds', 81.4375, 92.6875], 2: ['View000_0000004.eds', 77.5625, 88.9375], 3: ['View000_0000003.eds', 73.6875, 85.1875], 4: ['View000_0000002.eds', 69.8125, 81.4375]}
+    >>> pl.eds_dict #doctest: +NORMALIZE_WHITESPACE
+    {0: ['View000_0000006.eds', np.float64(85.3125), np.float64(96.4375)],
+     1: ['View000_0000005.eds', np.float64(81.4375), np.float64(92.6875)],
+     2: ['View000_0000004.eds', np.float64(77.5625), np.float64(88.9375)],
+     3: ['View000_0000003.eds', np.float64(73.6875), np.float64(85.1875)],
+     4: ['View000_0000002.eds', np.float64(69.8125), np.float64(81.4375)]}
 
     Image object (``JEOL_image``) is stored as ``JEOL_PointLine.ref_image``:
     >>> ref = pl.ref_image
@@ -70,7 +73,7 @@ class JEOL_PointLine:
 
     Image parameters can be accessed such as MAG calibration and image size:
     >>> ref.nm_per_pixel
-    1.93359375
+    np.float64(1.93359375)
 
     >>> ref.parameters['Image']['Size']
     array([256, 256], dtype=int32)
@@ -82,11 +85,11 @@ class JEOL_PointLine:
     values should be ``CoefA``, ``CoefB`` (calibration of energy axis):
     >>> h = pl.eds_header
     >>> h['CoefA']
-    0.0100006
+    np.float64(0.0100006)
     >>> h['CoefB']
-    -0.00122558
+    np.float64(-0.00122558)
 
-    Spectral data is availabe:
+    Spectral data is available:
     >>> pl.eds_data.shape
     (5, 4096)
 
@@ -138,7 +141,7 @@ class JEOL_PointLine:
                 tmp = fp.read(1)
 
         def read_eds_meta(fp):
-            """Reads meta data bloch for each ".eds" file
+            """Reads meta data block for each ".eds" file
 
             Parameter:
             ----------
@@ -155,17 +158,17 @@ class JEOL_PointLine:
             Point_nr = int(_decode(fp.read(bytes_len).rstrip(b'\x00')))
             skip_zeros(fp)
             fp.read(4)
-            Pos_MM = _decode(fp.read(12).rstrip(b'\x00'))
+            _ = _decode(fp.read(12).rstrip(b'\x00'))  # Pos_MM
             find_next_tag(fp, b'\xff')
             fp.read(5)
-            Pos_PXL = _decode(fp.read(12).rstrip(b'\x00'))
+            _ = _decode(fp.read(12).rstrip(b'\x00'))  # Pos_PXL
             fp.read(8)  # skip 2x b'\x08'
             xPos = np.fromfile(fp, "<i", 1)[0]
             yPos = np.fromfile(fp, "<i", 1)[0]
             find_next_tag(fp, b'\xff')
             fp.read(1)
             str_len = np.fromfile(fp, "<I", 1)[0]
-            FileName = _decode(fp.read(str_len).rstrip(b'\x00'))
+            _ = _decode(fp.read(str_len).rstrip(b'\x00'))  # FileName
             fp.read(4)
             str_len = np.fromfile(fp, "<I", 1)[0]
             fname = _decode(fp.read(str_len).rstrip(b'\x00'))
@@ -184,18 +187,18 @@ class JEOL_PointLine:
             fp.read(9)  # skip
             fp.read(1)  # 1
             str_len = np.fromfile(fp, "<I", 1)[0]
-            ID = _decode(fp.read(str_len).rstrip(b'\x00'))
+            _ = _decode(fp.read(str_len).rstrip(b'\x00'))  # ID
             fp.read(12)
-            Memo = read_string(fp)  # 'Memo'
+            _ = read_string(fp)  # 'Memo'
             fp.read(12)     # skip
-            Num = read_string(fp)   # 'Num'
-            fp.read(12) # skip
-            Image = read_string(fp)     # 'Image'
+            _ = read_string(fp)   # 'Num'
+            fp.read(12)  # skip
+            _ = read_string(fp)     # 'Image'
             fp.read(4)
             str_len = np.fromfile(fp, "<I", 1)[0]
             fn = _decode(fp.read(str_len).rstrip(b'\x00'))
             self.Image_name = fn.rsplit('\\', 1)[1]
-            Marker = read_string(fp)    # 'Marker'
+            _ = read_string(fp)    # 'Marker'
             fp.read(10)
 
             end = False
@@ -205,7 +208,7 @@ class JEOL_PointLine:
                     key, val = read_eds_meta(fp)
                     self.eds_dict[key] = val
                     fp.read(1)
-                except:
+                except IndexError:
                     end = True
 
         # Read and insert reference image
@@ -221,14 +224,14 @@ class JEOL_PointLine:
         for key in self.eds_dict:
             name = self.eds_dict[key][0]
             s = JEOL_spectrum(os.path.join(path, name))
-            if first:  # First spectrum read. Perform some initializations
+            if first:  # First spectrum read. Perform some initialization
                 self.eds_header = copy.deepcopy(s.header)
                 self.eds_data = np.zeros((len(self.eds_dict), self.eds_header['NumCH']))
                 first = False
             self.eds_data[key] = s.data
 
     def __get_x(self, xCalib=False):
-        """Returns relative x coordinates of marker poinst on line
+        """Returns relative x coordinates of marker points on line
 
         Parameters
         ----------
@@ -244,14 +247,12 @@ class JEOL_PointLine:
         N = len(self.eds_dict)
         X = np.zeros((N,))
         x0, y0 = self.eds_dict[0][1:3]
-        for i in range(1,N):
+        for i in range(1, N):
             x, y = self.eds_dict[i][1:3]
             X[i] = np.sqrt((x - x0)**2 + (y - y0)**2)
         if xCalib:
             X *= self.ref_image.nm_per_pixel
         return X
-
-
 
     def profile(self, interval=None, energy=False, markers=None, xCalib=False):
         """Returns profile of x-ray intensity integrated in `interval`.
@@ -323,7 +324,7 @@ class JEOL_PointLine:
         else:
             profile = np.full((self.eds_data.shape[0],), np.nan)
             for m in markers:
-                profile[m] =self.eds_data[m, interval[0]:interval[1]].sum()
+                profile[m] = self.eds_data[m, interval[0]:interval[1]].sum()
 
         return self.__get_x(xCalib=xCalib), profile
 
@@ -364,7 +365,7 @@ class JEOL_PointLine:
 
         # Use xlim, ylim for zoomed in region.
         # y axis in image is inverted (origin is top/left). Thus
-        # inverte order of ylim coordinates.
+        # invert order of ylim coordinates.
         if not ROI:
             xlim = (0, self.ref_image.image.shape[0])
             ylim = (self.ref_image.image.shape[1], 0)
@@ -389,6 +390,7 @@ class JEOL_PointLine:
 
         if outfile:
             plt.savefig(outfile)
+
 
 if __name__ == "__main__":
     import doctest

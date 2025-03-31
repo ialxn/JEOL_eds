@@ -26,7 +26,6 @@ import numpy as np
 from JEOL_eds.misc import _decode, _parsejeol
 
 
-
 class JEOL_image:
     """Read JEOL image data ('.img' and '.map' files).
 
@@ -62,7 +61,7 @@ class JEOL_image:
 
     Print calibration data (pixel size in nm):
     >>> demo_map.nm_per_pixel
-    3.8671875
+    np.float64(3.8671875)
 
     Use "plot_map()" for more features. "demo_im" is a BF image thus invert color map:
     >>> scale_bar = {'label': '200nm',
@@ -104,6 +103,7 @@ class JEOL_image:
             ScanSize = self.parameters["Instrument"]["ScanSize"]
             Mag = self.parameters["Instrument"]["Mag"]
             self.nm_per_pixel = ScanSize / Mag * 1000000 / sh[0]
+
 
 if __name__ == "__main__":
     import doctest

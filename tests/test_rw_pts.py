@@ -10,6 +10,7 @@ import unittest
 from JEOL_eds import JEOL_pts
 import numpy as np
 
+
 class testIO_pts(unittest.TestCase):
 
     def test_read_basic(self):
@@ -60,7 +61,7 @@ class testIO_pts(unittest.TestCase):
         self.assertIsNone(dc.drift_images)
 
     def test_read_drift_images(self):
-        dc = JEOL_pts('data/128.pts', read_drift=True)
+        dc = JEOL_pts('data/128.pts', read_drift="yes")
 
         self.assertEqual((1, 128, 128, 4000), dc.dcube.shape)
 

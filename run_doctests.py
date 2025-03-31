@@ -30,7 +30,6 @@ files.append('JEOL_eds/utils.py')
 # Output files to be deleted at end of test
 output = ['128.h5',
           'carbon_Ka.pdf',
-          'compressed.h5',
           'data/128.h5',
           'data/128.mp4',
           'data/128.npz',

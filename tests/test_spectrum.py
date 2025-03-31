@@ -9,13 +9,14 @@ import unittest
 
 from JEOL_eds import JEOL_pts
 
+
 class Spectrum(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        print('Loading data ... ', end='', flush=True)
+        print('\nLoading data ... ', end='', flush=True)
         cls.dc = JEOL_pts('data/128.pts', split_frames=True)
-        print('done')
+        print('done: ', end='', flush=True)
 
     def test_ref(self):
         # Skip lowest 100 channels where interpolation is performed
@@ -39,7 +40,7 @@ class Spectrum(unittest.TestCase):
         self.assertEqual((4000,), s.shape)
         self.assertEqual(s.sum(), 16341)
 
-        s2 = self.dc.dcube[:, ROI[0]:ROI[1]+1, ROI[2]:ROI[3]+1, :].sum(axis=(0, 1, 2))
+        s2 = self.dc.dcube[:, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1, 2))
         # Skip lowest 100 channels where interpolation is performed
         self.assertEqual(s[100:].sum(),
                          s2[100:].sum())
@@ -77,7 +78,7 @@ class Spectrum(unittest.TestCase):
         self.assertAlmostEqual(s.sum(), s2_sum, places=3)
 
     def test_point_ROI(self):
-        ROI=(78, 62)
+        ROI = (78, 62)
         s = self.dc.spectrum(ROI=ROI)
 
         self.assertEqual((4000,), s.shape)
