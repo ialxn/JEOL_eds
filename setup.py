@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(name='JEOL_eds',
       description='Read binary files acquired by JEOL Analysis Station',
-      version='1.12.1',
+      version='2.0',
       author='Ivo Alxneit',
       author_email='ivo.alxneit@psi.ch',
       packages=['JEOL_eds'],
