@@ -18,9 +18,9 @@ This package does not aim to replace HyperSpy which is much more feature-rich. I
 
 
 
-## Installation
+# Installation
 
-### Requirements
+## Requirements
 ```
 Python 3.6+
 numpy
@@ -44,9 +44,48 @@ $ pip install . -U
 ```
 to upgrade an existing installation.
 
-## Usage
+# Important (API breaking) changes
 
-### General imports
+## Version 2
+
+- The parameter `frames=[]` lists the indices of a sub set of frames to be used. Since version 2 the indices refer to the original indices and not anymore to  their index in the data cube.
+<br>
+```
+dc = JEOL_pts('data/128.pts', split_frames=True, frames=[10, 11, 12])
+```
+<br>
+Now you refer to frame 11 (available as dc.dcube(1)) as e.g.:
+<br>
+```
+m = dc.map(frames=[11])
+```
+<br>
+while before:
+<br>
+```
+m = dc.map(frames=[1])
+```
+<br>
+A convenience function `JEOL_pts.frame()` is provide for easy access to the frames:
+<br>
+```
+f = dc.frame(11)
+```
+
+- Data (EDX and drift images) can be rebinned on-the-fly while they are loaded. <br>
+```
+dc = JEOL_pts('data/128.pts', split_frames=True, rebin=(4, 4))
+```
+
+- The drift images can be loaded separately. The `read_drift=` parameter is now a string (`'yes'|'no'|'only'`) and not a boolean anymore.
+
+- `JEOL_pts.make_movie(only_drift=True)` can now assemble a movie of the drift images only (independent of the presence of EDX data).
+
+- The EDX frames can be (re)aligned based on the drift images (`align_src='data'|'drift_images'`).
+
+# Usage
+
+## General imports
 
 ```python
 >>> from JEOL_eds import JEOL_pts, JEOL_spectrum, JEOL_image, JEOL_PointLine, JEOL_DigiLine
@@ -54,7 +93,7 @@ to upgrade an existing installation.
 ```
 
 
-### EDS maps
+## EDS maps
 
 ```python
 # Read binary EDS data (up to 11.0 keV) storing each sweep individually.
@@ -149,7 +188,7 @@ to upgrade an existing installation.
 ```
 
 
-### Scan line data
+## Scan line data
 ```python
 >>> dl = JEOL_DigiLine('data/DigiLine/View000_0000003.pts')
 
@@ -191,7 +230,7 @@ to upgrade an existing installation.
 ```
 
 
-### Area or spot scan data
+## Area or spot scan data
 ```python
 >>> s = JEOL_spectrum('data/spot.eds')
 
@@ -220,7 +259,7 @@ to upgrade an existing installation.
 ```
 
 
-### Line scan data
+## Line scan data
 ```python
 >>> pl = JEOL_PointLine('data/PointLine/View000_0000001.pln')
 
@@ -258,7 +297,7 @@ to upgrade an existing installation.
 >>> pl.show_PointLine(ROI=(45,110,50,100),
                       color='red',
                       ann_color='white')
-                      
+
 # Extract profile of Ti Ka line with one spectrum (marker '2') omitted
 # x axis in [nm].
 >>> x, p_Ti = pl.profile(interval=(4.4, 4.65),
@@ -272,7 +311,7 @@ array([ 0.        , 10.42673734, 20.85347467, 31.28021201, 41.70694934])
 ```
 
 
-### Image files
+## Image files
 ```python
 # Read an image file.
 >>> demo_im = JEOL_image('data/demo.img')
@@ -302,9 +341,9 @@ array([512, 512], dtype=int32)
 ```
 
 
-## Bugs
+# Bugs
 
-### Possibly conflicting parameter types
+## Possibly conflicting parameter types
 
 Parameters loaded from '.pts' files might have different types than the ones
 loaded from '.h5' files. Thus take extra care if you need to compare them:
@@ -357,7 +396,7 @@ numpy.float32
 float
 ```
 
-### Missing position information
+## Missing position information
 
 The position in the '.img' file where **spot**, **area** ('.eds.') data were acquired is still unknown (they must be present in the data sets but I have not yet been able to extract them).
 
