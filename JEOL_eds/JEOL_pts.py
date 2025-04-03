@@ -1449,7 +1449,7 @@ class JEOL_pts:
             self.dcube = hf['dcube'][()]
 
             self.drift_images = hf['drift_images'][()] if 'drift_images' in hf.keys() else None
-            self.frame_list = hf['drift_images'][()] if 'frame_list' in hf.keys() else None
+            self.frame_list = hf['frame_list'][()] if 'frame_list' in hf.keys() else None
 
             self.file_date = hf.attrs['file_date']
             self.file_name = hf.attrs['file_name']
