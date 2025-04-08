@@ -23,7 +23,7 @@ import sys
 from datetime import datetime, timedelta
 from warnings import warn
 import h5py
-import asteval
+import json
 import numpy as np
 from scipy.signal import wiener, correlate
 import matplotlib.pyplot as plt
@@ -1435,7 +1435,7 @@ class JEOL_pts:
                 hf.attrs['frame_list'] = self.frame_list
             # avoid printing of ellipsis in arrays / lists
             np.set_printoptions(threshold=sys.maxsize)
-            hf.attrs['parameters'] = str(self.parameters)
+            hf.attrs['parameters'] = json.dumps(self.parameters, default=str)
 
     def __load_hdf5(self, fname):
         """Loads data including attributes from hdf5 file
@@ -1449,7 +1449,7 @@ class JEOL_pts:
             self.dcube = hf['dcube'][()]
 
             self.drift_images = hf['drift_images'][()] if 'drift_images' in hf.keys() else None
-            self.frame_list = hf['drift_images'][()] if 'frame_list' in hf.keys() else None
+            self.frame_list = hf['frame_list'][()] if 'frame_list' in hf.keys() else None
 
             self.file_date = hf.attrs['file_date']
             self.file_name = hf.attrs['file_name']
@@ -1458,8 +1458,7 @@ class JEOL_pts:
             except KeyError:
                 self.nm_per_pixel = None
 
-            aeval = asteval.Interpreter()
-            self.parameters = aeval(hf.attrs['parameters'])
+            self.parameters = json.loads(hf.attrs['parameters'])
 
 
 if __name__ == "__main__":
