@@ -15,6 +15,7 @@ class testIO_hdf5(unittest.TestCase):
 
     def tearDown(self):
         os.remove('data/test.h5')
+        pass
 
     def test_rw_hdf5(self):
         dc = JEOL_pts('data/64.pts', split_frames=True, read_drift="yes")
@@ -30,6 +31,9 @@ class testIO_hdf5(unittest.TestCase):
 
         self.assertEqual(dc.drift_images.shape, saved.drift_images.shape)
         self.assertEqual(dc.drift_images.sum(), saved.drift_images.sum())
+
+        self.assertEqual(float(dc.parameters['PTTD Param']['Params']['PARAMPAGE0_SEM']['ScanSize']),
+                         float(saved.parameters['PTTD Param']['Params']['PARAMPAGE0_SEM']['ScanSize']))
 
 
 if __name__ == '__main__':

@@ -361,40 +361,23 @@ loaded from '.h5' files. Thus take extra care if you need to compare them:
 >>> p == p_hdf5
 False
 
-# But they seem identical.
+# Here the values are numpy dtypes:
 >>> p
-{'AccKV': 200.0,
- 'AccNA': 7.475,
- 'Mag': 800000,
- 'WD': 3.2,
- 'ScanR': 270.0,
- 'FocusMP': 16043213}
+{'AccKV': np.float32(200.0),
+ 'AccNA': np.float32(7.475),
+ 'Mag': np.int32(800000),
+ 'WD': np.float32(3.2),
+ 'ScanR': np.float32(270.0),
+ 'FocusMP': np.int32(16043213)}
 
+# In the 'h5' file the values are stored as strings!
 >>> p_hdf5
-{'AccKV': 200.0,
- 'AccNA': 7.475,
- 'Mag': 800000,
- 'WD': 3.2,
- 'ScanR': 270.0,
- 'FocusMP': 16043213}
-
-# The issue is different types.
-# This works.
->>> p['AccKV'] == p_hdf5['AccKV']
-True
->>> type(p['AccKV'])
-numpy.float32
->>> type(p_hdf5['AccKV'])
-float
-
-# This causes the issue.
->>> p['AccNA'] == p_hdf5['AccNA']
-False
->>> type(p['AccNA'])
-numpy.float32
->>> type(p_hdf5['AccNA'])
-float
-```
+{'AccKV': '200.0',
+ 'AccNA': '7.475',
+ 'Mag': '800000',
+ 'WD': '3.2',
+ 'ScanR': '270.0',
+ 'FocusMP': '16043213'}
 
 ## Missing position information
 
