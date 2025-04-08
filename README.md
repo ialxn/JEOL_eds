@@ -48,33 +48,20 @@ to upgrade an existing installation.
 
 ## Version 2
 
-- The parameter `frames=[]` lists the indices of a sub set of frames to be used. Since version 2 the indices refer to the original indices and not anymore to  their index in the data cube.
-<br>
+- The parameter `frames=[]` lists the indices of a sub set of frames to be used. Since version 2 the indices refer to the original indices and not anymore to  their index in the data cube. Now you refer to frame 11 (available as `dc.dcube[1]`)<br>
+```python
+>>> dc = JEOL_pts('data/128.pts', split_frames=True, frames=[10, 11, 12])
+>>> m = dc.map(frames=[11])
 ```
-dc = JEOL_pts('data/128.pts', split_frames=True, frames=[10, 11, 12])
-```
-<br>
-Now you refer to frame 11 (available as dc.dcube(1)) as e.g.:
-<br>
-```
-m = dc.map(frames=[11])
-```
-<br>
-while before:
-<br>
-```
-m = dc.map(frames=[1])
-```
-<br>
-A convenience function `JEOL_pts.frame()` is provide for easy access to the frames:
-<br>
-```
-f = dc.frame(11)
+
+- A convenience function `JEOL_pts.frame()` is provide for easy access to the frames:
+```python
+>>> f = dc.frame(11)
 ```
 
 - Data (EDX and drift images) can be rebinned on-the-fly while they are loaded. <br>
-```
-dc = JEOL_pts('data/128.pts', split_frames=True, rebin=(4, 4))
+```python
+>>> dc = JEOL_pts('data/128.pts', split_frames=True, rebin=(4, 4))
 ```
 
 - The drift images can be loaded separately. The `read_drift=` parameter is now a string (`'yes'|'no'|'only'`) and not a boolean anymore.
