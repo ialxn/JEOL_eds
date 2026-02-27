@@ -983,7 +983,7 @@ class JEOL_pts:
         for f in frames:
             # map of this frame summed over all energy intervals
             dx, dy = shifts[self.__fr_idx[f]]
-            res[x0 - dx:x0 - dx + Nx, y0 - dy:y0 - dy + Ny] += \
+            res[x0 + dx:x0 + dx + Nx, y0 + dy:y0 + dy + Ny] += \
                 self.frame(f)[:, :, interval[0]:interval[1]].sum(axis=-1)
 
         return res[x0:x0 + Nx, y0:y0 + Ny]
