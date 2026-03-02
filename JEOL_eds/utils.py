@@ -434,12 +434,13 @@ def create_overlay(images, colors,
 
     # Add legends. Position and font size depends on image size
     if legends:
-        fontsize = 12
-        delta = extent[3] // fontsize  # Found by trial-and-error
         for i in range(len(images)):
-            ax.text(extent[1], extent[3] - i * delta, legends[i],
-                    size=fontsize,
-                    color=colors[i], backgroundcolor='white')
+            ax.annotate(legends[i],
+                        xy=(0, 1), xycoords='axes fraction',
+                        xytext=(0.5, -0.5 - 1.5 * i), textcoords='offset fontsize',
+                        fontsize='medium', verticalalignment='top', fontfamily='serif',
+                        color=colors[i],
+                        bbox=dict(facecolor='0.7', edgecolor='none', pad=3.0))
 
     __add_scalebar(ax, scale_bar, extent)
 
@@ -618,15 +619,11 @@ def plot_map(m, color,
     ax.set_yticks([])
 
     if label:
-        # Ensure that legend is visible black in white box on black BG or vice versa
-        label_BGcolor = "black" if background.lower() == "white" else "white"
-        label_color = "black" if label_BGcolor == "white" else "white"
-        # Position to print label in data coordinates found by trial-and-error.
-        ax.text(extent[0] * 0.05, extent[3] * 0.85,
-                label,
-                size=24,
-                color=label_color,
-                backgroundcolor=label_BGcolor)
+        ax.annotate(label,
+                    xy=(0, 1), xycoords='axes fraction',
+                    xytext=(0.5, -0.5), textcoords='offset fontsize',
+                    fontsize='medium', verticalalignment='top', fontfamily='serif',
+                    bbox=dict(facecolor='0.7', edgecolor='none', pad=3.0))
 
     __add_scalebar(ax, scale_bar, extent)
 
