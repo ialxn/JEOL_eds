@@ -564,9 +564,9 @@ class JEOL_pts:
         N_images = self.parameters['PTTD Data'] \
                                   ['AnalyzableMap MeasData']['Doc'] \
                                   ['Sweep']
-        area = self. parameters['EDS Data'] \
-                               ['AnalyzableMap MeasData']['Meas Cond'] \
-                               ['Aim Area']
+        area = self.parameters['EDS Data'] \
+                              ['AnalyzableMap MeasData']['Meas Cond'] \
+                              ['Aim Area']
         h = area[2] - area[0] + 1
         v = area[3] - area[1] + 1
         image_shape = (N_images, v, h)
