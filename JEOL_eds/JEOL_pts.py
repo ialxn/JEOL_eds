@@ -584,8 +584,9 @@ class JEOL_pts:
                 return rebin(im.reshape(image_shape), bs)
             except ValueError:  # incomplete image
                 # Add `N_addl` NaNs before reshape()
-                N_addl = N_images * v * h - im.shape[0]
-                im = np.append(im, np.full((N_addl), np.nan, dtype='uint16'))
+                # Type cast to prevent overflow in multiplication
+                N_addl = int(N_images) * int(v) * int(h) - int(im.shape[0])
+                im = np.append(im, np.full((N_addl), 0, dtype='uint16'))
                 return rebin(im.reshape(image_shape), bs)
 
     def frame(self, index):
