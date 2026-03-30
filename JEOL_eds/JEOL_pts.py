@@ -274,19 +274,19 @@ class JEOL_pts:
             self.file_name = fname
             self.parameters, data_offset = self.__parse_header(fname)
 
-            AimArea = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Aim Area']
-            if AimArea[1] == AimArea[3]:
-                raise ValueError(f'"{fname}" does not contain map data! Aim area {AimArea} suggests to use `JEOL_DigiLine()` to load data.')
+            area = self.parameters['EDS Data'] \
+                                  ['AnalyzableMap MeasData']['Meas Cond'] \
+                                  ['Aim Area']
+            if area[1] == area[3]:
+                raise ValueError(f'"{fname}" does not contain map data! Aim area {area} suggests to use `JEOL_DigiLine()` to load data.')
 
             # Nominal pixel size [nm]
             ScanSize = self.parameters['PTTD Param']['Params']['PARAMPAGE0_SEM']['ScanSize']
             Mag = self.parameters['PTTD Data']['AnalyzableMap MeasData']['MeasCond']['Mag']
-            area = self. parameters['EDS Data'] \
-                                   ['AnalyzableMap MeasData']['Meas Cond'] \
-                                   ['Pixels'].split('x')
+
             if rebin is None:   # No rebinning required
                 rebin = (1, 1)
-            h = int(area[0]) // rebin[1]
+            h = (area[2] - area[0] + 1) // rebin[1]
             self.nm_per_pixel = ScanSize / Mag * 1000000 / h
 
             if only_metadata:
@@ -424,24 +424,22 @@ class JEOL_pts:
             channels.
         """
         # Verify that this is not DigiLine data
-        AimArea = self.parameters['EDS Data'] \
-                                 ['AnalyzableMap MeasData']['Meas Cond'] \
-                                 ['Aim Area']
-        assert AimArea[1] != AimArea[3]  # They are identical for DigiLine data
+        area = self.parameters['EDS Data'] \
+                              ['AnalyzableMap MeasData']['Meas Cond'] \
+                              ['Aim Area']
+        assert area[1] != area[3]  # They are identical for DigiLine data
 
         CH_offset = self.__CH_offset_from_meta()
         NumCH = self.parameters['PTTD Param'] \
                                ['Params']['PARAMPAGE1_EDXRF'] \
                                ['NumCH']
-        area = self. parameters['EDS Data'] \
-                               ['AnalyzableMap MeasData']['Meas Cond'] \
-                               ['Pixels'].split('x')
 
         if rebin is None:   # No rebinning required
             rebin = (1, 1)
 
-        h = int(area[0]) // rebin[1]
-        v = int(area[1]) // rebin[0]
+        h = (area[2] - area[0] + 1) // rebin[1]
+        v = (area[3] - area[1] + 1) // rebin[0]
+
         if E_cutoff:
             CoefA = self.parameters['PTTD Data'] \
                                    ['AnalyzableMap MeasData']['Doc'] \
