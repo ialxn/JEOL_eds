@@ -281,8 +281,12 @@ class JEOL_pts:
                 raise ValueError(f'"{fname}" does not contain map data! Aim area {area} suggests to use `JEOL_DigiLine()` to load data.')
 
             # Nominal pixel size [nm]
-            ScanSize = self.parameters['PTTD Param']['Params']['PARAMPAGE0_SEM']['ScanSize']
-            Mag = self.parameters['PTTD Data']['AnalyzableMap MeasData']['MeasCond']['Mag']
+            ScanSize = self.parameters['PTTD Param'] \
+                                      ['Params']['PARAMPAGE0_SEM'] \
+                                      ['ScanSize']
+            Mag = self.parameters['PTTD Data'] \
+                                 ['AnalyzableMap MeasData']['MeasCond'] \
+                                 ['Mag']
 
             if rebin is None:   # No rebinning required
                 rebin = (1, 1)
@@ -342,7 +346,9 @@ class JEOL_pts:
             try:
                 N = self.dcube.shape[3]
             except AttributeError:
-                N = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['NumCH']
+                N = self.parameters['PTTD Param'] \
+                                   ['Params']['PARAMPAGE1_EDXRF'] \
+                                   ['NumCH']
                 # We use 1000, 2000, 4000 channels (no negative energies)
                 N = N // 1000 * 1000
             self.ref_spectrum = self.parameters['EDS Data'] \

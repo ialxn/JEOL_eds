@@ -76,7 +76,9 @@ class JEOL_DigiLine:
         self.file_name = fname
         self.parameters, data_offset = self.__parse_header(fname)
 
-        AimArea = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Aim Area']
+        AimArea = self.parameters['EDS Data'] \
+                                 ['AnalyzableMap MeasData']['Meas Cond'] \
+                                 ['Aim Area']
         if AimArea[1] != AimArea[3]:
             raise TypeError(f'"{fname}" does not contain scan line data! Aim area {AimArea} suggests to use `JEOL_pts() to load data.')
         # Easy access to scan line index
@@ -85,8 +87,12 @@ class JEOL_DigiLine:
         self.dcube = self.__get_data_cube(data_offset)
 
         # Set MAG calibration factor
-        ScanSize = self.parameters['PTTD Param']['Params']['PARAMPAGE0_SEM']['ScanSize']
-        Mag = self.parameters['PTTD Data']['AnalyzableMap MeasData']['MeasCond']['Mag']
+        ScanSize = self.parameters['PTTD Param'] \
+                                  ['Params']['PARAMPAGE0_SEM'] \
+                                  ['ScanSize']
+        Mag = self.parameters['PTTD Data'] \
+                             ['AnalyzableMap MeasData']['MeasCond'] \
+                             ['Mag']
         self.nm_per_pixel = ScanSize / Mag * 1000000 / self.dcube.shape[1]
 
         # Make reference spectrum (sum spectrum) accessible easier
