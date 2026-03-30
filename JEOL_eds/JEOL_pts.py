@@ -63,8 +63,8 @@ class JEOL_pts:
         "only" : Skip reading EDX data.
     rebin : Tuple
         Rebin drift images and data while reading the '.pts' file
-        by (nw, nh). The integers nw and nh must be compatible with
-        the scan size.
+        by (ny, nx). The integers ny (vertical) and nx (horizontal) must be
+        compatible with the scan size.
         This option is not used when reading '.npz' or '.h5' files.
     only_metadata : Bool
         Only meta data is read (True) but nothing else. All other keywords are
@@ -258,8 +258,8 @@ class JEOL_pts:
             "only" : Skip reading EDX data.
         rebin : Tuple
             Rebin drift images and data while reading the '.pts' file
-            by (nw, nh). The integers nw and nh must be compatible with
-            the scan size.
+            by (ny, nx). The integers ny (vertical) and nx (horizontal) must be
+            compatible with the scan size..
             This option is not used when reading '.npz' or '.h5' files.
         only_metadata : Bool
             Only metadata are read (True) but nothing else. All other keywords
@@ -409,8 +409,8 @@ class JEOL_pts:
         E_cutoff : Float
             Cutoff energy for spectra. Only store data below this energy.
         rebin : Tuple
-            Rebin data while reading by (nv, nh). The integers nw and nh
-            must be compatible with the scan size.
+            Rebin data while reading by (ny, nx). The integers ny (vertical)
+            and nx (horizontal) must be compatible with the scan size.
             None implied no rebinning performed.
 
         verbose : Bool
@@ -542,9 +542,9 @@ class JEOL_pts:
         ----------
         fname : Str
             Filename.
-        bs: Tuple (nx, ny)
-            Size of the bin applied, i.e. (2, 2) means that the output array will
-            be reduced by a factor of 2 in both directions.
+        bs: Tuple (ny, nx)
+            Size of the bin applied, i.e. (2, 1) means that the output array will
+            be reduced by a factor of 2 in y direction (vertical) only.
 
 
         Returns
