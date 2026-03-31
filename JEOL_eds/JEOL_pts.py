@@ -417,7 +417,7 @@ class JEOL_pts:
         rebin : Tuple
             Rebin data while reading by (ny, nx). The integers ny (vertical)
             and nx (horizontal) must be compatible with the scan size.
-            None implied no rebinning performed.
+            (1, 1) implies no rebinning performed.
 
         verbose : Bool
             Print additional output.
@@ -439,9 +439,6 @@ class JEOL_pts:
         NumCH = self.parameters['PTTD Param'] \
                                ['Params']['PARAMPAGE1_EDXRF'] \
                                ['NumCH']
-
-        if rebin is None:   # No rebinning required
-            rebin = (1, 1)
 
         h = (area[2] - area[0] + 1) // rebin[1]
         v = (area[3] - area[1] + 1) // rebin[0]
