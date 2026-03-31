@@ -912,7 +912,7 @@ def export_profile(x, y, outfile, units='px'):
     assert x.shape[0] == y.shape[0]
 
     header = f'# Position [{units}]        counts [-]'
-    fmt = '%d\t%f'
+    fmt = '%d\t%f' if units.lower() == 'px' else '%f\t%f'
     np.savetxt(outfile, np.vstack((x, y)).T, header=header, fmt=fmt)
 
 
