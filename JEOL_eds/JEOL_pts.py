@@ -483,15 +483,15 @@ class JEOL_pts:
         #   36864 <= datum < 40960                  -> x-coordinate
         #   45056 <= datum < END (=45056 + NumCH)    -> count registered at energy
         END = 45056 + NumCH
-        scale_h = 4096 / h
-        scale_v = 4096 / v
+        scale_h = 4096 // h
+        scale_v = 4096 // v
         # map the size x size image into 4096x4096
         for d in data:
             N += 1
             if 32768 <= d < 36864:
-                y = int((d - 32768) / scale_h)
+                y = (d - 32768) // scale_h
             elif 36864 <= d < 40960:
-                d = int((d - 36864) / scale_v)
+                d = (d - 36864) // scale_v
                 if split_frames and d < x:
                     # A new frame starts once the slow axis (x) restarts. This
                     # does not necessary happen at x=zero, if we have very few
@@ -506,7 +506,7 @@ class JEOL_pts:
                         pass
                 x = d
             elif 45056 <= d < END:
-                z = int(d - 45056)
+                z = d - 45056
                 z -= CH_offset
                 if N_spec > z >= 0:
                     try:    # self.frame_list might be None
