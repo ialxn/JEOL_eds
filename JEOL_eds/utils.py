@@ -996,8 +996,8 @@ def show_line(image, line, linewidth=1, outfile=None, **kws):
         plt.savefig(outfile)
 
 
-def get_profile(image, line, linewidth=1):
-    """Returns a profile along line on image.
+def get_profile(image, line, **kws):
+    """Returns a profile along line on image / map.
 
     Parameters
     ----------
@@ -1005,8 +1005,14 @@ def get_profile(image, line, linewidth=1):
         Image onto which the line will be plotted.
     line : Tuple (int, int, int, int).
         Defines line (start_v, start_h, stop_v, stop_h).
-    linewidth : Int.
-        Width of profile line (to be integrated).
+
+    Notes
+    -----
+    **kws are passed to skimage.measure.profile_line the most important being
+    linewidth : Int
+        Width of line (pixels).
+    order: Int
+        Order of the spline interpolation applied (0, 1, 2, 3, 4, 5)
 
     Returns
     -------
@@ -1040,8 +1046,7 @@ def get_profile(image, line, linewidth=1):
     """
     profile = profile_line(image,
                            line[0:2], line[2:],
-                           linewidth=linewidth,
-                           mode='nearest')
+                           **kws)
     return profile
 
 
