@@ -221,8 +221,8 @@ class JEOL_PointLine:
 
         # Read and insert spectral data
         first = True
-        for key in self.eds_dict:
-            name = self.eds_dict[key][0]
+        for key, value in self.eds_dict.items():
+            name = value[0]
             s = JEOL_spectrum(os.path.join(path, name))
             if first:  # First spectrum read. Perform some initialization
                 self.eds_header = copy.deepcopy(s.header)
@@ -357,9 +357,9 @@ class JEOL_PointLine:
         plt.imshow(self.ref_image.image)
 
         # Plot '+' and annotate at PointLine positions
-        for key in self.eds_dict:
-            xPos = self.eds_dict[key][1]
-            yPos = self.eds_dict[key][2]
+        for key, val in self.eds_dict.items():
+            xPos = val[1]
+            yPos = val[2]
             plt.plot(xPos, yPos, '+', color=color)
             plt.annotate(key, (xPos, yPos), color=ann_color)
 
@@ -370,12 +370,12 @@ class JEOL_PointLine:
             xlim = (0, self.ref_image.image.shape[0])
             ylim = (self.ref_image.image.shape[1], 0)
         elif ROI == 'auto':
-            xmin = np.asarray([self.eds_dict[k][1] for k in self.eds_dict]).min()
-            xmax = np.asarray([self.eds_dict[k][1] for k in self.eds_dict]).max()
+            xmin = np.asarray([v[1] for v in self.eds_dict.values()]).min()
+            xmax = np.asarray([v[1] for v in self.eds_dict.values()]).max()
             dx = (xmax - xmin) / 10.0
             xlim = (xmin - dx, xmax + dx)
-            ymin = np.asarray([self.eds_dict[k][2] for k in self.eds_dict]).min()
-            ymax = np.asarray([self.eds_dict[k][2] for k in self.eds_dict]).max()
+            ymin = np.asarray([v[2] for v in self.eds_dict.values()]).min()
+            ymax = np.asarray([v[2] for v in self.eds_dict.values()]).max()
             dy = (ymax - ymin) / 10.0
             ylim = (ymin - dy, ymax + dy)
         else:
