@@ -63,8 +63,8 @@ class JEOL_pts:
         "only" : Skip reading EDX data.
     rebin : Tuple
         Rebin drift images and data while reading the '.pts' file
-        by (nw, nh). The integers nw and nh must be compatible with
-        the scan size.
+        by (ny, nx). The integers ny (vertical) and nx (horizontal) must be
+        compatible with the scan size.
         This option is not used when reading '.npz' or '.h5' files.
     only_metadata : Bool
         Only meta data is read (True) but nothing else. All other keywords are
@@ -258,8 +258,8 @@ class JEOL_pts:
             "only" : Skip reading EDX data.
         rebin : Tuple
             Rebin drift images and data while reading the '.pts' file
-            by (nw, nh). The integers nw and nh must be compatible with
-            the scan size.
+            by (ny, nx). The integers ny (vertical) and nx (horizontal) must be
+            compatible with the scan size..
             This option is not used when reading '.npz' or '.h5' files.
         only_metadata : Bool
             Only metadata are read (True) but nothing else. All other keywords
@@ -274,19 +274,23 @@ class JEOL_pts:
             self.file_name = fname
             self.parameters, data_offset = self.__parse_header(fname)
 
-            AimArea = self.parameters['EDS Data']['AnalyzableMap MeasData']['Meas Cond']['Aim Area']
-            if AimArea[1] == AimArea[3]:
-                raise ValueError(f'"{fname}" does not contain map data! Aim area {AimArea} suggests to use `JEOL_DigiLine()` to load data.')
+            area = self.parameters['EDS Data'] \
+                                  ['AnalyzableMap MeasData']['Meas Cond'] \
+                                  ['Aim Area']
+            if area[1] == area[3]:
+                raise ValueError(f'"{fname}" does not contain map data! Aim area {area} suggests to use `JEOL_DigiLine()` to load data.')
 
             # Nominal pixel size [nm]
-            ScanSize = self.parameters['PTTD Param']['Params']['PARAMPAGE0_SEM']['ScanSize']
-            Mag = self.parameters['PTTD Data']['AnalyzableMap MeasData']['MeasCond']['Mag']
-            area = self. parameters['EDS Data'] \
-                                   ['AnalyzableMap MeasData']['Meas Cond'] \
-                                   ['Pixels'].split('x')
+            ScanSize = self.parameters['PTTD Param'] \
+                                      ['Params']['PARAMPAGE0_SEM'] \
+                                      ['ScanSize']
+            Mag = self.parameters['PTTD Data'] \
+                                 ['AnalyzableMap MeasData']['MeasCond'] \
+                                 ['Mag']
+
             if rebin is None:   # No rebinning required
                 rebin = (1, 1)
-            h = int(area[0]) // rebin[1]
+            h = (area[2] - area[0] + 1) // rebin[1]
             self.nm_per_pixel = ScanSize / Mag * 1000000 / h
 
             if only_metadata:
@@ -342,7 +346,9 @@ class JEOL_pts:
             try:
                 N = self.dcube.shape[3]
             except AttributeError:
-                N = self.parameters['PTTD Param']['Params']['PARAMPAGE1_EDXRF']['NumCH']
+                N = self.parameters['PTTD Param'] \
+                                   ['Params']['PARAMPAGE1_EDXRF'] \
+                                   ['NumCH']
                 # We use 1000, 2000, 4000 channels (no negative energies)
                 N = N // 1000 * 1000
             self.ref_spectrum = self.parameters['EDS Data'] \
@@ -409,9 +415,9 @@ class JEOL_pts:
         E_cutoff : Float
             Cutoff energy for spectra. Only store data below this energy.
         rebin : Tuple
-            Rebin data while reading by (nv, nh). The integers nw and nh
-            must be compatible with the scan size.
-            None implied no rebinning performed.
+            Rebin data while reading by (ny, nx). The integers ny (vertical)
+            and nx (horizontal) must be compatible with the scan size.
+            (1, 1) implies no rebinning performed.
 
         verbose : Bool
             Print additional output.
@@ -424,24 +430,19 @@ class JEOL_pts:
             channels.
         """
         # Verify that this is not DigiLine data
-        AimArea = self.parameters['EDS Data'] \
-                                 ['AnalyzableMap MeasData']['Meas Cond'] \
-                                 ['Aim Area']
-        assert AimArea[1] != AimArea[3]  # They are identical for DigiLine data
+        area = self.parameters['EDS Data'] \
+                              ['AnalyzableMap MeasData']['Meas Cond'] \
+                              ['Aim Area']
+        assert area[1] != area[3]  # They are identical for DigiLine data
 
         CH_offset = self.__CH_offset_from_meta()
         NumCH = self.parameters['PTTD Param'] \
                                ['Params']['PARAMPAGE1_EDXRF'] \
                                ['NumCH']
-        area = self. parameters['EDS Data'] \
-                               ['AnalyzableMap MeasData']['Meas Cond'] \
-                               ['Pixels'].split('x')
 
-        if rebin is None:   # No rebinning required
-            rebin = (1, 1)
+        h = (area[2] - area[0] + 1) // rebin[1]
+        v = (area[3] - area[1] + 1) // rebin[0]
 
-        h = int(area[0]) // rebin[1]
-        v = int(area[1]) // rebin[0]
         if E_cutoff:
             CoefA = self.parameters['PTTD Data'] \
                                    ['AnalyzableMap MeasData']['Doc'] \
@@ -482,15 +483,15 @@ class JEOL_pts:
         #   36864 <= datum < 40960                  -> x-coordinate
         #   45056 <= datum < END (=45056 + NumCH)    -> count registered at energy
         END = 45056 + NumCH
-        scale_h = 4096 / h
-        scale_v = 4096 / v
+        scale_h = 4096 // h
+        scale_v = 4096 // v
         # map the size x size image into 4096x4096
         for d in data:
             N += 1
             if 32768 <= d < 36864:
-                y = int((d - 32768) / scale_h)
+                y = (d - 32768) // scale_h
             elif 36864 <= d < 40960:
-                d = int((d - 36864) / scale_v)
+                d = (d - 36864) // scale_v
                 if split_frames and d < x:
                     # A new frame starts once the slow axis (x) restarts. This
                     # does not necessary happen at x=zero, if we have very few
@@ -505,7 +506,7 @@ class JEOL_pts:
                         pass
                 x = d
             elif 45056 <= d < END:
-                z = int(d - 45056)
+                z = d - 45056
                 z -= CH_offset
                 if N_spec > z >= 0:
                     try:    # self.frame_list might be None
@@ -544,9 +545,9 @@ class JEOL_pts:
         ----------
         fname : Str
             Filename.
-        bs: Tuple (nx, ny)
-            Size of the bin applied, i.e. (2, 2) means that the output array will
-            be reduced by a factor of 2 in both directions.
+        bs: Tuple (ny, nx)
+            Size of the bin applied, i.e. (2, 1) means that the output array will
+            be reduced by a factor of 2 in y direction (vertical) only.
 
 
         Returns

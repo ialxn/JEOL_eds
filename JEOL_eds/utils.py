@@ -146,10 +146,10 @@ def rebin(a, bs, func=np.sum):
                            a.shape[1] // bs[1], bs[1]),
                  axis=(1, 3))
         return r.reshape(N, r.shape[0] // N, r.shape[1])
-    else:
-        return func(a.reshape(a.shape[0] // bs[0], bs[0],
-                              a.shape[1] // bs[1], bs[1]),
-                    axis=(1, 3))
+
+    return func(a.reshape(a.shape[0] // bs[0], bs[0],
+                          a.shape[1] // bs[1], bs[1]),
+                axis=(1, 3))
 
 
 def __plot_line(x, y,
@@ -440,7 +440,7 @@ def create_overlay(images, colors,
                         xytext=(0.5, -0.5 - 1.5 * i), textcoords='offset fontsize',
                         fontsize='medium', verticalalignment='top', fontfamily='serif',
                         color=colors[i],
-                        bbox=dict(facecolor='0.7', edgecolor='none', pad=3.0))
+                        bbox={"facecolor": '0.7', "edgecolor": 'none', "pad": 3.0})
 
     __add_scalebar(ax, scale_bar, extent)
 
@@ -623,7 +623,7 @@ def plot_map(m, color,
                     xy=(0, 1), xycoords='axes fraction',
                     xytext=(0.5, -0.5), textcoords='offset fontsize',
                     fontsize='medium', verticalalignment='top', fontfamily='serif',
-                    bbox=dict(facecolor='0.7', edgecolor='none', pad=3.0))
+                    bbox={"facecolor": '0.7', "edgecolor": 'none', "pad": 3.0})
 
     __add_scalebar(ax, scale_bar, extent)
 
@@ -678,8 +678,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
 
     if E_range is not None:
         E_low, E_high = E_range
-        if E_high > s.shape[0] * F:  # E_high is out of range
-            E_high = s.shape[0] * F
+        E_high = min(E_high, s.shape[0] * F)  # Prevent E_high out of range
     else:
         E_low, E_high = 0, s.shape[0] * F
 
@@ -727,8 +726,7 @@ def export_spectrum(s, outfile, E_range=None):
 
     if E_range is not None:
         E_low, E_high = E_range
-        if E_high > s.shape[0] * F:  # E_high is out of range
-            E_high = s.shape[0] * F
+        E_high = min(E_high, s.shape[0] * F)  # Prevent E_high out of range
     else:
         E_low, E_high = 0, s.shape[0] * F
 
@@ -912,7 +910,7 @@ def export_profile(x, y, outfile, units='px'):
     assert x.shape[0] == y.shape[0]
 
     header = f'# Position [{units}]        counts [-]'
-    fmt = '%d\t%f'
+    fmt = '%d\t%f' if units.lower() == 'px' else '%f\t%f'
     np.savetxt(outfile, np.vstack((x, y)).T, header=header, fmt=fmt)
 
 
