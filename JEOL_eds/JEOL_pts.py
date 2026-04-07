@@ -1005,21 +1005,12 @@ class JEOL_pts:
         spectrum : Ndarray
             EDX spectrum.
         """
-        # check validity of ROI
-        min_x = ROI[0] - ROI[2]
-        max_x = ROI[0] + ROI[2]
-        min_y = ROI[1] - ROI[2]
-        max_y = ROI[1] + ROI[2]
-        if not all(0 <= val < self.dcube.shape[1] for val in [min_x, max_x, min_y, max_y]):
-            raise ValueError(f"ROI {ROI} lies partially outside data cube")
-
         # Masking array with ones within circular ROI and zeros outside.
-        # Only use slice containing the circle.
-        N = 2 * ROI[2] + 1
+        N = self.dcube.shape[1]     # Assume square map / image
         mask = np.zeros((N, N))
         x, y = np.ogrid[:N, :N]
         # Compare squares to avoid sqrt()
-        r2 = (x + min_x - ROI[0])**2 + (y + min_y - ROI[1])**2
+        r2 = (x - ROI[0])**2 + (y - ROI[1])**2
         m = r2 <= ROI[2]**2
         mask[m] = 1
 
@@ -1035,7 +1026,7 @@ class JEOL_pts:
         for f in frames:
             # We have to mask the image at each energy
             for j in range(self.dcube.shape[3]):
-                spectrum[j] += (mask * self.frame(f)[min_x:max_x + 1, min_y:max_y + 1, j]).sum()
+                spectrum[j] += (mask * self.frame(f)[:, :, j]).sum()
 
         return spectrum
 
@@ -1108,22 +1099,48 @@ class JEOL_pts:
             return None
 
         if not ROI:
-            ROI = (0, self.dcube.shape[1] - 1, 0, self.dcube.shape[1] - 1)
+            ROI = (0, self.dcube.shape[1] - 1, 0, self.dcube.shape[2] - 1)
+
         # ROI elements need to be ints
         if not all(isinstance(el, int) for el in ROI):
             raise ValueError(f"ROI {ROI} contains non-integer elements")
+
         if len(ROI) == 2:   # point ROI
             ROI = (ROI[0], ROI[0], ROI[1], ROI[1])
-        if len(ROI) == 3:   # circular ROI, special
+            if (
+                    (ROI[0] >= self.dcube.shape[1])
+                    or (ROI[0] < 0)
+                    or (ROI[1] >= self.dcube.shape[2])
+                    or (ROI[1] < 0)
+            ):
+                raise ValueError(f'Invalid ROI {ROI}.')
+
+        if len(ROI) == 3:   # circular ROI (may be partially outside)
+            if (
+                (ROI[0] > self.dcube.shape[1] + ROI[2])
+                or (ROI[0] < -ROI[2])
+                or (ROI[1] > self.dcube.shape[2] + ROI[2])
+                or (ROI[1] < -ROI[2])
+            ):
+                raise ValueError(f'Invalid ROI {ROI}.')
             return _correct_spectrum(self.parameters,
                                      self.__spectrum_cROI(ROI, frames))
 
         # check that ROI lies fully within the data cube
-        if not all(0 <= val < self.dcube.shape[1] for val in ROI):
-            raise ValueError(f"ROI {ROI} lies partially outside data cube")
+        if(
+                (ROI[0] >= self.dcube.shape[0])
+                or (ROI[0] < 0)
+                or (ROI[1] >= self.dcube.shape[1])
+                or (ROI[1] < 0)
+                or (ROI[2] >= self.dcube.shape[0])
+                or (ROI[2] < 0)
+                or (ROI[3] >= self.dcube.shape[1])
+                or (ROI[3] < 0)
+        ):
+            raise ValueError(f'Invalid ROI {ROI}.')
 
         if self.dcube.shape[0] == 1:   # only a single frame (0) present
-            s = self.dcube[0, ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
+            s = self.dcube[0, ROI[0]:ROI[1], ROI[2]:ROI[3], :].sum(axis=(0, 1))
             return _correct_spectrum(self.parameters, s)
 
         # split_frames is active

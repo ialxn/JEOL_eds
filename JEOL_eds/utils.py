@@ -1051,8 +1051,8 @@ def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
     image : Ndarray
         Image where ROI will be applied.
     ROI : Tuple
-        If tuple is (int, int) ROI defines a point (h, v).
-        If tuple is (int, int, int) ROI defines a circle (h, v, r) .
+        If tuple is (int, int) ROI defines a point (v, h).
+        If tuple is (int, int, int) ROI defines a circle (v, h, r) .
         If tuple is (int, int, int, int) ROI defines rectangle (t, b, l, r).
     outfile : Str
         Optional filename where plot is saved.
@@ -1077,17 +1077,42 @@ def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
     >>> JU.show_ROI(my_map, (270, 122, 10), cmap='inferno')
     """
     if len(ROI) == 2:
+        if (
+                (ROI[0] >= image.shape[0])
+                or (ROI[0] < 0)
+                or (ROI[1] >= image.shape[1])
+                or (ROI[1] < 0)
+        ):
+            raise ValueError(f'Invalid ROI {ROI}.')
         im = image.copy().astype('float')
         im[ROI[0], :] = np.nan
         im[:, ROI[1]] = np.nan
         plt.imshow(im, **kws)
     elif len(ROI) == 3:
+        if (
+                (ROI[0] > image.shape[0] + ROI[2])
+                or (ROI[0] < -ROI[2])
+                or (ROI[1] > image.shape[1] + ROI[2])
+                or (ROI[1] < -ROI[2])
+        ):
+            raise ValueError(f'Invalid ROI {ROI}.')
         x, y = np.ogrid[:image.shape[0], :image.shape[1]]
         r = np.sqrt((x - ROI[0])**2 + (y - ROI[1])**2)
         mask = r <= ROI[2]
         plt.imshow(image * mask, **kws)         # ROI
         plt.imshow(image, alpha=alpha, **kws)     # transparent image
     elif len(ROI) == 4:
+        if(
+                (ROI[0] >= image.shape[0])
+                or (ROI[0] < 0)
+                or (ROI[1] >= image.shape[1])
+                or (ROI[1] < 0)
+                or (ROI[2] >= image.shape[0])
+                or (ROI[2] < 0)
+                or (ROI[3] >= image.shape[1])
+                or (ROI[3] < 0)
+        ):
+            raise ValueError(f'Invalid ROI {ROI}.')
         mask = np.full_like(image, False, dtype='bool')
         mask[ROI[0]:ROI[1], ROI[2]:ROI[3]] = True
         plt.imshow(image * mask, **kws)         # ROI
