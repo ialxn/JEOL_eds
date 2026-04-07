@@ -875,6 +875,10 @@ class JEOL_pts:
 
         Map corresponding to the sum of a few selected frames:
         >>> m = dc.map(frames=[3,5,11,12,13])
+        >>> m.min()
+        np.float64(0.0)
+        m.max()
+        np.float64(22.0)
 
         Cu Kalpha map of all even frames:
         >>> m = dc.map(interval=(7.9, 8.1),
@@ -886,7 +890,7 @@ class JEOL_pts:
         >>> m.min()
         np.float64(0.0)
         >>> m.max()
-        np.float64(136.0)
+        np.float64(142.0)
 
         Cu Kalpha map of frames 0..10. Frames are aligned using frame 5 as
         reference. Wiener filtered frames are used to calculate the shifts:
