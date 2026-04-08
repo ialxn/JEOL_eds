@@ -994,7 +994,7 @@ def show_line(image, line, linewidth=1, outfile=None, **kws):
         plt.savefig(outfile)
 
 
-def get_profile(image, line, linewidth=1):
+def get_profile(image, line, **kws):
     """Returns a profile along line on image.
 
     Parameters
@@ -1003,8 +1003,8 @@ def get_profile(image, line, linewidth=1):
         Image onto which the line will be plotted.
     line : Tuple (int, int, int, int).
         Defines line (start_v, start_h, stop_v, stop_h).
-    linewidth : Int.
-        Width of profile line (to be integrated).
+    **kws
+        Additional keywords passed to ``skimage.measure.profile_line()``
 
     Returns
     -------
@@ -1015,6 +1015,22 @@ def get_profile(image, line, linewidth=1):
     --------
     >>> from JEOL_eds import JEOL_pts
     >>> import JEOL_eds.utils as JU
+    >>> import numpy as np
+
+    Dummy data:
+    >>> data = np.ones((10, 10))
+
+    Horizontal line: 10 entries
+    >>> JU.get_profile(data, (0, 0, 0, 9))
+    array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1.])
+
+    Diagonal line: 14 entries
+    >>> JU.get_profile(data, (0, 0, 9, 9))
+    array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.])
+
+    Increase line width (you also need to supply a reduce_func)
+    >>> JU.get_profile(data, (0, 0, 9, 9), linewidth=3, reduce_func=np.sum)
+    array([3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3.])
 
     Load data:
     >>> dc = JEOL_pts('data/128.pts')
@@ -1036,10 +1052,21 @@ def get_profile(image, line, linewidth=1):
 
     >>> ax = plt.plot(profile)
     """
+    if(
+            (line[0] >= image.shape[0])
+            or (line[0] < 0)
+            or (line[1] >= image.shape[1])
+            or (line[1] < 0)
+            or (line[2] >= image.shape[0])
+            or (line[2] < 0)
+            or (line[3] >= image.shape[1])
+            or (line[3] < 0)
+    ):
+        raise ValueError(f'Invalid line {line}.')
+
     profile = profile_line(image,
                            line[0:2], line[2:],
-                           linewidth=linewidth,
-                           mode='nearest')
+                           **kws)
     return profile
 
 
