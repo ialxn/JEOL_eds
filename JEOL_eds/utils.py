@@ -1003,14 +1003,8 @@ def get_profile(image, line, **kws):
         Image onto which the line will be plotted.
     line : Tuple (int, int, int, int).
         Defines line (start_v, start_h, stop_v, stop_h).
-
-    Notes
-    -----
-    **kws are passed to skimage.measure.profile_line the most important being
-    linewidth : Int
-        Width of line (pixels).
-    order: Int
-        Order of the spline interpolation applied (0, 1, 2, 3, 4, 5)
+    **kws
+        Additional keywords passed to ``skimage.measure.profile_line()``
 
     Returns
     -------
@@ -1021,6 +1015,22 @@ def get_profile(image, line, **kws):
     --------
     >>> from JEOL_eds import JEOL_pts
     >>> import JEOL_eds.utils as JU
+    >>> import numpy as np
+
+    Dummy data:
+    >>> data = np.ones((10, 10))
+
+    Horizontal line: 10 entries
+    >>> JU.get_profile(data, (0, 0, 0, 9))
+    array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1.])
+
+    Diagonal line: 14 entries
+    >>> JU.get_profile(data, (0, 0, 9, 9))
+    array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.])
+
+    Increase line width (you also need to supply a reduce_func)
+    >>> JU.get_profile(data, (0, 0, 9, 9), linewidth=3, reduce_func=np.sum)
+    array([3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3.])
 
     Load data:
     >>> dc = JEOL_pts('data/128.pts')
@@ -1042,6 +1052,18 @@ def get_profile(image, line, **kws):
 
     >>> ax = plt.plot(profile)
     """
+    if(
+            (line[0] >= image.shape[0])
+            or (line[0] < 0)
+            or (line[1] >= image.shape[1])
+            or (line[1] < 0)
+            or (line[2] >= image.shape[0])
+            or (line[2] < 0)
+            or (line[3] >= image.shape[1])
+            or (line[3] < 0)
+    ):
+        raise ValueError(f'Invalid line {line}.')
+
     profile = profile_line(image,
                            line[0:2], line[2:],
                            **kws)
@@ -1056,8 +1078,8 @@ def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
     image : Ndarray
         Image where ROI will be applied.
     ROI : Tuple
-        If tuple is (int, int) ROI defines a point (h, v).
-        If tuple is (int, int, int) ROI defines a circle (h, v, r) .
+        If tuple is (int, int) ROI defines a point (v, h).
+        If tuple is (int, int, int) ROI defines a circle (v, h, r) .
         If tuple is (int, int, int, int) ROI defines rectangle (t, b, l, r).
     outfile : Str
         Optional filename where plot is saved.
@@ -1082,17 +1104,42 @@ def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
     >>> JU.show_ROI(my_map, (270, 122, 10), cmap='inferno')
     """
     if len(ROI) == 2:
+        if (
+                (ROI[0] >= image.shape[0])
+                or (ROI[0] < 0)
+                or (ROI[1] >= image.shape[1])
+                or (ROI[1] < 0)
+        ):
+            raise ValueError(f'Invalid ROI {ROI}.')
         im = image.copy().astype('float')
         im[ROI[0], :] = np.nan
         im[:, ROI[1]] = np.nan
         plt.imshow(im, **kws)
     elif len(ROI) == 3:
+        if (
+                (ROI[0] > image.shape[0] + ROI[2])
+                or (ROI[0] < -ROI[2])
+                or (ROI[1] > image.shape[1] + ROI[2])
+                or (ROI[1] < -ROI[2])
+        ):
+            raise ValueError(f'Invalid ROI {ROI}.')
         x, y = np.ogrid[:image.shape[0], :image.shape[1]]
         r = np.sqrt((x - ROI[0])**2 + (y - ROI[1])**2)
         mask = r <= ROI[2]
         plt.imshow(image * mask, **kws)         # ROI
         plt.imshow(image, alpha=alpha, **kws)     # transparent image
     elif len(ROI) == 4:
+        if(
+                (ROI[0] >= image.shape[0])
+                or (ROI[0] < 0)
+                or (ROI[1] >= image.shape[1])
+                or (ROI[1] < 0)
+                or (ROI[2] >= image.shape[0])
+                or (ROI[2] < 0)
+                or (ROI[3] >= image.shape[1])
+                or (ROI[3] < 0)
+        ):
+            raise ValueError(f'Invalid ROI {ROI}.')
         mask = np.full_like(image, False, dtype='bool')
         mask[ROI[0]:ROI[1], ROI[2]:ROI[3]] = True
         plt.imshow(image * mask, **kws)         # ROI
