@@ -187,12 +187,12 @@ class JEOL_DigiLine:
         scan = 0
         x = -1
         END = 45056 + NumCH
-        scale = 4096 / (AimArea[2] + 1)
+        scale = 4096 // (AimArea[2] + 1)
 
         for d in data:
             N += 1
             if 32768 <= d < 36864:
-                d = int((d - 32768) / scale)
+                d = (d - 32768) // scale
                 if d < x:
                     # A new scan starts
                     scan += 1
@@ -200,7 +200,7 @@ class JEOL_DigiLine:
             elif 36864 <= d < 40960:    # Will be ScanLine index (uninteresting because is constant)
                 pass
             elif 45056 <= d < END:
-                E = int(d - 45056)
+                E = d - 45056
                 E -= CH_offset
                 dcube[scan, x, E] = dcube[scan, x, E] + 1
             else:   # Unknown data
