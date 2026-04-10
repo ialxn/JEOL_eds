@@ -442,10 +442,11 @@ class JEOL_pts:
         with open(self.file_name, 'rb') as f:
             f.seek(offset)
             data = np.fromfile(f, dtype='u2')
+
+        Sweep = self.parameters['PTTD Data'] \
+                               ['AnalyzableMap MeasData']['Doc'] \
+                               ['Sweep']
         if split_frames:
-            Sweep = self.parameters['PTTD Data'] \
-                                   ['AnalyzableMap MeasData']['Doc'] \
-                                   ['Sweep']
             if self.frame_list:
                 # Check that only frames present in data are requested.
                 if not all(x < Sweep for x in self.frame_list):
@@ -459,7 +460,9 @@ class JEOL_pts:
         else:
             dcube = np.zeros([1, v, h, N_spec],
                              dtype=dtype)
-        last_frame = max(self.frame_list) if self.frame_list else 65535
+
+        frame_list = self.frame_list if self.frame_list else list(range(Sweep))
+        last_frame = max(frame_list)
 
         N = 0
         frame = 0
@@ -492,16 +495,12 @@ class JEOL_pts:
                 z = d - 45056
                 z -= CH_offset
                 if N_spec > z >= 0:
-                    try:    # self.frame_list might be None
-                        if frame in self.frame_list:
-                            # Current frame is specified in self.frame_list.
-                            # Store data in self.dcube in correct position
-                            # i.e. position within list.
-                            idx = self.frame_list.index(frame)
-                            dcube[idx, x, y, z] = dcube[idx, x, y, z] + 1
-                    except TypeError:
-                        # self.frame_list is None, just store data in this frame
-                        dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
+                    if frame in self.frame_list:
+                        # Current frame is specified in self.frame_list.
+                        # Store data in self.dcube in correct position
+                        # i.e. position within list.
+                        idx = self.frame_list.index(frame)
+                        dcube[idx, x, y, z] = dcube[idx, x, y, z] + 1
             else:   # Unknown data
                 pass
         return dcube
