@@ -25,6 +25,7 @@ from warnings import warn
 import h5py
 import json
 import numpy as np
+from numba import jit
 from scipy.signal import wiener, correlate
 import matplotlib.pyplot as plt
 from matplotlib import animation
@@ -69,8 +70,6 @@ class JEOL_pts:
     only_metadata : Bool
         Only meta data is read (True) but nothing else. All other keywords are
         ignored.
-    verbose : Bool
-        Turn on (various) output.
 
     Notes
     -----
@@ -95,12 +94,6 @@ class JEOL_pts:
     >>> dc = JEOL_pts('data/128.pts', dtype='int')
     >>> dc.dcube.dtype
     dtype('int64')
-
-    Provide additional (debug) output when loading:
-    >>> dc = JEOL_pts('data/128.pts', dtype='uint16', verbose=True) #doctest: +NORMALIZE_WHITESPACE
-    Unidentified data items (82810 out of 2081741, 3.98%) found:
-        24576: found 41858
-        28672: found 40952
 
     Store individual frames:
     >>> dc = JEOL_pts('data/128.pts', split_frames=True)
@@ -228,7 +221,7 @@ class JEOL_pts:
     def __init__(self, fname, dtype='uint16',
                  split_frames=False, frame_list=None,
                  E_cutoff=False, read_drift="no",
-                 rebin=None, only_metadata=False, verbose=False):
+                 rebin=None, only_metadata=False):
         """Reads data cube from JEOL '.pts' file or from previously saved data cube.
 
         Parameters
@@ -264,8 +257,6 @@ class JEOL_pts:
         only_metadata : Bool
             Only metadata are read (True) but nothing else. All other keywords
             are ignored.
-        verbose : Bool
-            Turn on (various) output.
         """
         if os.path.splitext(fname)[1] == '.pts':
             read_drift = read_drift.lower()
@@ -311,8 +302,7 @@ class JEOL_pts:
             self.dcube = self.__get_data_cube(dtype, data_offset,
                                               split_frames=split_frames,
                                               E_cutoff=E_cutoff,
-                                              rebin=rebin,
-                                              verbose=verbose)
+                                              rebin=rebin)
             self.__mk_idx()
 
         elif os.path.splitext(fname)[1] == '.npz':
@@ -399,8 +389,53 @@ class JEOL_pts:
                               ['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond] \
                               ['DigZ']
 
+    @staticmethod
+    @jit(nopython=True)
+    def __buffer2dcube(buf, dcube, N_spec, END, CH_offset,
+                       h, v,
+                       split_frames, frame_list, last_frame):
+        N = 0
+        frame = 0
+        x = -1
+        # Data is mapped as follows:
+        #   32768 <= datum < 36864                  -> y-coordinate
+        #   36864 <= datum < 40960                  -> x-coordinate
+        #   45056 <= datum < END (=45056 + NumCH)    -> count registered at energy
+        scale_h = 4096 // h
+        scale_v = 4096 // v
+        # map the size x size image into 4096x4096
+        for d in buf:
+            N += 1
+            if 32768 <= d < 36864:
+                y = (d - 32768) // scale_h
+            elif 36864 <= d < 40960:
+                d = (d - 36864) // scale_v
+                if split_frames and d < x:
+                    # A new frame starts once the slow axis (x) restarts. This
+                    # does not necessary happen at x=zero, if we have very few
+                    # counts and nothing registers on first scan line.
+                    frame += 1
+                    if frame > last_frame:
+                        # Further frames present are not required, so stop
+                        # (slow) reading and return data read (dcube).
+                        return dcube
+                x = d
+            elif 45056 <= d < END:
+                z = d - 45056
+                z -= CH_offset
+                if N_spec > z >= 0:
+                    if frame in frame_list:
+                        # Current frame is specified in self.frame_list.
+                        # Store data in self.dcube in correct position
+                        # i.e. position within list.
+                        idx = frame_list.index(frame)
+                        dcube[idx, x, y, z] = dcube[idx, x, y, z] + 1
+            else:   # Unknown data
+                pass
+        return dcube
+
     def __get_data_cube(self, dtype, offset, split_frames=False,
-                        E_cutoff=None, rebin=None, verbose=False):
+                        E_cutoff=None, rebin=None):
         """Returns data cube (F x X x Y x E).
 
         Parameters
@@ -418,9 +453,6 @@ class JEOL_pts:
             Rebin data while reading by (ny, nx). The integers ny (vertical)
             and nx (horizontal) must be compatible with the scan size.
             (1, 1) implies no rebinning performed.
-
-        verbose : Bool
-            Print additional output.
 
         Returns
         -------
@@ -456,10 +488,11 @@ class JEOL_pts:
         with open(self.file_name, 'rb') as f:
             f.seek(offset)
             data = np.fromfile(f, dtype='u2')
+
+        Sweep = self.parameters['PTTD Data'] \
+                               ['AnalyzableMap MeasData']['Doc'] \
+                               ['Sweep']
         if split_frames:
-            Sweep = self.parameters['PTTD Data'] \
-                                   ['AnalyzableMap MeasData']['Doc'] \
-                                   ['Sweep']
             if self.frame_list:
                 # Check that only frames present in data are requested.
                 if not all(x < Sweep for x in self.frame_list):
@@ -473,70 +506,14 @@ class JEOL_pts:
         else:
             dcube = np.zeros([1, v, h, N_spec],
                              dtype=dtype)
-        N = 0
-        N_err = 0
-        unknown = {}
-        frame = 0
-        x = -1
-        # Data is mapped as follows:
-        #   32768 <= datum < 36864                  -> y-coordinate
-        #   36864 <= datum < 40960                  -> x-coordinate
-        #   45056 <= datum < END (=45056 + NumCH)    -> count registered at energy
+
+        frame_list = self.frame_list if self.frame_list else list(range(Sweep))
+        last_frame = max(frame_list)
         END = 45056 + NumCH
-        scale_h = 4096 // h
-        scale_v = 4096 // v
-        # map the size x size image into 4096x4096
-        for d in data:
-            N += 1
-            if 32768 <= d < 36864:
-                y = (d - 32768) // scale_h
-            elif 36864 <= d < 40960:
-                d = (d - 36864) // scale_v
-                if split_frames and d < x:
-                    # A new frame starts once the slow axis (x) restarts. This
-                    # does not necessary happen at x=zero, if we have very few
-                    # counts and nothing registers on first scan line.
-                    frame += 1
-                    try:
-                        if frame > max(self.frame_list):
-                            # Further frames present are not required, so stop
-                            # (slow) reading and return data read (dcube).
-                            return dcube
-                    except TypeError:
-                        pass
-                x = d
-            elif 45056 <= d < END:
-                z = d - 45056
-                z -= CH_offset
-                if N_spec > z >= 0:
-                    try:    # self.frame_list might be None
-                        if frame in self.frame_list:
-                            # Current frame is specified in self.frame_list.
-                            # Store data in self.dcube in correct position
-                            # i.e. position within list.
-                            idx = self.frame_list.index(frame)
-                            dcube[idx, x, y, z] = dcube[idx, x, y, z] + 1
-                    except TypeError:
-                        # self.frame_list is None, just store data in this frame
-                        dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
-            else:
-                if verbose:
-                    if 40960 <= d < 45056:
-                        # Image (one per sweep) stored if option
-                        # "correct for sample movement" was active
-                        # during data collection.
-                        continue
-                    if str(d) in unknown:
-                        unknown[str(d)] += 1
-                    else:
-                        unknown[str(d)] = 1
-                    N_err += 1
-        if verbose:
-            print(f'Unidentified data items ({N_err} out of {N}, '
-                  f'{100 * N_err / N:.2f}%) found:')
-            for key in sorted(unknown):
-                print(f'\t{key}: found {unknown[key]}')
-        return dcube
+
+        return self.__buffer2dcube(data, dcube, N_spec, END, CH_offset,
+                                   h, v,
+                                   split_frames, frame_list, last_frame)
 
     def __read_drift_images(self, fname, bs):
         """Read BF images stored in raw data
