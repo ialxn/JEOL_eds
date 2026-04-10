@@ -459,6 +459,8 @@ class JEOL_pts:
         else:
             dcube = np.zeros([1, v, h, N_spec],
                              dtype=dtype)
+        last_frame = max(self.frame_list) if self.frame_list else 65535
+
         N = 0
         frame = 0
         x = -1
@@ -481,13 +483,10 @@ class JEOL_pts:
                     # does not necessary happen at x=zero, if we have very few
                     # counts and nothing registers on first scan line.
                     frame += 1
-                    try:
-                        if frame > max(self.frame_list):
-                            # Further frames present are not required, so stop
-                            # (slow) reading and return data read (dcube).
-                            return dcube
-                    except TypeError:
-                        pass
+                    if frame > last_frame:
+                        # Further frames present are not required, so stop
+                        # (slow) reading and return data read (dcube).
+                        return dcube
                 x = d
             elif 45056 <= d < END:
                 z = d - 45056
