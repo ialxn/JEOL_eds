@@ -25,6 +25,7 @@ from warnings import warn
 import h5py
 import json
 import numpy as np
+from numba import jit
 from scipy.signal import wiener, correlate
 import matplotlib.pyplot as plt
 from matplotlib import animation
@@ -388,6 +389,51 @@ class JEOL_pts:
                               ['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond] \
                               ['DigZ']
 
+    @staticmethod
+    @jit(nopython=True)
+    def __buffer2dcube(buf, dcube, N_spec, END, CH_offset,
+                       h, v,
+                       split_frames, frame_list, last_frame):
+        N = 0
+        frame = 0
+        x = -1
+        # Data is mapped as follows:
+        #   32768 <= datum < 36864                  -> y-coordinate
+        #   36864 <= datum < 40960                  -> x-coordinate
+        #   45056 <= datum < END (=45056 + NumCH)    -> count registered at energy
+        scale_h = 4096 // h
+        scale_v = 4096 // v
+        # map the size x size image into 4096x4096
+        for d in buf:
+            N += 1
+            if 32768 <= d < 36864:
+                y = (d - 32768) // scale_h
+            elif 36864 <= d < 40960:
+                d = (d - 36864) // scale_v
+                if split_frames and d < x:
+                    # A new frame starts once the slow axis (x) restarts. This
+                    # does not necessary happen at x=zero, if we have very few
+                    # counts and nothing registers on first scan line.
+                    frame += 1
+                    if frame > last_frame:
+                        # Further frames present are not required, so stop
+                        # (slow) reading and return data read (dcube).
+                        return dcube
+                x = d
+            elif 45056 <= d < END:
+                z = d - 45056
+                z -= CH_offset
+                if N_spec > z >= 0:
+                    if frame in frame_list:
+                        # Current frame is specified in self.frame_list.
+                        # Store data in self.dcube in correct position
+                        # i.e. position within list.
+                        idx = frame_list.index(frame)
+                        dcube[idx, x, y, z] = dcube[idx, x, y, z] + 1
+            else:   # Unknown data
+                pass
+        return dcube
+
     def __get_data_cube(self, dtype, offset, split_frames=False,
                         E_cutoff=None, rebin=None):
         """Returns data cube (F x X x Y x E).
@@ -463,47 +509,11 @@ class JEOL_pts:
 
         frame_list = self.frame_list if self.frame_list else list(range(Sweep))
         last_frame = max(frame_list)
-
-        N = 0
-        frame = 0
-        x = -1
-        # Data is mapped as follows:
-        #   32768 <= datum < 36864                  -> y-coordinate
-        #   36864 <= datum < 40960                  -> x-coordinate
-        #   45056 <= datum < END (=45056 + NumCH)    -> count registered at energy
         END = 45056 + NumCH
-        scale_h = 4096 // h
-        scale_v = 4096 // v
-        # map the size x size image into 4096x4096
-        for d in data:
-            N += 1
-            if 32768 <= d < 36864:
-                y = (d - 32768) // scale_h
-            elif 36864 <= d < 40960:
-                d = (d - 36864) // scale_v
-                if split_frames and d < x:
-                    # A new frame starts once the slow axis (x) restarts. This
-                    # does not necessary happen at x=zero, if we have very few
-                    # counts and nothing registers on first scan line.
-                    frame += 1
-                    if frame > last_frame:
-                        # Further frames present are not required, so stop
-                        # (slow) reading and return data read (dcube).
-                        return dcube
-                x = d
-            elif 45056 <= d < END:
-                z = d - 45056
-                z -= CH_offset
-                if N_spec > z >= 0:
-                    if frame in self.frame_list:
-                        # Current frame is specified in self.frame_list.
-                        # Store data in self.dcube in correct position
-                        # i.e. position within list.
-                        idx = self.frame_list.index(frame)
-                        dcube[idx, x, y, z] = dcube[idx, x, y, z] + 1
-            else:   # Unknown data
-                pass
-        return dcube
+
+        return self.__buffer2dcube(data, dcube, N_spec, END, CH_offset,
+                                   h, v,
+                                   split_frames, frame_list, last_frame)
 
     def __read_drift_images(self, fname, bs):
         """Read BF images stored in raw data
