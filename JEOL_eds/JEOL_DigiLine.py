@@ -338,7 +338,7 @@ class JEOL_DigiLine:
         else:
             profile = np.zeros((self.dcube.shape[1],))
             for scan in scans:
-                profile += self.dcube[scan, :, interval[0]:interval[1]].sum(axis=(1))
+                profile += self.dcube[scan, :, interval[0]:interval[1]].sum(axis=1)
         return x, profile
 
     def spectral_map(self, E_range=None, energy=False):
