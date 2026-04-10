@@ -1132,13 +1132,13 @@ class JEOL_pts:
 
         # check that ROI lies fully within the data cube
         if(
-                (ROI[0] >= self.dcube.shape[0])
+                (ROI[0] >= self.dcube.shape[1])
                 or (ROI[0] < 0)
-                or (ROI[1] >= self.dcube.shape[1])
+                or (ROI[1] >= self.dcube.shape[2])
                 or (ROI[1] < 0)
-                or (ROI[2] >= self.dcube.shape[0])
+                or (ROI[2] >= self.dcube.shape[1])
                 or (ROI[2] < 0)
-                or (ROI[3] >= self.dcube.shape[1])
+                or (ROI[3] >= self.dcube.shape[2])
                 or (ROI[3] < 0)
         ):
             raise ValueError(f'Invalid ROI {ROI}.')
