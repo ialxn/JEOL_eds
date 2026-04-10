@@ -877,7 +877,7 @@ class JEOL_pts:
         >>> m = dc.map(frames=[3,5,11,12,13])
         >>> m.min()
         np.float64(0.0)
-        m.max()
+        >>> m.max()
         np.float64(22.0)
 
         Cu Kalpha map of all even frames:
