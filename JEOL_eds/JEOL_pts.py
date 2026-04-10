@@ -22,8 +22,8 @@ import os
 import sys
 from datetime import datetime, timedelta
 from warnings import warn
-import h5py
 import json
+import h5py
 import numpy as np
 from scipy.signal import wiener, correlate
 import matplotlib.pyplot as plt
