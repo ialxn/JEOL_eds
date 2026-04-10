@@ -11,6 +11,5 @@ setup(name='JEOL_eds',
                         'scipy',
                         'matplotlib',
                         'scikit-image',
-                        'h5py',
-                        'asteval'],
+                        'h5py'],
       zip_safe=False)
