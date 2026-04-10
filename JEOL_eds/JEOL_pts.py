@@ -22,8 +22,8 @@ import os
 import sys
 from datetime import datetime, timedelta
 from warnings import warn
-import h5py
 import json
+import h5py
 import numpy as np
 from numba import jit
 from scipy.signal import wiener, correlate
@@ -854,7 +854,7 @@ class JEOL_pts:
         >>> m = dc.map(frames=[3,5,11,12,13])
         >>> m.min()
         np.float64(0.0)
-        m.max()
+        >>> m.max()
         np.float64(22.0)
 
         Cu Kalpha map of all even frames:
@@ -1109,13 +1109,13 @@ class JEOL_pts:
 
         # check that ROI lies fully within the data cube
         if(
-                (ROI[0] >= self.dcube.shape[0])
+                (ROI[0] >= self.dcube.shape[1])
                 or (ROI[0] < 0)
-                or (ROI[1] >= self.dcube.shape[1])
+                or (ROI[1] >= self.dcube.shape[2])
                 or (ROI[1] < 0)
-                or (ROI[2] >= self.dcube.shape[0])
+                or (ROI[2] >= self.dcube.shape[1])
                 or (ROI[2] < 0)
-                or (ROI[3] >= self.dcube.shape[1])
+                or (ROI[3] >= self.dcube.shape[2])
                 or (ROI[3] < 0)
         ):
             raise ValueError(f'Invalid ROI {ROI}.')
