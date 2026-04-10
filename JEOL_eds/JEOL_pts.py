@@ -69,8 +69,6 @@ class JEOL_pts:
     only_metadata : Bool
         Only meta data is read (True) but nothing else. All other keywords are
         ignored.
-    verbose : Bool
-        Turn on (various) output.
 
     Notes
     -----
@@ -95,12 +93,6 @@ class JEOL_pts:
     >>> dc = JEOL_pts('data/128.pts', dtype='int')
     >>> dc.dcube.dtype
     dtype('int64')
-
-    Provide additional (debug) output when loading:
-    >>> dc = JEOL_pts('data/128.pts', dtype='uint16', verbose=True) #doctest: +NORMALIZE_WHITESPACE
-    Unidentified data items (82810 out of 2081741, 3.98%) found:
-        24576: found 41858
-        28672: found 40952
 
     Store individual frames:
     >>> dc = JEOL_pts('data/128.pts', split_frames=True)
@@ -228,7 +220,7 @@ class JEOL_pts:
     def __init__(self, fname, dtype='uint16',
                  split_frames=False, frame_list=None,
                  E_cutoff=False, read_drift="no",
-                 rebin=None, only_metadata=False, verbose=False):
+                 rebin=None, only_metadata=False):
         """Reads data cube from JEOL '.pts' file or from previously saved data cube.
 
         Parameters
@@ -264,8 +256,6 @@ class JEOL_pts:
         only_metadata : Bool
             Only metadata are read (True) but nothing else. All other keywords
             are ignored.
-        verbose : Bool
-            Turn on (various) output.
         """
         if os.path.splitext(fname)[1] == '.pts':
             read_drift = read_drift.lower()
@@ -311,8 +301,7 @@ class JEOL_pts:
             self.dcube = self.__get_data_cube(dtype, data_offset,
                                               split_frames=split_frames,
                                               E_cutoff=E_cutoff,
-                                              rebin=rebin,
-                                              verbose=verbose)
+                                              rebin=rebin)
             self.__mk_idx()
 
         elif os.path.splitext(fname)[1] == '.npz':
@@ -400,7 +389,7 @@ class JEOL_pts:
                               ['DigZ']
 
     def __get_data_cube(self, dtype, offset, split_frames=False,
-                        E_cutoff=None, rebin=None, verbose=False):
+                        E_cutoff=None, rebin=None):
         """Returns data cube (F x X x Y x E).
 
         Parameters
@@ -418,9 +407,6 @@ class JEOL_pts:
             Rebin data while reading by (ny, nx). The integers ny (vertical)
             and nx (horizontal) must be compatible with the scan size.
             (1, 1) implies no rebinning performed.
-
-        verbose : Bool
-            Print additional output.
 
         Returns
         -------
@@ -474,8 +460,6 @@ class JEOL_pts:
             dcube = np.zeros([1, v, h, N_spec],
                              dtype=dtype)
         N = 0
-        N_err = 0
-        unknown = {}
         frame = 0
         x = -1
         # Data is mapped as follows:
@@ -519,23 +503,8 @@ class JEOL_pts:
                     except TypeError:
                         # self.frame_list is None, just store data in this frame
                         dcube[frame, x, y, z] = dcube[frame, x, y, z] + 1
-            else:
-                if verbose:
-                    if 40960 <= d < 45056:
-                        # Image (one per sweep) stored if option
-                        # "correct for sample movement" was active
-                        # during data collection.
-                        continue
-                    if str(d) in unknown:
-                        unknown[str(d)] += 1
-                    else:
-                        unknown[str(d)] = 1
-                    N_err += 1
-        if verbose:
-            print(f'Unidentified data items ({N_err} out of {N}, '
-                  f'{100 * N_err / N:.2f}%) found:')
-            for key in sorted(unknown):
-                print(f'\t{key}: found {unknown[key]}')
+            else:   # Unknown data
+                pass
         return dcube
 
     def __read_drift_images(self, fname, bs):
