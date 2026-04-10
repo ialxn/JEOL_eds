@@ -11,5 +11,6 @@ setup(name='JEOL_eds',
                         'scipy',
                         'matplotlib',
                         'scikit-image',
-                        'h5py'],
+                        'h5py',
+                        'numba'],
       zip_safe=False)

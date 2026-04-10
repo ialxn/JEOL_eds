@@ -27,8 +27,8 @@ numpy
 scipy
 matplotlib
 scikit-image
-asteval
 h5py
+numba
 (pip for installation)
 ```
 
