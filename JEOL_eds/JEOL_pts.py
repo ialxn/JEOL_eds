@@ -1481,7 +1481,12 @@ class JEOL_pts:
             except KeyError:
                 self.nm_per_pixel = None
 
-            self.parameters = json.loads(hf.attrs['parameters'])
+            try:
+                self.parameters = json.loads(hf.attrs['parameters'])
+            except json.JSONDecodeError:
+                print("Warning: Could not load meta data (parameters).")
+                print("         Some class methods might fail now.")
+                self.parameters = None
 
 
 if __name__ == "__main__":

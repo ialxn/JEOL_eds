@@ -1093,6 +1093,9 @@ def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
 
     Load data and create map of total x-ray intensity.
     >>> dc = JEOL_pts('data/complex_oxide.h5')
+    Warning: Could not load meta data (parameters).
+             Some class methods might fail now.
+
     >>> my_map = dc.map()
 
     Verify definition of rectangular ROI. Make image more visible (less
