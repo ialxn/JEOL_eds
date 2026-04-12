@@ -26,6 +26,7 @@ import json
 import h5py
 import numpy as np
 from numba import jit
+from numba.typed import List
 from scipy.signal import wiener, correlate
 import matplotlib.pyplot as plt
 from matplotlib import animation
@@ -507,7 +508,7 @@ class JEOL_pts:
             dcube = np.zeros([1, v, h, N_spec],
                              dtype=dtype)
 
-        frame_list = self.frame_list if self.frame_list else list(range(Sweep))
+        frame_list = List(self.frame_list) if self.frame_list else List(range(Sweep))
         last_frame = max(frame_list)
         END = 45056 + NumCH
 
