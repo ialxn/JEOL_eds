@@ -46,6 +46,10 @@ to upgrade an existing installation.
 
 # Important (API breaking) changes
 
+## Version 2.1
+
+Use `numba` to read '.pts' data (`JEOL_pts()` and `JEOL_DigiLine()`). This results in a speed up of about two orders of magnitude!
+
 ## Version 2
 
 - The parameter `frames=[]` lists the indices of a sub set of frames to be used. Since version 2 the indices refer to the original indices and not anymore to  their index in the data cube. Now you refer to frame 11 (available as `dc.dcube[1]`)<br>
