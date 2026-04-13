@@ -22,6 +22,7 @@ along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 from datetime import datetime, timedelta
 from collections.abc import Iterable
 import numpy as np
+from numba import jit
 
 from JEOL_eds.misc import _parsejeol, _correct_spectrum
 
@@ -141,6 +142,33 @@ class JEOL_DigiLine:
                               ['Params']['PARAMPAGE1_EDXRF']['Tpl'][Tpl_cond] \
                               ['DigZ']
 
+    @staticmethod
+    @jit(nopython=True)
+    def __buffer2dcube(buf, dcube, CH_offset, last_pix, NumCH):
+        END = 45056 + NumCH
+        scale = 4096 // (last_pix + 1)
+        N = 0
+        scan = 0
+        x = -1
+        for d in buf:
+            N += 1
+            if 32768 <= d < 36864:
+                d = (d - 32768) // scale
+                if d < x:
+                    # A new scan starts
+                    scan += 1
+                x = d
+            elif 36864 <= d < 40960:    # Will be ScanLine index (uninteresting because is constant)
+                pass
+            elif 45056 <= d < END:
+                E = d - 45056
+                E -= CH_offset
+                dcube[scan, x, E] = dcube[scan, x, E] + 1
+            else:   # Unknown data
+                pass
+        return dcube
+
+
     def __get_data_cube(self, offset):
         """Returns data cube (N x X x E).
 
@@ -183,29 +211,7 @@ class JEOL_DigiLine:
             f.seek(offset)
             data = np.fromfile(f, dtype='u2')
 
-        N = 0
-        scan = 0
-        x = -1
-        END = 45056 + NumCH
-        scale = 4096 / (AimArea[2] + 1)
-
-        for d in data:
-            N += 1
-            if 32768 <= d < 36864:
-                d = int((d - 32768) / scale)
-                if d < x:
-                    # A new scan starts
-                    scan += 1
-                x = d
-            elif 36864 <= d < 40960:    # Will be ScanLine index (uninteresting because is constant)
-                pass
-            elif 45056 <= d < END:
-                E = int(d - 45056)
-                E -= CH_offset
-                dcube[scan, x, E] = dcube[scan, x, E] + 1
-            else:   # Unknown data
-                pass
-        return dcube
+        return self.__buffer2dcube(data, dcube, CH_offset, AimArea[2], NumCH)
 
     def sum_spectrum(self, xRange=None, scans=None):
         """Return sum spectrum for (a fraction of) the scan line (DigiLine).
@@ -338,7 +344,7 @@ class JEOL_DigiLine:
         else:
             profile = np.zeros((self.dcube.shape[1],))
             for scan in scans:
-                profile += self.dcube[scan, :, interval[0]:interval[1]].sum(axis=(1))
+                profile += self.dcube[scan, :, interval[0]:interval[1]].sum(axis=1)
         return x, profile
 
     def spectral_map(self, E_range=None, energy=False):

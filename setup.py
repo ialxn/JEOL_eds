@@ -12,5 +12,5 @@ setup(name='JEOL_eds',
                         'matplotlib',
                         'scikit-image',
                         'h5py',
-                        'asteval'],
+                        'numba'],
       zip_safe=False)

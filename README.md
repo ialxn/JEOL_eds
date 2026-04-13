@@ -27,8 +27,8 @@ numpy
 scipy
 matplotlib
 scikit-image
-asteval
 h5py
+numba
 (pip for installation)
 ```
 
@@ -45,6 +45,10 @@ $ pip install . -U
 to upgrade an existing installation.
 
 # Important (API breaking) changes
+
+## Version 2.1
+
+Use `numba` to read '.pts' data (`JEOL_pts()` and `JEOL_DigiLine()`). This results in a speed up of about two orders of magnitude!
 
 ## Version 2
 
