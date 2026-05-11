@@ -260,6 +260,7 @@ class JEOL_pts:
             are ignored.
         """
         if os.path.splitext(fname)[1] == '.pts':
+            assert isinstance(read_drift, str)
             read_drift = read_drift.lower()
             assert read_drift in ("no", "yes", "only")
 
