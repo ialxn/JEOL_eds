@@ -20,6 +20,7 @@ along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 """
 import os
 import sys
+import pickle
 from datetime import datetime, timedelta
 from warnings import warn
 import json
@@ -318,6 +319,27 @@ class JEOL_pts:
             raise OSError(f"Unknown type of file '{fname}'")
 
         self.__set_ref_spectrum()
+
+    def __sizeof__(self):
+        """Returns size (in bytes) of data attibutes
+        """
+        size = (
+            sys.getsizeof(self.file_name)
+            + sys.getsizeof(self.file_date)
+            + sys.getsizeof(self.frame_list)
+            + sys.getsizeof(self.nm_per_pixel)
+            + self.ref_spectrum.nbytes
+            + len(pickle.dumps(self.parameters))    # dicts
+        )
+        try:
+            size += self.dcube.nbytes
+        except AttributeError:  # self.dcube is None
+            pass
+        try:
+            size += self.drift_images.nbytes
+        except AttributeError:  # self.drift_images is None
+            pass
+        return size
 
     def __mk_idx(self):
         """Set up dict{frame_number: index_of_frame_in_data_cube}
