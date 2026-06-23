@@ -20,6 +20,7 @@ along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 """
 import os
 import sys
+import pickle
 from datetime import datetime, timedelta
 from warnings import warn
 import json
@@ -260,6 +261,7 @@ class JEOL_pts:
             are ignored.
         """
         if os.path.splitext(fname)[1] == '.pts':
+            assert isinstance(read_drift, str)
             read_drift = read_drift.lower()
             assert read_drift in ("no", "yes", "only")
 
@@ -317,6 +319,27 @@ class JEOL_pts:
             raise OSError(f"Unknown type of file '{fname}'")
 
         self.__set_ref_spectrum()
+
+    def __sizeof__(self):
+        """Returns size (in bytes) of data attibutes
+        """
+        size = (
+            sys.getsizeof(self.file_name)
+            + sys.getsizeof(self.file_date)
+            + sys.getsizeof(self.frame_list)
+            + sys.getsizeof(self.nm_per_pixel)
+            + self.ref_spectrum.nbytes
+            + len(pickle.dumps(self.parameters))    # dicts
+        )
+        try:
+            size += self.dcube.nbytes
+        except AttributeError:  # self.dcube is None
+            pass
+        try:
+            size += self.drift_images.nbytes
+        except AttributeError:  # self.drift_images is None
+            pass
+        return size
 
     def __mk_idx(self):
         """Set up dict{frame_number: index_of_frame_in_data_cube}
@@ -961,9 +984,9 @@ class JEOL_pts:
 
         # Allocate array for result
         Nx, Ny = shape
-        res = np.zeros((2 * Nx, 2 * Ny))
-        x0 = Nx // 2
-        y0 = Nx // 2
+        res = np.zeros((3 * Nx, 3 * Ny))
+        x0 = Nx // 3
+        y0 = Nx // 3
         for f in frames:
             # map of this frame summed over all energy intervals
             dx, dy = shifts[self.__fr_idx[f]]

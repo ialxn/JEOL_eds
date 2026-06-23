@@ -99,6 +99,9 @@ def rebin(a, bs, func=np.sum):
         + When used with maps or images, please note that the calibration
           (dc.nm_per_pixels) will be too small by the corresponding rebin
           factor.
+        + The result is returned with the minimum dtype to accommodate the
+          result. If np.sum() is used this will be typically ints while
+          np.mean() will result in floats.
 
     Examples:
     ---------
@@ -106,14 +109,22 @@ def rebin(a, bs, func=np.sum):
     >>> import JEOL_eds.utils as JU
 
     >>> a = np.arange(36).reshape(6, 6)
+    >>> a.dtype
+    dtype('int64')
+
     >>> rebinned = JU.rebin(a, (2, 3))
     >>> rebinned
     array([[ 24,  42],
            [ 96, 114],
-           [168, 186]])
+           [168, 186]], dtype=uint8)
 
     >>> rebinned.sum() == a.sum()
     np.True_
+
+    >>> rebinned = JU.rebin(a, (3, 3), func=np.mean)
+    >>> rebinned
+    array([[ 7., 10.],
+           [25., 28.]], dtype=float32)
 
     >>> a.mean() == (JU.rebin(a, (3, 3), func=np.mean).mean())
     np.True_
@@ -123,9 +134,18 @@ def rebin(a, bs, func=np.sum):
     >>> a.shape
     (3, 4, 2)
 
-    >>> rebinned = rebin(a, (2, 1))
+    >>> rebinned = JU.rebin(a, (2, 1))
     >>> rebinned.shape
     (3, 2, 2)
+    >>> rebinned
+    array([[[ 2,  4],
+            [10, 12]],
+    <BLANKLINE>
+           [[18, 20],
+            [26, 28]],
+    <BLANKLINE>
+           [[34, 36],
+            [42, 44]]], dtype=uint8)
 
     >>> a[0, 2:4, 0].sum() == rebinned[0, 1, 0]
     np.True_
@@ -145,11 +165,29 @@ def rebin(a, bs, func=np.sum):
         r = func(a.reshape(a.shape[0] // bs[0], bs[0],
                            a.shape[1] // bs[1], bs[1]),
                  axis=(1, 3))
-        return r.reshape(N, r.shape[0] // N, r.shape[1])
+        r = r.reshape(N, r.shape[0] // N, r.shape[1])
+    else:
+        r = func(a.reshape(a.shape[0] // bs[0], bs[0],
+                           a.shape[1] // bs[1], bs[1]),
+                 axis=(1, 3))
+    # Convert to minimum dtype that can accommodate data
+    r_max = r.max()
 
-    return func(a.reshape(a.shape[0] // bs[0], bs[0],
-                          a.shape[1] // bs[1], bs[1]),
-                axis=(1, 3))
+    # Float types resulting from np.mean()
+    if r.dtype in ('float32', 'float64'):
+        if r_max <= np.finfo('float32').max:
+            return r.astype('float32')
+        return r
+    # Int types
+    if r.min() >= 0:    # test unsiged dtypes
+        for dtype in ('uint8', 'uint16', 'uint32', 'uint64'):
+            # convert to smallest dtype
+            if r_max <= np.iinfo(dtype).max:
+                return r.astype(dtype, copy=False)
+    else:   # test signed dtype
+        for dtype in ('int8', 'int16', 'int32', 'int64'):
+            if r_max <= np.iinfo(dtype).max:
+                return r.astype(dtype, copy=False)
 
 
 def __plot_line(x, y,

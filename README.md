@@ -374,3 +374,7 @@ False
 
 The position in the '.img' file where **spot**, **area** ('.eds.') data were acquired is still unknown (they must be present in the data sets but I have not yet been able to extract them).
 
+## Magnification calibration
+
+Note that the calibration constant stored in e.g. `JEOL_pts.nm_per_pixel` refers to to the **nominal** magnification dialed in at the instrument and **not** to the calibrated magnification that might substantially differ.
+
