@@ -985,8 +985,8 @@ class JEOL_pts:
         # Allocate array for result
         Nx, Ny = shape
         res = np.zeros((3 * Nx, 3 * Ny))
-        x0 = Nx // 3
-        y0 = Nx // 3
+        x0 = Nx
+        y0 = Nx
         for f in frames:
             # map of this frame summed over all energy intervals
             dx, dy = shifts[self.__fr_idx[f]]
