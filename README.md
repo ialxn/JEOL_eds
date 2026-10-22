@@ -61,9 +61,9 @@ Use `numba` to read '.pts' data (`JEOL_pts()` and `JEOL_DigiLine()`). This resul
 >>> m = dc.map(frames=[11])
 ```
 
-- A convenience function `JEOL_pts.frame()` is provide for easy access to the frames:
+- A convenience function `JEOL_pts.data_frame()` is provide for easy access to the data frames:
 ```python
->>> f = dc.frame(11)
+>>> f = dc.data_frame(11)
 ```
 
 - Data (EDX and drift images) can be rebinned on-the-fly while they are loaded. <br>

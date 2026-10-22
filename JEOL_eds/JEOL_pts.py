@@ -153,7 +153,7 @@ class JEOL_pts:
     >>> drift_images = [dc.drift_images[i] for i in dc.frame_list]
 
     Frames are addressed by their original ID in the data cube
-    >>> dc.frame(1).sum() - dc.frame(16).sum()
+    >>> dc.data_frame(1).sum() - dc.data_frame(16).sum()
     np.uint64(141)
 
     Useful attributes:
@@ -591,18 +591,18 @@ class JEOL_pts:
                 im = np.append(im, np.full((N_addl), 0, dtype='uint16'))
                 return rebin(im.reshape(image_shape), bs)
 
-    def frame(self, index):
-        """Returns frame with index from data cube
+    def data_frame(self, index):
+        """Returns data frame corresponding to index from data cube
 
         Parameter
         ---------
             index : Int
-                Index of frame to be returned.
+                Index of data frame to be returned.
 
         Returns
         -------
-            frame : Ndarray
-                Frame with index None if frame was not loaded.
+            data_frame : Ndarray
+                Data frame corresponding to index or None if frame was not loaded.
 
         Notes
         -----
@@ -617,13 +617,13 @@ class JEOL_pts:
         >>> dc = JEOL_pts("data/64.pts",
         ...                     split_frames=True, frame_list=[10, 11, 12])
 
-        Obtain index of frame 11 in data cube
-        >>> f = dc.frame(11)
+        Obtain frame 11 in data cube
+        >>> f = dc.data_frame(11)
         >>> f.sum()
         np.uint64(26163)
 
         Frames not avaliable return None
-        >>> dc.frame(1) is None
+        >>> dc.data_frame(1) is None
         True
 
         Without `split_frames=True` the data cube contains just the sum
@@ -631,7 +631,7 @@ class JEOL_pts:
 
         >>> dc = JEOL_pts("data/64.pts")
 
-        >>> dc.frame(0).sum() == dc.dcube[0].sum()
+        >>> dc.data_frame(0).sum() == dc.dcube[0].sum()
         np.True_
         """
         try:
@@ -965,7 +965,7 @@ class JEOL_pts:
             # Only sum frames specified
             m = np.zeros(shape)
             for f in frames:
-                m += self.frame(f)[:, :, interval[0]:interval[1]].sum(axis=-1)
+                m += self.data_frame(f)[:, :, interval[0]:interval[1]].sum(axis=-1)
             return m
 
         # Alignment is required
@@ -989,7 +989,7 @@ class JEOL_pts:
             # map of this frame summed over all energy intervals
             dx, dy = shifts[self.__fr_idx[f]]
             res[x0 + dx:x0 + dx + Nx, y0 + dy:y0 + dy + Ny] += \
-                self.frame(f)[:, :, interval[0]:interval[1]].sum(axis=-1)
+                self.data_frame(f)[:, :, interval[0]:interval[1]].sum(axis=-1)
 
         return res[x0:x0 + Nx, y0:y0 + Ny]
 
@@ -1029,7 +1029,7 @@ class JEOL_pts:
         for f in frames:
             # We have to mask the image at each energy
             for j in range(self.dcube.shape[3]):
-                spectrum[j] += (mask * self.frame(f)[:, :, j]).sum()
+                spectrum[j] += (mask * self.data_frame(f)[:, :, j]).sum()
 
         return spectrum
 
@@ -1154,7 +1154,7 @@ class JEOL_pts:
         # only sum specified frames
         s = np.zeros(self.dcube.shape[3], dtype=self.dcube.dtype)
         for f in frames:
-            s += self.frame(f)[ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
+            s += self.data_frame(f)[ROI[0]:ROI[1] + 1, ROI[2]:ROI[3] + 1, :].sum(axis=(0, 1))
         return _correct_spectrum(self.parameters, s)
 
     def time_series(self, interval=None, energy=False, frames=None):
@@ -1221,7 +1221,7 @@ class JEOL_pts:
         else:
             ts = np.full((self.dcube.shape[0],), np.nan)
             for f in frames:
-                ts[self.__fr_idx[f]] = self.frame(f)[:, :, interval[0]:interval[1]].sum(axis=(0, 1, 2))
+                ts[self.__fr_idx[f]] = self.data_frame(f)[:, :, interval[0]:interval[1]].sum(axis=(0, 1, 2))
         return ts
 
     def make_movie(self, fname=None, only_drift=False, **kws):
