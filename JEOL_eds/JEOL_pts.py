@@ -711,14 +711,11 @@ class JEOL_pts:
                     print(f'      {mx}, {my}')
         return h, extent
 
-    def shifts(self, frames=None, align_src="data", filtered=False, verbose=False):
+    def shifts(self, align_src="data", filtered=False, verbose=False):
         """Calcultes frame shift by cross correlation of images (total intensity).
 
         Parameters
         ----------
-        frames : Iterable
-            Frame numbers for which shifts are calculated. First frame given is
-            used a reference.
         align_src : Str
             "data" : Calculate shifts based on the cross-correlation of the
                      total EDX counts. Default.
@@ -757,30 +754,21 @@ class JEOL_pts:
         >>> sh[-1]
         (0, -1)
 
-        Calculate shifts for selected frames (odd frames) only. In this case
-        farme 1, again the first frame given is used as reference.
-        >>> sh = dc.shifts(frames=range(1, dc.dcube.shape[0], 2))
-        >>> sh[-1]
-        (-1, -1)
-
-        Calculate shifts of even frames between 10 and 40 (inclusive) based
-        on the drift images and using frame 4 a reference.
-        >>> frames = [4] + list(range(10, 41, 2))
-        >>> sh = dc.shifts(align_src="drift_images", frames=frames)
-
-        Print non-zero shifts.
+        Print number of non-zero shifts.
         >>> print([x for x in sh if x != (0, 0)])
-        [(-1, 0), (-1, 0), (-1, -1), (-1, 0), (-1, 0), (0, -1), (-1, 0), (-1, 0), (0, -1)]
+        34
         """
-        if self.dcube is None or self.dcube.shape[0] == 1:
-            # only a single frame present
-            return []
+        assert align_src in ("drift_images", "data")
 
-        if align_src == "drift_images" and self.drift_images is None:
+        if align_src == "data":
+            if self.dcube is None or self.dcube.shape[0] == 1:
+                # not enough data to perform drift correction
+                return []
+        else:
             raise ValueError("Data does not contain drift images")
 
-        if frames is None:
-            frames = list(self.__fr_idx.keys())
+        # Set up list with data frame indices
+        frames = list(self.__fr_idx.keys())
 
         # Always use first frame given as reference
         if align_src == "data":
