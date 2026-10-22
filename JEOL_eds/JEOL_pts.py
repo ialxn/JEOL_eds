@@ -307,6 +307,7 @@ class JEOL_pts:
                                               E_cutoff=E_cutoff,
                                               rebin=rebin)
             self.__mk_idx()
+            self.__aligned = False
 
         elif os.path.splitext(fname)[1] == '.npz':
             self.parameters = None
@@ -819,6 +820,92 @@ class JEOL_pts:
             shifts[self.__fr_idx[f]] = (dx - self.dcube.shape[1] + 1,
                                         dy - self.dcube.shape[1] + 1)
         return shifts
+
+    def correct_drift(self, frames=None, align_src="data", apply_filter=True):
+        """Realignes drift images and data frames to correct for sample movement
+
+        Parameters
+        ----------
+        frames : Iterable (tuple, list, array, range object)
+            Frame numbers included. If split_frames was used whe data was loaded
+            and frames is not specified all frames loaded are included.
+        align_src : Str
+            "data" : Calculate shifts based on the cross-correlation of the
+                     total EDX counts. Default.
+            "drift_images" : Calculate shifts based on the cross-correlation
+                             of the drift images.
+        apply_filter : Bool
+            If True use  Wiener filtered frames in cross correlation
+
+        Notes
+        -----
+        + This function DOES modify the data (self.dcube and self.drift_images).
+          They are replaced with the shifted data.
+        + The first frame give in frames are used as reference to calculate
+          the shifts.
+
+        Returns
+        -------
+        None
+
+        Examples
+        --------
+        >>> from JEOL_eds import JEOL_pts
+
+        >>> dc = JEOL_pts("data/128.pts", read_drift="yes", split_frames=True)
+
+        Store some original data and images (copies , not references)
+        >>> d0 = dc.data_frame(0).copy()
+        >>> d5 = dc.data_frame(5).copy()
+        >>> i0 = dc.drift_images[0].copy()
+        >>> i5 = dc.drift_images[5].copy()
+
+        Get the shifts
+        >>> sh = dc.shifts()
+        >>> sh[5]
+        (1, 0)
+
+        Correct for sample drift
+        >>> dc.correct_drift()
+
+        First frame was used as reference and should not have changed
+        >>> np.array_equal(d0, dc.data_frame(0))
+        True
+
+        >>> np.array_equal(i0, dc.drift_images[0])
+        True
+
+        Frame 5 is shifted. Data and drift image has changed
+        >>> np.array_equal(d5, dc.data_frame(5))
+        False
+
+        >>> np.array_equal(i5, dc.drift_images[0]
+        False
+        """
+        if frames is None:
+            frames = list(self.__fr_idx.keys())
+
+        shifts = self.shifts(filtered=apply_filter, align_src=align_src)
+
+        Nx, Ny, NN = self.dcube.shape[1:]
+        x0 = Nx
+        y0 = Nx
+        for f in frames:
+            # map of this frame summed over all energy intervals
+            dx, dy = shifts[self.__fr_idx[f]]
+            if self.dcube is not None:
+                # Correct data frame
+                tmp = np.zeros((3 * Nx, 3 * Ny, NN), dtype=self.dcube.dtype)
+                tmp[x0 + dx:x0 + dx + Nx, y0 + dy:y0 + dy + Ny, :] = self.data_frame(f)
+                self.dcube[self.__fr_idx[f]] = tmp[x0:x0 + Nx, y0:y0 + Ny, :]
+                self.__aligned = True
+
+            if self.drift_images is not None:
+                # Correct drift image
+                tmp = np.zeros((3 * Nx, 3 * Ny), dtype=self.drift_images.dtype)
+                tmp[x0 + dx:x0 + dx + Nx, y0 + dy:y0 + dy + Ny] = self.drift_images[self.__fr_idx[f]]
+                self.drift_images[self.__fr_idx[f]] = tmp[x0:x0 + Nx, y0:y0 + Ny]
+                self.__aligned = True
 
     def map(self, interval=None, energy=False, frames=None,
             align='no', align_src="data",
