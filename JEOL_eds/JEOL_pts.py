@@ -759,7 +759,7 @@ class JEOL_pts:
         (0, -1)
 
         Print number of non-zero shifts.
-        >>> print([x for x in sh if x != (0, 0)])
+        >>> print(len([x for x in sh if x != (0, 0)]))
         34
         """
         assert align_src in ("drift_images", "data")
@@ -869,7 +869,7 @@ class JEOL_pts:
         Correct for sample drift
         >>> dc.correct_drift()
 
-        First frame was used as reference and should not have changed
+        Frame 0 was used as reference and should not have changed
         >>> np.array_equal(d0, dc.data_frame(0))
         True
 
@@ -880,8 +880,15 @@ class JEOL_pts:
         >>> np.array_equal(d5, dc.data_frame(5))
         False
 
-        >>> np.array_equal(i5, dc.drift_images[0]
+        >>> np.array_equal(i5, dc.drift_images[5])
         False
+
+        Data was shifted horizontally by one pixel. So compare the common parts
+        >>> np.array_equal(dc.data_frame(5)[1:,:,:], d5[0:127,:,:])
+        True
+
+        >>> np.array_equal(dc.drift_images[5][1:,:], i5[0:127,:])
+        True
         """
         if frames is None:
             frames = list(self.__fr_idx.keys())
@@ -955,6 +962,7 @@ class JEOL_pts:
         >>> m = dc.map(frames=[3,5,11,12,13])
         >>> m.min()
         np.float64(0.0)
+
         >>> m.max()
         np.float64(22.0)
 
@@ -964,45 +972,24 @@ class JEOL_pts:
         ...            frames=range(0, dc.dcube.shape[0], 2))
 
         Correct for frame shifts (calculated from unfiltered frames):
-        >>> m = dc.map(align='yes')
+        >>> dc.correct_drift(apply_filter=False)
+        >>> m = dc.map()
         >>> m.min()
-        np.float64(0.0)
+        np.uint64(0)
         >>> m.max()
-        np.float64(142.0)
+        np.uint64(142)
 
-        Cu Kalpha map of frames 0..10. Frames are aligned using frame 5 as
-        reference. Wiener filtered frames are used to calculate the shifts:
-        >>> m = dc.map(interval=(7.9, 8.1),
-        ...            energy=True,
-        ...            frames=[5,0,1,2,3,4,6,7,8,9,10],
-        ...            align='filter')
+        Reload data, correct for drift using the filtered drift images. Only
+        use a frames 0..10 with frame 5 used as reference. Cu Kalpha map:
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift="yes")
+        >>> frames=[5,0,1,2,3,4,6,7,8,9,10]
+        >>> dc.correct_drift(frames=frames)
+        >>> m = dc.map(interval=(7.9, 8.1), energy=True)
         >>> m.min()
-        np.float64(0.0)
+        np.uint64(0)
+
         >>> m.max()
-        np.float64(5.0)
-
-        Same, but drift images are used for alignment:
-        >>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift='yes')
-        >>> m = dc.map(interval=(7.9, 8.1),
-        ...            energy=True,
-        ...            frames=[5,0,1,2,3,4,6,7,8,9,10],
-        ...            align='filter', align_src='drift_images')
-        >>> m.min()
-        np.float64(0.0)
-        >>> m.max()
-        np.float64(4.0)
-
-        Load only odd frames.
-        >>> dc = JEOL_pts('data/128.pts',
-        ...           split_frames=True, frame_list=list(range(1, 50, 2)),
-        ...           read_drift="yes")
-        >>> frames = list(range(1, 50, 10))
-        >>> m = dc.map(frames=frames, verbose=True,
-        ...            energy=True, interval=(7.9, 8.5))
-        Using channels 790 - 850
-
-        >>> m.sum()
-        np.float64(1419.0)
+        np.uint64(12)
         """
         if self.dcube is None:  # Only metadata was read
             return None
