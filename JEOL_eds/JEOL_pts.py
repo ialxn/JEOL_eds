@@ -1150,6 +1150,9 @@ class JEOL_pts:
         if self.dcube is None:  # Only metadata was read
             return None
 
+        if not self.__aligned:
+            warn('Data has not been corrected for drift.')
+
         if not ROI:
             ROI = (0, self.dcube.shape[1] - 1, 0, self.dcube.shape[2] - 1)
 
