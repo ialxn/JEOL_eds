@@ -604,6 +604,12 @@ class JEOL_pts:
             frame : Ndarray
                 Frame with index None if frame was not loaded.
 
+        Notes
+        -----
+        No special access function is needed for individual drift images. They
+        are all read en bloc even if only selected data frames are read by
+        specifying a frame_list.
+
         Examples
         --------
 

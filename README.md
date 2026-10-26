@@ -54,7 +54,10 @@ Use `numba` to read '.pts' data (`JEOL_pts()` and `JEOL_DigiLine()`). This resul
 
 - The parameter `frames=[]` lists the indices of a sub set of frames to be used. Since version 2 the indices refer to the original indices and not anymore to  their index in the data cube. Now you refer to frame 11 (available as `dc.dcube[1]`)<br>
 ```python
->>> dc = JEOL_pts('data/128.pts', split_frames=True, frames=[10, 11, 12])
+>>> dc = JEOL_pts('data/128.pts', split_frames=True, frame_list=[10, 11, 12])
+>>> dc.dcube.shape
+(3, 128, 128, 4000)
+
 >>> m = dc.map(frames=[11])
 ```
 
@@ -68,7 +71,7 @@ Use `numba` to read '.pts' data (`JEOL_pts()` and `JEOL_DigiLine()`). This resul
 >>> dc = JEOL_pts('data/128.pts', split_frames=True, rebin=(4, 4))
 ```
 
-- The drift images can be loaded separately. The `read_drift=` parameter is now a string (`'yes'|'no'|'only'`) and not a boolean anymore.
+- The drift images can be loaded separately. The `read_drift=` parameter is now a string (`'yes'|'no'|'only'`) and not a boolean anymore. Note that drift images are read *en bloc* requiring that all drift images are read. Therefore, the original frame indices are used to access an image.
 
 - `JEOL_pts.make_movie(only_drift=True)` can now assemble a movie of the drift images only (independent of the presence of EDX data).
 
