@@ -711,7 +711,7 @@ class JEOL_pts:
                     print(f'      {mx}, {my}')
         return h, extent
 
-    def shifts(self, align_src="data", filtered=False, verbose=False):
+    def shifts(self, align_src="data", filtered=False, reference=0, verbose=False):
         """Calcultes frame shift by cross correlation of images (total intensity).
 
         Parameters
@@ -723,6 +723,8 @@ class JEOL_pts:
                              of the drift images.
         filtered : Bool
             If True, use Wiener filtered data.
+        reference : Int
+            Index of reference frame to be used.
         verbose : Bool
             Provide additional info if set to True.
 
@@ -764,17 +766,20 @@ class JEOL_pts:
             if self.dcube is None or self.dcube.shape[0] == 1:
                 # not enough data to perform drift correction
                 return []
+            if self.frame_list and reference not in self.frame_list:
+                raise ValueError(f"Data does not contain reference frame (index {reference})")
         else:
-            raise ValueError("Data does not contain drift images")
+            if self.drift_images is None:
+                raise ValueError("Data does not contain drift images")
 
         # Set up list with data frame indices
         frames = list(self.__fr_idx.keys())
 
         # Always use first frame given as reference
         if align_src == "data":
-            ref = self.map(frames=[frames[0]]).astype(float)
+            ref = self.map(frames=[frames[reference]]).astype(float)
         else:       # Align drift images
-            ref = self.drift_images[frames[0]].astype(float)
+            ref = self.drift_images[frames[reference]].astype(float)
         if filtered:
             ref = wiener(ref)
         ref -= ref.mean()
@@ -970,11 +975,10 @@ class JEOL_pts:
 
         # Calculate frame shifts
         if align == 'filter':
-            shifts = self.shifts(frames=frames, filtered=True,
-                                 align_src=align_src, verbose=verbose)
+            shifts = self.shifts(filtered=True, align_src=align_src,
+                                 verbose=verbose)
         if align == 'yes':
-            shifts = self.shifts(frames=frames,
-                                 align_src=align_src, verbose=verbose)
+            shifts = self.shifts(align_src=align_src, verbose=verbose)
 
         # Allocate array for result
         Nx, Ny = shape
