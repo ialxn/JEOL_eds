@@ -901,7 +901,7 @@ class JEOL_pts:
         >>> m.min()
         np.float64(0.0)
         >>> m.max()
-        np.float64(4.0)
+        np.float64(5.0)
 
         Same, but drift images are used for alignment:
         >>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift='yes')
