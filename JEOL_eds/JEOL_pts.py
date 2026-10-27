@@ -779,9 +779,9 @@ class JEOL_pts:
 
         # Always use first frame given as reference
         if align_src == "data":
-            ref = self.map(frames=[frames[reference]]).astype(float)
+            ref = self.map(frames=[self.__fr_idx[reference]]).astype(float)
         else:       # Align drift images
-            ref = self.drift_images[frames[reference]].astype(float)
+            ref = self.drift_images[reference].astype(float)
         if filtered:
             ref = wiener(ref)
         ref -= ref.mean()
@@ -791,9 +791,9 @@ class JEOL_pts:
         if verbose:
             print(f'Aligning based on {align_src} with frame {frames[0]} used a reference')
 
-        for f in frames[1:]:    # skip reference frame
+        for f in frames:
             if align_src == "data":
-                data = self.map(frames=[f]).astype(float)
+                data = self.map(frames=[self.__fr_idx[f]]).astype(float)
             else:       # Align drift images
                 data = self.drift_images[f].astype(float)
             if filtered:
