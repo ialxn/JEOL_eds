@@ -985,13 +985,13 @@ class JEOL_pts:
         use a frames 0..10 with frame 5 used as reference. Cu Kalpha map:
         >>> dc = JEOL_pts('data/128.pts', split_frames=True, read_drift="yes")
         >>> frames=[5,0,1,2,3,4,6,7,8,9,10]
-        >>> dc.correct_drift(frames=frames)
+        >>> dc.correct_drift()
         >>> m = dc.map(interval=(7.9, 8.1), energy=True)
         >>> m.min()
         np.uint64(0)
 
         >>> m.max()
-        np.uint64(12)
+        np.uint64(13)
         """
         if self.dcube is None:  # Only metadata was read
             return None

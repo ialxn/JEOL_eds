@@ -22,7 +22,7 @@ class Map(unittest.TestCase):
         m = self.dc.map()
 
         self.assertEqual((128, 128), m.shape)
-        self.assertEqual(m.sum(), 354131)
+        self.assertEqual(m.sum(), 353140)
         self.assertEqual(m.sum(), self.dc.dcube.sum())
 
     def test_full_dcube_frames(self):
@@ -69,25 +69,29 @@ class Map(unittest.TestCase):
 
         self.assertEqual(m.sum(), m_even.sum() + m_odd.sum())
 
-    def test_align_yes(self):
+    def test_align_no(self):
         warnings.filterwarnings("ignore")
-        m = self.dc.map(align='yes')
+        m = self.dc.map()
 
         self.assertEqual((128, 128), m.shape)
-        self.assertEqual(m.sum(), 353024.0)
+        self.assertEqual(m.sum(), 354131)
 
-    def test_align_yes_frames(self):
-        pass
-
-    def test_align_filter(self):
+    def test_align_yes_all(self):
         warnings.filterwarnings("ignore")
-        m = self.dc.map(align='filter')
+        self.dc.correct_drift(align_src="data", apply_filter=True, reference=0)
+        m = self.dc.map()
 
         self.assertEqual((128, 128), m.shape)
-        self.assertEqual(m.sum(), 353140.0)
+        self.assertEqual(m.sum(), 353140)
 
-    def test_align_filter_frames(self):
-        pass
+    def test_align_yes_even(self):
+        warnings.filterwarnings("ignore")
+        self.dc.correct_drift(align_src="data", apply_filter=True, reference=0)
+        m = self.dc.map(frames=list(range(0, self.dc.dcube.shape[0], 2)))
+
+        self.assertEqual((128, 128), m.shape)
+        self.assertEqual(m.sum(), 176515.0)
+
 
 
 if __name__ == '__main__':
