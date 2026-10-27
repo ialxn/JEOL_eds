@@ -897,7 +897,7 @@ class JEOL_pts:
 
         Nx, Ny, NN = self.dcube.shape[1:]
         x0 = Nx
-        y0 = Nx
+        y0 = Ny
         for f in frames:
             # map of this frame summed over all energy intervals
             dx, dy = shifts[self.__fr_idx[f]]
