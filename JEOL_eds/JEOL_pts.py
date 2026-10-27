@@ -822,14 +822,11 @@ class JEOL_pts:
                                         dy - self.dcube.shape[1] + 1)
         return shifts
 
-    def correct_drift(self, frames=None, align_src="data", apply_filter=True):
+    def correct_drift(self, align_src="data", apply_filter=True, reference=0):
         """Realignes drift images and data frames to correct for sample movement
 
         Parameters
         ----------
-        frames : Iterable (tuple, list, array, range object)
-            Frame numbers included. If split_frames was used whe data was loaded
-            and frames is not specified all frames loaded are included.
         align_src : Str
             "data" : Calculate shifts based on the cross-correlation of the
                      total EDX counts. Default.
@@ -837,6 +834,8 @@ class JEOL_pts:
                              of the drift images.
         apply_filter : Bool
             If True use  Wiener filtered frames in cross correlation
+        reference : Int
+            Index of reference frame to be used.
 
         Notes
         -----
@@ -890,12 +889,15 @@ class JEOL_pts:
         >>> np.array_equal(dc.drift_images[5][1:,:], i5[0:127,:])
         True
         """
-        if frames is None:
+        shifts = self.shifts(filtered=apply_filter, align_src=align_src,
+                             reference=reference)
+
+        Nf, Nx, Ny, NN = self.dcube.shape
+
+        if self.frame_list:
             frames = list(self.__fr_idx.keys())
-
-        shifts = self.shifts(filtered=apply_filter, align_src=align_src)
-
-        Nx, Ny, NN = self.dcube.shape[1:]
+        else:
+            frames = range(Nf)
         x0 = Nx
         y0 = Ny
         for f in frames:
