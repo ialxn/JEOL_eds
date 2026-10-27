@@ -260,6 +260,8 @@ class JEOL_pts:
             Only metadata are read (True) but nothing else. All other keywords
             are ignored.
         """
+        self.__making_movie = False
+        self.__aligned = False
         if os.path.splitext(fname)[1] == '.pts':
             assert isinstance(read_drift, str)
             read_drift = read_drift.lower()
@@ -307,7 +309,6 @@ class JEOL_pts:
                                               E_cutoff=E_cutoff,
                                               rebin=rebin)
             self.__mk_idx()
-            self.__aligned = False
 
         elif os.path.splitext(fname)[1] == '.npz':
             self.parameters = None
@@ -908,7 +909,6 @@ class JEOL_pts:
                 self.__aligned = True
 
     def map(self, interval=None, energy=False, frames=None,
-            align='no', align_src="data",
             verbose=False):
         """Returns map corresponding to an interval in spectrum.
 
@@ -923,15 +923,6 @@ class JEOL_pts:
         frames : Iterable (tuple, list, array, range object)
             Frame numbers included in map. If split_frames is active and frames
             is not specified all frames loaded are included.
-        align : Str
-            'no': Do not align individual frames.
-            'yes': Align frames (use unfiltered frames in cross correlation).
-            'filter': Align frames (use  Wiener filtered frames in cross correlation).
-        align_src : Str
-            "data" : Calculate shifts based on the cross-correlation of the
-                     total EDX counts. Default.
-            "drift_images" : Calculate shifts based on the cross-correlation
-                             of the drift images.
          verbose : Bool
             If True, output some additional info.
 
@@ -1013,12 +1004,6 @@ class JEOL_pts:
         >>> m.sum()
         np.float64(1419.0)
         """
-        # Check for valid keyword arguments
-        align = align.lower()
-        align_src = align_src.lower()
-        assert align in ['yes', 'no', 'filter']
-        assert align_src in ["data", "drift_images"]
-
         if self.dcube is None:  # Only metadata was read
             return None
 
@@ -1041,44 +1026,21 @@ class JEOL_pts:
         if verbose:
             print(f'Using channels {interval[0]} - {interval[1]}')
 
+        if not self.__aligned:
+            if not self.__making_movie:
+                warn('Data has not been corrected for drift.')
+
         if self.dcube.shape[0] == 1:   # only a single frame (0) present
             return self.dcube[0, :, :, interval[0]:interval[1]].sum(axis=-1)
 
-        # split_frame is active but no alignment required
-        shape = self.dcube.shape[1:3]     # image size
-        if align == 'no':
-            if frames is None:
-                return self.dcube[:, :, :, interval[0]:interval[1]].sum(axis=(0, -1))
-            # Only sum frames specified
-            m = np.zeros(shape)
-            for f in frames:
-                m += self.data_frame(f)[:, :, interval[0]:interval[1]].sum(axis=-1)
-            return m
-
-        # Alignment is required
         if frames is None:
-            # Sum all frames
-            frames = list(self.__fr_idx.keys())
+            return self.dcube[:, :, :, interval[0]:interval[1]].sum(axis=(0, -1))
 
-        # Calculate frame shifts
-        if align == 'filter':
-            shifts = self.shifts(filtered=True, align_src=align_src,
-                                 verbose=verbose)
-        if align == 'yes':
-            shifts = self.shifts(align_src=align_src, verbose=verbose)
-
-        # Allocate array for result
-        Nx, Ny = shape
-        res = np.zeros((3 * Nx, 3 * Ny))
-        x0 = Nx
-        y0 = Nx
+        # Only sum frames specified
+        m = np.zeros(self.dcube.shape[1:3])
         for f in frames:
-            # map of this frame summed over all energy intervals
-            dx, dy = shifts[self.__fr_idx[f]]
-            res[x0 + dx:x0 + dx + Nx, y0 + dy:y0 + dy + Ny] += \
-                self.data_frame(f)[:, :, interval[0]:interval[1]].sum(axis=-1)
-
-        return res[x0:x0 + Nx, y0:y0 + Ny]
+            m += self.data_frame(f)[:, :, interval[0]:interval[1]].sum(axis=-1)
+        return m
 
     def __spectrum_cROI(self, ROI, frames):
         """Returns spectrum integrated over a circular ROI
@@ -1348,8 +1310,12 @@ class JEOL_pts:
             # We have not loaded the drift images
             raise ValueError ("No drift images were loaded")
 
+        self.__making_movie = True
         if fname is None:
             fname = os.path.splitext(self.file_name)[0] + '.mp4'
+
+        if self.__aligned:
+            warn("Data has been corrected for drift")
 
         # remove `frames=` keyword from dict as it would interfere later
         try:
@@ -1420,6 +1386,7 @@ class JEOL_pts:
         ani = animation.ArtistAnimation(fig, frames, interval=50, blit=True,
                                         repeat_delay=1000)
         ani.save(fname)
+        self.__making_movie = False
 
     def save_dcube(self, fname=None):
         """Saves (compressed) data cube.
