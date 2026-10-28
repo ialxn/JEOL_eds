@@ -19,6 +19,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 """
+from pathlib import PurePath
 from datetime import datetime, timedelta
 from collections.abc import Iterable
 import numpy as np
@@ -32,7 +33,7 @@ class JEOL_DigiLine:
 
     Parameters
     ----------
-    fname : Str
+    fname : Str or PurePath
         Filename.
 
     Notes
@@ -73,9 +74,14 @@ class JEOL_DigiLine:
     (50, 256, 4000)
     """
     def __init__(self, fname):
-        assert fname.endswith('pts')
-        self.file_name = fname
-        self.parameters, data_offset = self.__parse_header(fname)
+        assert isinstance(fname, (str, PurePath))
+        if isinstance(fname, str):
+            assert fname.endswith('.pts')
+        if isinstance(fname, PurePath):
+            assert fname.suffix == '.pts'
+
+        self.file_name = str(fname)
+        self.parameters, data_offset = self.__parse_header(str(fname))
 
         AimArea = self.parameters['EDS Data'] \
                                  ['AnalyzableMap MeasData']['Meas Cond'] \
