@@ -46,6 +46,15 @@ to upgrade an existing installation.
 
 # Important (API breaking) changes
 
+## Version 2.2
+
+A separate member function `JEOL_pts.correct_drift()` is added to perform the correction for sample movement outside `JEOL_pts.map()`. This allows to extract spectra corresponding to different ROIs from the corrected data. Be aware, that `JEOL_pts.correct_drift()` overwrites the datacube and the drift_images with the shifted data. Therefore, the workflow now is<br>
+```python
+>>> dc.correct_drift()
+>>> m = dc.map()
+>>> s = dc.spectrum(ROI=(50, 60, 25))
+```
+
 ## Version 2.1
 
 Use `numba` to read '.pts' data (`JEOL_pts()` and `JEOL_DigiLine()`). This results in a speed up of about two orders of magnitude!
@@ -61,9 +70,9 @@ Use `numba` to read '.pts' data (`JEOL_pts()` and `JEOL_DigiLine()`). This resul
 >>> m = dc.map(frames=[11])
 ```
 
-- A convenience function `JEOL_pts.frame()` is provide for easy access to the frames:
+- A convenience function `JEOL_pts.data_frame()` is provide for easy access to the data frames:
 ```python
->>> f = dc.frame(11)
+>>> f = dc.data_frame(11)
 ```
 
 - Data (EDX and drift images) can be rebinned on-the-fly while they are loaded. <br>
@@ -380,4 +389,3 @@ The position in the '.img' file where **spot**, **area** ('.eds.') data were acq
 ## Magnification calibration
 
 Note that the calibration constant stored in e.g. `JEOL_pts.nm_per_pixel` refers to to the **nominal** magnification dialed in at the instrument and **not** to the calibrated magnification that might substantially differ.
-
