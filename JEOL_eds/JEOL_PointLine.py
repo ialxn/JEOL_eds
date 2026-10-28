@@ -18,8 +18,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 """
-
 import os
+from pathlib import PurePath
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
@@ -35,7 +35,7 @@ class JEOL_PointLine:
 
     Parameters
     ----------
-    fname : Str
+    fname : Str or PurePath
         Filename.
 
     Examples
@@ -101,7 +101,7 @@ class JEOL_PointLine:
 
         Parameters
         ----------
-        fname : Str
+        fname : Str or PurePath
             Filename.
         """
         def read_string(fp):
@@ -175,7 +175,13 @@ class JEOL_PointLine:
             return Point_nr, [fname.rsplit('\\', 1)[1], xPos, yPos]
 
         # Basic sanity checks
-        assert fname.endswith('.pln')
+        assert isinstance(fname, (str, PurePath))
+        if isinstance(fname, str):
+            assert fname.endswith('.pln')
+        if isinstance(fname, PurePath):
+            assert fname.suffix == '.pln'
+
+        fname = str(fname)
         path, self.file_name = os.path.split(fname)
 
         # Parse ".pln" file

@@ -18,6 +18,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 """
+from pathlib import PurePath
 import os
 import sys
 import pickle
@@ -41,7 +42,7 @@ class JEOL_pts:
 
     Parameters
     ----------
-    fname : Str
+    fname : Str or PurePath
         Filename.
     dtype : Str
         Data type used to store (not read) data cube. Can be any of the dtypes
@@ -228,7 +229,7 @@ class JEOL_pts:
 
         Parameters
         ----------
-        fname : Str
+        fname : Str or PurePath
             Filename.
         dtype : Str
             Data type used to store (not read) data cube. Can be any of the
@@ -260,7 +261,13 @@ class JEOL_pts:
             Only metadata are read (True) but nothing else. All other keywords
             are ignored.
         """
-        if os.path.splitext(fname)[1] == '.pts':
+        assert isinstance(fname, (str, PurePath))
+        if isinstance(fname, str):
+            assert fname.endswith(('.pts', 'npz', 'h5'))
+        if isinstance(fname, PurePath):
+            assert fname.suffix in ('.pts', 'npz', 'h5')
+
+        if PurePath(fname).suffix == '.pts':
             assert isinstance(read_drift, str)
             read_drift = read_drift.lower()
             assert read_drift in ("no", "yes", "only")
@@ -308,11 +315,11 @@ class JEOL_pts:
                                               rebin=rebin)
             self.__mk_idx()
 
-        elif os.path.splitext(fname)[1] == '.npz':
+        elif PurePath(fname).suffix == '.npz':
             self.parameters = None
             self.__load_dcube(fname)
 
-        elif os.path.splitext(fname)[1] == '.h5':
+        elif PurePath(fname).suffix == '.h5':
             self.__load_hdf5(fname)
 
         else:
@@ -1237,7 +1244,7 @@ class JEOL_pts:
 
         Parameters
         ----------
-        fname  : Str (or None)
+        fname  : Str or PUrePath (or None)
             Filename for movie file. If none is supplied the base name of the
             '.pts' file is used.
         only_drift : Bool (False)
@@ -1270,7 +1277,7 @@ class JEOL_pts:
             raise ValueError ("No drift images were loaded")
 
         if fname is None:
-            fname = os.path.splitext(self.file_name)[0] + '.mp4'
+            fname = PurePath(fname).with_suffix('.mp4')
 
         # remove `frames=` keyword from dict as it would interfere later
         try:
@@ -1347,7 +1354,7 @@ class JEOL_pts:
 
         Parameters
         ----------
-        fname : Str (or None)
+        fname : Str or PurePath (or None)
             Filename. If none is supplied the base name of the '.pts' file is used.
 
         Examples
@@ -1379,7 +1386,7 @@ class JEOL_pts:
             return
 
         if fname is None:
-            fname = os.path.splitext(self.file_name)[0] + '.npz'
+            fname = PurePath(fname).with_suffix('.npz')
         np.savez_compressed(fname, self.dcube)
 
     def __load_dcube(self, fname):
@@ -1403,7 +1410,7 @@ class JEOL_pts:
 
         Parameters
         ----------
-        fname : Str
+        fname : Str or PurePath
             File name of '.h5' file (must end in '.h5'). If none is supplied the
             base name of the '.pts' file is used.
 
@@ -1451,7 +1458,7 @@ class JEOL_pts:
             return
 
         if fname is None:
-            fname = os.path.splitext(self.file_name)[0] + '.h5'
+            fname = PurePath(fname).with_suffix('.h5')
 
         with h5py.File(fname, 'w') as hf:
             hf.create_dataset('dcube', data=self.dcube, **kws)
