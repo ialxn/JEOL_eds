@@ -19,7 +19,6 @@ You should have received a copy of the GNU General Public License
 along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 """
 from pathlib import PurePath
-import os
 import sys
 import pickle
 from datetime import datetime, timedelta
@@ -1312,7 +1311,7 @@ class JEOL_pts:
 
         self.__making_movie = True
         if fname is None:
-            fname = PurePath(fname).with_suffix('.mp4')
+            fname = PurePath(self.file_name).with_suffix('.mp4')
 
         if self.__aligned:
             warn("Data has been corrected for drift")
