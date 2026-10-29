@@ -648,7 +648,8 @@ class JEOL_pts:
         except KeyError:
             return None
 
-    def drift_statistics(self, filtered=False, align_src="data", verbose=False):
+    def drift_statistics(self, filtered=False, align_src="data", reference=0,
+                         verbose=False):
         """Returns 2D frequency distribution of frame shifts (x, y).
 
         Parameters
@@ -660,7 +661,9 @@ class JEOL_pts:
                      total EDX counts. Default.
             "drift_images" : Calculate shifts based on the cross-correlation
                              of the drift images.
-      verbose : Bool
+        reference : Int
+            Index of reference frame to be used.
+        verbose : Bool
             Provide additional info if set to True.
 
         Returns
@@ -699,7 +702,8 @@ class JEOL_pts:
         """
         if self.dcube is None or self.dcube.shape[0] == 1:
             return None, None
-        sh = self.shifts(filtered=filtered, align_src=align_src, verbose=verbose)
+        sh = self.shifts(filtered=filtered, align_src=align_src,
+                         reference=reference, verbose=verbose)
         amax = np.abs(np.asarray(sh)).max()
         if amax == 0:   # all shifts are zero, prevent SyntaxError in np.histogram2d()
             amax = 1
