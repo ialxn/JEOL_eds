@@ -1048,6 +1048,8 @@ def get_profile(image, line, **kws):
     -------
     profile : Ndarray
         Profile, length unit is pixels (as in image).
+    x : Ndarray
+        x axis of profile, length unit is pixels (as in image).
 
     Examples
     --------
@@ -1059,15 +1061,18 @@ def get_profile(image, line, **kws):
     >>> data = np.ones((10, 10))
 
     Horizontal line: 10 entries
-    >>> JU.get_profile(data, (0, 0, 0, 9))
+    >>> x, p = JU.get_profile(data, (0, 0, 0, 9))
+    >>> p
     array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1.])
 
     Diagonal line: 14 entries
-    >>> JU.get_profile(data, (0, 0, 9, 9))
+    >>> x, p = JU.get_profile(data, (0, 0, 9, 9))
+    >>> p
     array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.])
 
     Increase line width (you also need to supply a reduce_func)
-    >>> JU.get_profile(data, (0, 0, 9, 9), linewidth=3, reduce_func=np.sum)
+    >>> x, p = JU.get_profile(data, (0, 0, 9, 9), linewidth=3, reduce_func=np.sum)
+    >>> p
     array([3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3.])
 
     Load data:
@@ -1084,11 +1089,9 @@ def get_profile(image, line, **kws):
     >>> JU.show_line(C_map, line, linewidth=width, cmap='inferno')
 
     Calculate profile along the line (width equals 10 pixels) and plot it:
-    >>> profile = JU.get_profile(C_map, line, linewidth=width)
+    >>> x, profile = JU.get_profile(C_map, line, linewidth=width)
 
-    >>> import matplotlib.pyplot as plt
-
-    >>> ax = plt.plot(profile)
+    >>> JU.plot_profile(x, profile)
     """
     if(
             (line[0] >= image.shape[0])
@@ -1105,7 +1108,9 @@ def get_profile(image, line, **kws):
     profile = profile_line(image,
                            line[0:2], line[2:],
                            **kws)
-    return profile
+    x = np.asarray(range(profile.shape[0])
+                   )
+    return x, profile
 
 
 def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
