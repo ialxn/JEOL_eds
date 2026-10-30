@@ -190,7 +190,7 @@ def rebin(a, bs, func=np.sum):
                 return r.astype(dtype, copy=False)
 
 
-def __plot_line(x, y,
+def __plot_line(x, y, legends=None,
                 outfile=None,
                 x_label=None, y_label=None,
                 M_ticks=None,
@@ -204,6 +204,8 @@ def __plot_line(x, y,
         x data
     y : Ndarray or List of Ndarrays
         y data
+    legends : Str or List of Str (or None)
+        Labels of lines to be added to graph as legend. None indicates no legend added.
     x_label : Str
         Label for x-axis
     y_label : Str
@@ -227,17 +229,26 @@ def __plot_line(x, y,
         assert ext in supported
 
     assert type(x) == type(y)
+
     if isinstance(x, list):
         assert len(x) == len(y)
+        if legends:
+            assert isinstance(legends, list)
+            assert len(legends) == len(y)
+        else:
+            legends = [""] * len(y)
 
-        for X, Y in zip(x, y):
-            plt.plot(X, Y, **kws)
+        for X, Y, legend in zip(x, y, legends):
+            plt.plot(X, Y, label=legend, **kws)
     else:
-        plt.plot(x, y, **kws)
+        if not legends:
+            legends = ""
+        plt.plot(x, y, label=legends, **kws)
 
     ax = plt.gca()
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
+    ax.legend()
 
     if log_y:
         ax.set_yscale('log')
@@ -734,7 +745,7 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
     i_low = int(np.round(E_low / F))
     i_high = int(np.round(E_high / F))
 
-    __plot_line(x, s[i_low:i_high],
+    __plot_line(x, s[i_low:i_high], legends=None,
                 x_label='E  [keV]', y_label='counts  [-]',
                 M_ticks=M_ticks, log_y=log_y, outfile=outfile,
                 **kws)
@@ -830,7 +841,7 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
     ...                 outfile='carbon_Ka.pdf',
     ...                 color='Red', linestyle='-.', linewidth=1.0)
     """
-    __plot_line(range(ts.shape[0]), ts,
+    __plot_line(range(ts.shape[0]), ts, legends=None,
                 x_label='Frame Index  [-]', y_label='counts  [-]',
                 M_ticks=M_ticks, outfile=outfile,
                 **kws)
@@ -916,7 +927,7 @@ def plot_profile(x, y, units='px', M_ticks=None, outfile=None, **kws):
     ...                 color='Red', linestyle='-.', linewidth=1.0)
     """
     x_label = f'Length  [{units}]'
-    __plot_line(x, y,
+    __plot_line(x, y, legends=None,
                 x_label=x_label, y_label='counts  [-]',
                 M_ticks=M_ticks, outfile=outfile,
                 **kws)
