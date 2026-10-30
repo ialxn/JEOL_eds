@@ -200,9 +200,9 @@ def __plot_line(x, y,
 
     Parameters
     ----------
-    x : Ndarray
+    x : Ndarray or List of Ndarrays
         x data
-    y : Ndarray
+    y : Ndarray or List of Ndarrays
         y data
     x_label : Str
         Label for x-axis
@@ -226,7 +226,15 @@ def __plot_line(x, y,
         supported = plt.figure().canvas.get_supported_filetypes()
         assert ext in supported
 
-    plt.plot(x, y, **kws)
+    assert type(x) == type(y)
+    if isinstance(x, list):
+        assert len(x) == len(y)
+
+        for X, Y in zip(x, y):
+            plt.plot(X, Y, **kws)
+    else:
+        plt.plot(x, y, **kws)
+
     ax = plt.gca()
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
