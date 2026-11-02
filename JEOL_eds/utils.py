@@ -888,15 +888,17 @@ def export_tseries(ts, outfile):
     np.savetxt(outfile, data, header=header, fmt=fmt)
 
 
-def plot_profile(x, y, units='px', M_ticks=None, outfile=None, **kws):
+def plot_profile(x, y, legends=None, units='px', M_ticks=None, outfile=None, **kws):
     """Plots a nice profile.
 
     Parameters
     ----------
-    x : Ndarray.
+    x : Ndarray or List of Ndarrays.
         x values.
-    y : Ndarray
+    y : Ndarray or List of Ndarrays
         y values.
+    legends : Str or List of Str (or None)
+        Labels of lines to be added to graph as legend. None indicates no legend added.
     units : Str
         Units (length) of x data. The string supplied is only used to generate
         the axis label.
@@ -921,13 +923,16 @@ def plot_profile(x, y, units='px', M_ticks=None, outfile=None, **kws):
     >>> x, p_O = dl.profile(interval=(0.45, 0.6),
     ...                     energy=True, xCalib=True)
 
-    >>> JU.plot_profile(x, p_O,
+    >>> x, p_C = dl.profile(interval=(0.24, 0.33),
+    ...                     energy=True, xCalib=True)
+
+    >>> JU.plot_profile([x, x], [p_C, p_O], legends=["C", "O"],
     ...                 units='nm',
     ...                 M_ticks=(9, 4),
-    ...                 color='Red', linestyle='-.', linewidth=1.0)
+    ...                 linewidth=1.0)
     """
     x_label = f'Length  [{units}]'
-    __plot_line(x, y, legends=None,
+    __plot_line(x, y, legends=legends,
                 x_label=x_label, y_label='counts  [-]',
                 M_ticks=M_ticks, outfile=outfile,
                 **kws)
