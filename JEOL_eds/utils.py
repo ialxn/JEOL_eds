@@ -873,11 +873,11 @@ def plot_tseries(ts, legends=None, M_ticks=None, outfile=None, **kws):
     ...                 color='Red', linestyle='-.', linewidth=1.0)
     """
     if isinstance(ts, np.ndarray):
-        x = range(ts.shape[0])
+        x = np.arange(ts.shape[0])
     else:
         x = []
         for _ in range(len(ts)):
-            x.append(range(ts[0].shape[0]))
+            x.append(np.arange(ts[0].shape[0]))
 
     __plot_line(x, ts, legends=legends,
                 x_label='Frame Index  [-]', y_label='counts  [-]',
@@ -1170,8 +1170,7 @@ def get_profile(image, line, **kws):
     profile = profile_line(image,
                            line[0:2], line[2:],
                            **kws)
-    x = np.asarray(range(profile.shape[0])
-                   )
+    x = np.arange(profile.shape[0])
     return x, profile
 
 
