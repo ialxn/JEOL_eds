@@ -29,7 +29,6 @@ files.append('JEOL_eds/utils.py')
 
 # Output files to be deleted at end of test
 output = ['128.h5',
-          'data/128.h5',
           'data/128.mp4',
           'data/128.npz',
           'dummy.mp4',
@@ -54,7 +53,6 @@ for file in files:
     print()
 
 # Remove output
-
 print('*' * 80)
 print('*', ' ' * 76, '*')
 N = 76 - 17
