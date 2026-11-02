@@ -829,13 +829,15 @@ def export_spectrum(s, outfile, E_range=None):
     np.savetxt(outfile, data, header=header, fmt=fmt)
 
 
-def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
+def plot_tseries(ts, legends=None, M_ticks=None, outfile=None, **kws):
     """Plots a nice time series.
 
     Parameters
     ----------
-    ts : Ndarray.
-        Time series (integrated x-ray intensities.
+    ts : Ndarray or List of Ndarrays.
+        Time series (integrated x-ray intensities).
+    legends : Str or List of Str (or None)
+        Labels of lines to be added to graph as legend. None indicates no legend added.
     M_ticks : Tuple (mx, my).
         Number of minor ticks used for x and y axis. If you want to plot minor
         ticks for a single axis, use None for other axis.
@@ -853,24 +855,31 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
     Load data:
     >>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
-    Get integrated x-ray intensity for carbon Ka peak but exclude frames 11
+    Get integrated x-ray intensity for carbon Ka peak.
+    >>> ts_C = dc.time_series(interval=(0.22, 0.34), energy=True)
+
+    Get integrated x-ray intensity for oxygen Ka peak but exclude frames 11
     and 12):
     >>> frames = list(range(dc.dcube.shape[0]))
-
     >>> frames.remove(11)
-
     >>> frames.remove(12)
-
-    >>> ts = dc.time_series(interval=(0.22, 0.34), energy=True, frames=frames)
+    >>> ts_O = dc.time_series(interval=(0.45, 0.6), energy=True, frames=frames)
 
     Plot and save time series with some keywords passed to
     `matplotlib.pyplot.plot()`.
-    >>> JU.plot_tseries(ts,
+    >>> JU.plot_tseries([ts_C, ts_O], legends=["C", "O"],
     ...                 M_ticks=(9, 4),
     ...                 outfile='carbon_Ka.pdf',
     ...                 color='Red', linestyle='-.', linewidth=1.0)
     """
-    __plot_line(range(ts.shape[0]), ts, legends=None,
+    if isinstance(ts, np.ndarray):
+        x = range(ts.shape[0])
+    else:
+        x = []
+        for _ in range(len(ts)):
+            x.append(range(ts[0].shape[0]))
+
+    __plot_line(x, ts, legends=legends,
                 x_label='Frame Index  [-]', y_label='counts  [-]',
                 M_ticks=M_ticks, outfile=outfile,
                 **kws)
