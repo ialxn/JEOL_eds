@@ -688,15 +688,17 @@ def plot_map(m, color,
         plt.savefig(outfile)
 
 
-def plot_spectrum(s, E_range=None, M_ticks=None,
+def plot_spectrum(s, legends=None, E_range=None, M_ticks=None,
                   log_y=False, outfile=None, **kws):
     """Plots a nice spectrum.
 
     Parameters
     ----------
-    s : Ndarray
+    s : Ndarray or list of Ndarrays.
         Spectral data which is expected to cover the energy range
         0.0 < E <= E_max at an resolution of 0.01 keV per data point.
+    legends : Str or List of Str (or None)
+        Labels of lines to be added to graph as legend. None indicates no legend added.
     E_range : Tuple (E_low, E_high).
         Energy range to be plotted.
     M_ticks : Tuple (mx, my)
@@ -717,27 +719,41 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
     >>> import JEOL_eds.utils as JU
 
     Load data.
-    >>> dc = JEOL_pts('data/128.pts', only_metadata=True)
+    >>> dc = JEOL_pts('data/128.pts')
 
-    Plot full reference spectrum with logarithmic y-axis:
+    Extract reference spectrum, spectrum summed over all data, and calculate
+    difference of the two (Should be all zeros, but small differences below 1keV
+    where interpolation was performed.)
+    >>> s1 = dc.ref_spectrum
+    >>> s2 = dc.spectrum()
+    >>> s3 = s2 - s1
+
+    Plot the three spectra:
     >>> JU.plot_spectrum(dc.ref_spectrum, log_y=True)
 
     Plot and save reference spectrum between 1.0 and 2.5 keV. Plot one minor
     tick on x-axis and four on y-axis. Pass some keywords to
     `matplotlib.pyplot.plot()`:
-    >>> JU.plot_spectrum(dc.ref_spectrum,
-    ...                  E_range=(1, 2.5),
+    >>> JU.plot_spectrum([s1, s2, s3],
+    ...                  legends=["ref", "sum", "diff"],
+    ...                  E_range=(0, 2),
     ...                  M_ticks=(1, 4),
     ...                  outfile='ref_spectrum.pdf',
-    ...                  color='Red', linestyle='-.', linewidth=1.0)
+    ...                  linewidth=1.5)
     """
     F = 1 / 100     # Calibration factor (Energy per channel)
 
     if E_range is not None:
         E_low, E_high = E_range
-        E_high = min(E_high, s.shape[0] * F)  # Prevent E_high out of range
+        if isinstance(s, np.ndarray):
+            E_high = min(E_high, s.shape[0] * F)  # Prevent E_high out of range
+        else:
+            E_high = min(E_high, s[0].shape[0] * F)
     else:
-        E_low, E_high = 0, s.shape[0] * F
+        if isinstance(s, np.ndarray):
+            E_low, E_high = 0, s.shape[0] * F
+        else:
+            E_low, E_high = 0, s[0].shape[0] * F
 
     N = int(np.round((E_high - E_low) / F))    # Number of data points
     x = np.linspace(E_low, E_high, N)   # Energy axis
@@ -745,10 +761,23 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
     i_low = int(np.round(E_low / F))
     i_high = int(np.round(E_high / F))
 
-    __plot_line(x, s[i_low:i_high], legends=None,
-                x_label='E  [keV]', y_label='counts  [-]',
+    # Extract range required from list of spectra and plot spectra
+    if isinstance(s, list):
+        S = []
+        X = []
+        for this_s in s:
+            S.append(this_s[i_low:i_high])
+            X.append(x)
+        __plot_line(X, S, legends=legends,
+                    x_label='E  [keV]', y_label='counts  [-]',
                 M_ticks=M_ticks, log_y=log_y, outfile=outfile,
                 **kws)
+    else:
+        # Plot single spectrum
+        __plot_line(x, s[i_low:i_high], legends=legends,
+                    x_label='E  [keV]', y_label='counts  [-]',
+                    M_ticks=M_ticks, log_y=log_y, outfile=outfile,
+                    **kws)
 
 
 def export_spectrum(s, outfile, E_range=None):
