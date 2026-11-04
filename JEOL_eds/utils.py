@@ -190,7 +190,7 @@ def rebin(a, bs, func=np.sum):
                 return r.astype(dtype, copy=False)
 
 
-def __plot_line(x, y,
+def __plot_line(x, y, legends=None,
                 outfile=None,
                 x_label=None, y_label=None,
                 M_ticks=None,
@@ -200,10 +200,12 @@ def __plot_line(x, y,
 
     Parameters
     ----------
-    x : Ndarray
+    x : Ndarray or List of Ndarrays
         x data
-    y : Ndarray
+    y : Ndarray or List of Ndarrays
         y data
+    legends : Str or List of Str (or None)
+        Labels of lines to be added to graph as legend. None indicates no legend added.
     x_label : Str
         Label for x-axis
     y_label : Str
@@ -226,10 +228,27 @@ def __plot_line(x, y,
         supported = plt.figure().canvas.get_supported_filetypes()
         assert ext in supported
 
-    plt.plot(x, y, **kws)
+    assert type(x) == type(y)
+
+    if isinstance(x, list):
+        assert len(x) == len(y)
+        if legends:
+            assert isinstance(legends, list)
+            assert len(legends) == len(y)
+        else:
+            legends = [""] * len(y)
+
+        for X, Y, legend in zip(x, y, legends):
+            plt.plot(X, Y, label=legend, **kws)
+    else:
+        if not legends:
+            legends = ""
+        plt.plot(x, y, label=legends, **kws)
+
     ax = plt.gca()
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
+    ax.legend()
 
     if log_y:
         ax.set_yscale('log')
@@ -669,15 +688,17 @@ def plot_map(m, color,
         plt.savefig(outfile)
 
 
-def plot_spectrum(s, E_range=None, M_ticks=None,
+def plot_spectrum(s, legends=None, E_range=None, M_ticks=None,
                   log_y=False, outfile=None, **kws):
     """Plots a nice spectrum.
 
     Parameters
     ----------
-    s : Ndarray
+    s : Ndarray or list of Ndarrays.
         Spectral data which is expected to cover the energy range
         0.0 < E <= E_max at an resolution of 0.01 keV per data point.
+    legends : Str or List of Str (or None)
+        Labels of lines to be added to graph as legend. None indicates no legend added.
     E_range : Tuple (E_low, E_high).
         Energy range to be plotted.
     M_ticks : Tuple (mx, my)
@@ -698,27 +719,41 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
     >>> import JEOL_eds.utils as JU
 
     Load data.
-    >>> dc = JEOL_pts('data/128.pts', only_metadata=True)
+    >>> dc = JEOL_pts('data/128.pts')
 
-    Plot full reference spectrum with logarithmic y-axis:
+    Extract reference spectrum, spectrum summed over all data, and calculate
+    difference of the two (Should be all zeros, but small differences below 1keV
+    where interpolation was performed.)
+    >>> s1 = dc.ref_spectrum
+    >>> s2 = dc.spectrum()
+    >>> s3 = s2 - s1
+
+    Plot the three spectra:
     >>> JU.plot_spectrum(dc.ref_spectrum, log_y=True)
 
     Plot and save reference spectrum between 1.0 and 2.5 keV. Plot one minor
     tick on x-axis and four on y-axis. Pass some keywords to
     `matplotlib.pyplot.plot()`:
-    >>> JU.plot_spectrum(dc.ref_spectrum,
-    ...                  E_range=(1, 2.5),
+    >>> JU.plot_spectrum([s1, s2, s3],
+    ...                  legends=["ref", "sum", "diff"],
+    ...                  E_range=(0, 2),
     ...                  M_ticks=(1, 4),
     ...                  outfile='ref_spectrum.pdf',
-    ...                  color='Red', linestyle='-.', linewidth=1.0)
+    ...                  linewidth=1.5)
     """
     F = 1 / 100     # Calibration factor (Energy per channel)
 
     if E_range is not None:
         E_low, E_high = E_range
-        E_high = min(E_high, s.shape[0] * F)  # Prevent E_high out of range
+        if isinstance(s, np.ndarray):
+            E_high = min(E_high, s.shape[0] * F)  # Prevent E_high out of range
+        else:
+            E_high = min(E_high, s[0].shape[0] * F)
     else:
-        E_low, E_high = 0, s.shape[0] * F
+        if isinstance(s, np.ndarray):
+            E_low, E_high = 0, s.shape[0] * F
+        else:
+            E_low, E_high = 0, s[0].shape[0] * F
 
     N = int(np.round((E_high - E_low) / F))    # Number of data points
     x = np.linspace(E_low, E_high, N)   # Energy axis
@@ -726,10 +761,23 @@ def plot_spectrum(s, E_range=None, M_ticks=None,
     i_low = int(np.round(E_low / F))
     i_high = int(np.round(E_high / F))
 
-    __plot_line(x, s[i_low:i_high],
-                x_label='E  [keV]', y_label='counts  [-]',
+    # Extract range required from list of spectra and plot spectra
+    if isinstance(s, list):
+        S = []
+        X = []
+        for this_s in s:
+            S.append(this_s[i_low:i_high])
+            X.append(x)
+        __plot_line(X, S, legends=legends,
+                    x_label='E  [keV]', y_label='counts  [-]',
                 M_ticks=M_ticks, log_y=log_y, outfile=outfile,
                 **kws)
+    else:
+        # Plot single spectrum
+        __plot_line(x, s[i_low:i_high], legends=legends,
+                    x_label='E  [keV]', y_label='counts  [-]',
+                    M_ticks=M_ticks, log_y=log_y, outfile=outfile,
+                    **kws)
 
 
 def export_spectrum(s, outfile, E_range=None):
@@ -781,13 +829,15 @@ def export_spectrum(s, outfile, E_range=None):
     np.savetxt(outfile, data, header=header, fmt=fmt)
 
 
-def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
+def plot_tseries(ts, legends=None, M_ticks=None, outfile=None, **kws):
     """Plots a nice time series.
 
     Parameters
     ----------
-    ts : Ndarray.
-        Time series (integrated x-ray intensities.
+    ts : Ndarray or List of Ndarrays.
+        Time series (integrated x-ray intensities).
+    legends : Str or List of Str (or None)
+        Labels of lines to be added to graph as legend. None indicates no legend added.
     M_ticks : Tuple (mx, my).
         Number of minor ticks used for x and y axis. If you want to plot minor
         ticks for a single axis, use None for other axis.
@@ -805,24 +855,31 @@ def plot_tseries(ts, M_ticks=None, outfile=None, **kws):
     Load data:
     >>> dc = JEOL_pts('data/128.pts', split_frames=True)
 
-    Get integrated x-ray intensity for carbon Ka peak but exclude frames 11
+    Get integrated x-ray intensity for carbon Ka peak.
+    >>> ts_C = dc.time_series(interval=(0.22, 0.34), energy=True)
+
+    Get integrated x-ray intensity for oxygen Ka peak but exclude frames 11
     and 12):
     >>> frames = list(range(dc.dcube.shape[0]))
-
     >>> frames.remove(11)
-
     >>> frames.remove(12)
-
-    >>> ts = dc.time_series(interval=(0.22, 0.34), energy=True, frames=frames)
+    >>> ts_O = dc.time_series(interval=(0.45, 0.6), energy=True, frames=frames)
 
     Plot and save time series with some keywords passed to
     `matplotlib.pyplot.plot()`.
-    >>> JU.plot_tseries(ts,
+    >>> JU.plot_tseries([ts_C, ts_O], legends=["C", "O"],
     ...                 M_ticks=(9, 4),
     ...                 outfile='carbon_Ka.pdf',
     ...                 color='Red', linestyle='-.', linewidth=1.0)
     """
-    __plot_line(range(ts.shape[0]), ts,
+    if isinstance(ts, np.ndarray):
+        x = np.arange(ts.shape[0])
+    else:
+        x = []
+        for _ in range(len(ts)):
+            x.append(np.arange(ts[0].shape[0]))
+
+    __plot_line(x, ts, legends=legends,
                 x_label='Frame Index  [-]', y_label='counts  [-]',
                 M_ticks=M_ticks, outfile=outfile,
                 **kws)
@@ -869,15 +926,17 @@ def export_tseries(ts, outfile):
     np.savetxt(outfile, data, header=header, fmt=fmt)
 
 
-def plot_profile(x, y, units='px', M_ticks=None, outfile=None, **kws):
+def plot_profile(x, y, legends=None, units='px', M_ticks=None, outfile=None, **kws):
     """Plots a nice profile.
 
     Parameters
     ----------
-    x : Ndarray.
+    x : Ndarray or List of Ndarrays.
         x values.
-    y : Ndarray
+    y : Ndarray or List of Ndarrays
         y values.
+    legends : Str or List of Str (or None)
+        Labels of lines to be added to graph as legend. None indicates no legend added.
     units : Str
         Units (length) of x data. The string supplied is only used to generate
         the axis label.
@@ -902,13 +961,16 @@ def plot_profile(x, y, units='px', M_ticks=None, outfile=None, **kws):
     >>> x, p_O = dl.profile(interval=(0.45, 0.6),
     ...                     energy=True, xCalib=True)
 
-    >>> JU.plot_profile(x, p_O,
+    >>> x, p_C = dl.profile(interval=(0.24, 0.33),
+    ...                     energy=True, xCalib=True)
+
+    >>> JU.plot_profile([x, x], [p_C, p_O], legends=["C", "O"],
     ...                 units='nm',
     ...                 M_ticks=(9, 4),
-    ...                 color='Red', linestyle='-.', linewidth=1.0)
+    ...                 linewidth=1.0)
     """
     x_label = f'Length  [{units}]'
-    __plot_line(x, y,
+    __plot_line(x, y, legends=legends,
                 x_label=x_label, y_label='counts  [-]',
                 M_ticks=M_ticks, outfile=outfile,
                 **kws)
@@ -1048,6 +1110,8 @@ def get_profile(image, line, **kws):
     -------
     profile : Ndarray
         Profile, length unit is pixels (as in image).
+    x : Ndarray
+        x axis of profile, length unit is pixels (as in image).
 
     Examples
     --------
@@ -1059,15 +1123,18 @@ def get_profile(image, line, **kws):
     >>> data = np.ones((10, 10))
 
     Horizontal line: 10 entries
-    >>> JU.get_profile(data, (0, 0, 0, 9))
+    >>> x, p = JU.get_profile(data, (0, 0, 0, 9))
+    >>> p
     array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1.])
 
     Diagonal line: 14 entries
-    >>> JU.get_profile(data, (0, 0, 9, 9))
+    >>> x, p = JU.get_profile(data, (0, 0, 9, 9))
+    >>> p
     array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.])
 
     Increase line width (you also need to supply a reduce_func)
-    >>> JU.get_profile(data, (0, 0, 9, 9), linewidth=3, reduce_func=np.sum)
+    >>> x, p = JU.get_profile(data, (0, 0, 9, 9), linewidth=3, reduce_func=np.sum)
+    >>> p
     array([3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3., 3.])
 
     Load data:
@@ -1084,11 +1151,9 @@ def get_profile(image, line, **kws):
     >>> JU.show_line(C_map, line, linewidth=width, cmap='inferno')
 
     Calculate profile along the line (width equals 10 pixels) and plot it:
-    >>> profile = JU.get_profile(C_map, line, linewidth=width)
+    >>> x, profile = JU.get_profile(C_map, line, linewidth=width)
 
-    >>> import matplotlib.pyplot as plt
-
-    >>> ax = plt.plot(profile)
+    >>> JU.plot_profile(x, profile)
     """
     if(
             (line[0] >= image.shape[0])
@@ -1105,7 +1170,8 @@ def get_profile(image, line, **kws):
     profile = profile_line(image,
                            line[0:2], line[2:],
                            **kws)
-    return profile
+    x = np.arange(profile.shape[0])
+    return x, profile
 
 
 def show_ROI(image, ROI, outfile=None, alpha=0.4, **kws):
