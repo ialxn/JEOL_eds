@@ -18,8 +18,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 """
-
-import os
+from pathlib import PurePath
 from datetime import datetime, timedelta
 import numpy as np
 
@@ -31,7 +30,7 @@ class JEOL_image:
 
     Parameters
     ----------
-    fname : Str
+    fname : Str or PurePath
         Filename.
 
     Examples
@@ -74,7 +73,7 @@ class JEOL_image:
 
         Parameters
         ----------
-        fname : Str
+        fname : Str or PurePath
             Filename.
 
         Notes
@@ -82,11 +81,16 @@ class JEOL_image:
         Based on a code fragment by @sempicor at
         https://github.com/hyperspy/hyperspy/pull/2488
         """
-        assert os.path.splitext(fname)[1] in ['.img', '.map']
+        assert isinstance(fname, (str, PurePath))
+        if isinstance(fname, str):
+            assert fname.endswith(('.img', '.map'))
+        if isinstance(fname, PurePath):
+            assert fname.suffix in ('.img', '.map')
+
         with open(fname, "br") as fd:
             file_magic = np.fromfile(fd, "<I", 1)[0]
             assert file_magic == 52
-            self.file_name = fname
+            self.file_name = str(fname)
             self.fileformat = _decode(fd.read(32).rstrip(b"\x00"))
             fd.read(8)  # Skip header position and length
             data_pos = np.fromfile(fd, "<I", 1)[0]

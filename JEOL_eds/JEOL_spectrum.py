@@ -20,6 +20,7 @@ along with JEOL_eds. If not, see <http://www.gnu.org/licenses/>.
 """
 
 from datetime import datetime, timedelta
+from pathlib import PurePath
 import numpy as np
 
 from JEOL_eds.misc import _decode
@@ -30,7 +31,7 @@ class JEOL_spectrum:
 
     Parameters:
     -----------
-    fname : Str
+    fname : Str or PurePath
         Filename.
 
     Examples:
@@ -293,14 +294,19 @@ class JEOL_spectrum:
 
         Parameters:
         -----------
-        fname : Str
+        fname : Str or PurePath
             Filename.
         """
-        assert fname.endswith('.eds')
+        assert isinstance(fname, (str, PurePath))
+        if isinstance(fname, str):
+            assert fname.endswith('.eds')
+        if isinstance(fname, PurePath):
+            assert fname.suffix == '.eds'
+
         with open(fname, "br") as fd:
             file_magic = np.fromfile(fd, "<I", 1)[0]
             assert file_magic == 2
-            self.file_name = fname
+            self.file_name = str(fname)
             fd.read(6)  # skip 6 bytes
             self.file_date = (str(datetime(1899, 12, 30) +
                                   timedelta(days=np.fromfile(fd, "<d", 1)[0])))
