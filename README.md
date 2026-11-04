@@ -55,6 +55,8 @@ A separate member function `JEOL_pts.correct_drift()` is added to perform the co
 >>> s = dc.spectrum(ROI=(50, 60, 25))
 ```
 
+Tutorials (see doc/tutorials) are added for the different data types that can be loaded.
+
 ## Version 2.1
 
 Use `numba` to read '.pts' data (`JEOL_pts()` and `JEOL_DigiLine()`). This results in a speed up of about two orders of magnitude!
@@ -145,17 +147,19 @@ Use `numba` to read '.pts' data (`JEOL_pts()` and `JEOL_DigiLine()`). This resul
 >>> JU.plot_spectrum(JEOL_pts('data/64.pts', only_metadata=True).ref_spectrum)
 
 # Cu Ka map of all even frames.
->>> dc = JEOL_pts('data/128.pts')
+>>> dc = JEOL_pts('data/128.pts', split_frames=True)
 >>> m = dc.map(interval=(7.9, 8.1),
                energy=True,
                frames=range(0, dc.dcube.shape[0], 2))
 
-# Cu Ka map of frames 0..10. Frames are aligned using frame 5 as
-# reference. Wiener filtered frames are used to calculate the shifts.
+# Correct for sample movement (based on the total X-ray intensity) using
+# Wiener-filtered data and frame 5 as reference.
+>>> dc.correct_drift(align_src='data', reference=5, apply_filter=True)
+
+# Cu Ka map of frames 0..10.
 >>> m = dc.map(interval=(7.9, 8.1),
                energy=True,
-               frames=[5,0,1,2,3,4,6,7,8,9,10],
-               align='filter')
+               frames=range(11))
 
 # Plot nice map using custom color map black to purple. `gamma=0.9`
 # enhances details. Little smoothing (FWHH=1.75 pixels) is applied.
