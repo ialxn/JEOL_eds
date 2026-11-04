@@ -1002,7 +1002,7 @@ class JEOL_pts:
         np.uint64(0)
 
         >>> m.max()
-        np.uint64(13)
+        np.uint64(11)
         """
         if self.dcube is None:  # Only metadata was read
             return None
@@ -1403,7 +1403,7 @@ class JEOL_pts:
         --------
         >>> from JEOL_eds import JEOL_pts
 
-        >>> dc = JEOL_pts('data/128.pts', split_frames=True)
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True, E_cutoff=2.0, rebin=(2,2))
 
         Save extracted data cube. File name is the same as the '.pts' file but
         extension is changed to 'npz'. This makes only sense if option
@@ -1419,16 +1419,16 @@ class JEOL_pts:
         >>> dcube = npzfile['arr_0']
 
         >>> dcube.shape
-        (50, 128, 128, 4000)
+        (50, 64, 64, 200)
 
         >>> dc.dcube.shape
-        (50, 128, 128, 4000)
+        (50, 64, 64, 200)
         """
         if self.dcube is None:  # Only metadata was read
             return
 
         if fname is None:
-            fname = PurePath(fname).with_suffix('.npz')
+            fname = PurePath(self.file_name).with_suffix('.npz')
         np.savez_compressed(fname, self.dcube)
 
     def __load_dcube(self, fname):
@@ -1460,7 +1460,7 @@ class JEOL_pts:
         --------
         >>> from JEOL_eds import JEOL_pts
 
-        >>> dc = JEOL_pts('data/128.pts', split_frames=True)
+        >>> dc = JEOL_pts('data/128.pts', split_frames=True, E_cutoff=2.0, rebin=(2,2))
 
         Save data with file name based on the '.pts' file but extension is
         changed to 'h5':
@@ -1487,7 +1487,7 @@ class JEOL_pts:
         >>> data = hf['dcube'][()]
 
         >>> data.shape
-        (50, 128, 128, 4000)
+        (50, 64, 64 200)
 
         List attributes:
         >>> print(hf.attrs.keys())
@@ -1500,7 +1500,7 @@ class JEOL_pts:
             return
 
         if fname is None:
-            fname = PurePath(fname).with_suffix('.h5')
+            fname = PurePath(self.file_name).with_suffix('.h5')
 
         with h5py.File(fname, 'w') as hf:
             hf.create_dataset('dcube', data=self.dcube, **kws)
