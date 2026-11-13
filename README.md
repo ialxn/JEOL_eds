@@ -125,23 +125,70 @@ Use `numba` to read '.pts' data (`JEOL_pts()` and `JEOL_DigiLine()`). This resul
 (5, 128, 128, 1100)
 
 # To read (and process) large data sets you might use the following code fragment.
-# First read number of frames (read only meta data to speed up this step) and then
-# process the full data set batch-wise.
->>> large_fn = 'data/128.pts'
->>> large = JEOL_pts(large_fn, only_metadata=True)
->>> N = large.parameters['EDS Data']['AnalyzableMap MeasData']['Doc']['Sweep']
+# As example we extract an unbinned Fe Ka map of a data set containing 106 frames
+# with size 512x512 by processing the data set batch-wise. The data cube of the
+# full data would be
+# 106 * 512 * 512 * 4000 * 2 = 222298112000 bytes (222.3 GB).
+
+# First read only the meta data and obtain the number of frames and their size
+# from the parameters.
+>>> tmp = JEOL_pts(fn, only_metadata=True)
+>>> N_pix = tmp.parameters["EDS Data"]["AnalyzableMap MeasData"]["Doc"]["ScanLine"]
+>>> N = tmp.parameters['EDS Data']['AnalyzableMap MeasData']['Doc']['Sweep']
+
+# Index of reference frame used in the drift correction.
+>>> i_ref = 0
+
+# Adapt the following to suit your case (minimize data cube).
+# Set the dtype to 1-byte unsigned integer (maximum count per channel
+# in a spectrum is 255) and discard energies above the Fe Ka line.
+>>> dtype = "uint8"
+>>> E_cutoff = 7.0
 >>> per_batch = 10
->>> N_batches = N // per_batch
+# With these numbers the data cube of each subset read will be
+# 10 * 512 * 512 * 700 * 1 = 1835008000 bytes (1.84GB)
+
+>>> Fe_map = np.zeros((N_pix, N_pix))
+>>> N_batches = N // per_batch + 1
+
+# Process the data batch-wise.
 >>> for i in range(N_batches):
-        flist = [i*per_batch + j for j in range(per_batch)]
-        subset = JEOL_pts(large_fn, split_frames=True, frame_list=flist)
-        # Do the processing of the subset. Here print total X-ray intensity.
-        print(subset.map().sum())
-70627
-70960
-71021
-70746
-70777
+        # Frames to be read in this batch.
+        flist = [i * per_batch + j for j in range(per_batch)]
+
+        # The last batch might contain less than `per_batch` items.
+        # Remove entries larger than `N`, the total number of frames.
+        flist = [x for x in flist if x < N]
+
+        # Make sure that `flist` contains the reference frame. Insert the
+        # reference frame index as first entry in the list if required.
+        # Take note of wether original list did contain the reference frame.
+        if i_ref not in flist:
+            flist = [i_ref] + flist
+            original_contained_ref = False
+        else:
+            original_contained_ref = True
+
+        # Read one batch / subset
+        subset = JEOL_pts(fn, read_drift="yes", split_frames=True,
+                          frame_list=flist, E_cutoff=E_cutoff, dtype=dtype)
+
+        # Perform the drift correction on the current batch
+        subset.correct_drift(align_src="drift_images", apply_filter=True,
+                             reference=i_ref)
+
+        # Be careful to add the contribution of reference frame only once
+        # even though it is now part of every frame list.
+        if original_contained_ref:
+            Fe_map += subset.map(interval=(6.28, 6.52), energy=True)
+        else:
+            # We have inserted the reference frame as first element in the
+            # current `flist`. Ignore it here as it will be counted in the
+            # batch where it is initially part of.
+            Fe_map += subset.map(interval=(6.28, 6.52), energy=True,
+                                 frames=flist[1:])
+# Now plot the unbinned Fe Ka map
+>>> JU.plot_map(Fe_map, 'purple', label='FeKa')
 
 # The fast way to read and plot reference spectrum.
 >>> JU.plot_spectrum(JEOL_pts('data/64.pts', only_metadata=True).ref_spectrum)
@@ -385,6 +432,7 @@ False
  'WD': '3.2',
  'ScanR': '270.0',
  'FocusMP': '16043213'}
+```
 
 ## Missing position information
 
